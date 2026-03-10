@@ -20,6 +20,7 @@ export function QuickAccessBar({ onSelectFolder, selectedFolderId }: QuickAccess
     if (user) {
       loadQuickAccess();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const loadQuickAccess = async () => {

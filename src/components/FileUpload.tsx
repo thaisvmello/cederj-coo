@@ -28,7 +28,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   // Extract suggested file name from folder name
   const generateSuggestedFileName = (file: File): string => {
     const extension = file.name.substring(file.name.lastIndexOf('.'));
-    const currentYear = new Date().getFullYear();
 
     // Extract from disciplineName (format: DISCIPLINA_PROVAX_ANO)
     const parts = disciplineName.split('_');
