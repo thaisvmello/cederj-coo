@@ -16,6 +16,7 @@ interface PendingFile {
   file: File;
   uploading: boolean;
   validationError?: string;
+  suggestedName?: string;
 }
 
 export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUploadProps) {
@@ -23,6 +24,21 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Extract suggested file name from folder name
+  const generateSuggestedFileName = (file: File): string => {
+    const extension = file.name.substring(file.name.lastIndexOf('.'));
+
+    // Extract from disciplineName (format: DISCIPLINA_PROVAX_ANO)
+    const parts = disciplineName.split('_');
+
+    if (parts.length >= 2) {
+      // Use the folder name pattern as base
+      return `${disciplineName}${extension}`;
+    }
+
+    return file.name;
+  };
 
   const validateFileName = (fileName: string): string | null => {
     const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
@@ -46,14 +62,18 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   };
 
   const addFiles = (files: File[]) => {
-    const newFiles = files.map((file) => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      description: '',
-      file,
-      uploading: false,
-      validationError: validateFileName(file.name),
-    }));
+    const newFiles = files.map((file) => {
+      const suggestedName = generateSuggestedFileName(file);
+      return {
+        id: Math.random().toString(36).substr(2, 9),
+        name: suggestedName,
+        description: '',
+        file,
+        uploading: false,
+        validationError: validateFileName(suggestedName),
+        suggestedName,
+      };
+    });
     setPendingFiles((prev) => [...prev, ...newFiles]);
   };
 
@@ -203,20 +223,67 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
                 )}
               </div>
 
-              {file.validationError && (
-                <div className="text-xs text-red-700 font-medium">
-                  {file.validationError}
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Nome do arquivo"
+                    value={file.name}
+                    onChange={(e) =>
+                      setPendingFiles((prev) =>
+                        prev.map((f) =>
+                          f.id === file.id
+                            ? {
+                                ...f,
+                                name: e.target.value,
+                                validationError: validateFileName(e.target.value),
+                              }
+                            : f
+                        )
+                      )
+                    }
+                    disabled={file.uploading}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                  {file.suggestedName && file.name !== file.suggestedName && (
+                    <button
+                      onClick={() =>
+                        setPendingFiles((prev) =>
+                          prev.map((f) =>
+                            f.id === file.id
+                              ? {
+                                  ...f,
+                                  name: file.suggestedName!,
+                                  validationError: validateFileName(file.suggestedName!),
+                                }
+                              : f
+                          )
+                        )
+                      }
+                      disabled={file.uploading}
+                      className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm transition disabled:opacity-50"
+                      title="Usar nome sugerido"
+                    >
+                      Sugerir
+                    </button>
+                  )}
                 </div>
-              )}
 
-              <input
-                type="text"
-                placeholder="Descrição (opcional)"
-                value={file.description}
-                onChange={(e) => updateDescription(file.id, e.target.value)}
-                disabled={file.uploading || !!file.validationError}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
-              />
+                {file.validationError && (
+                  <div className="text-xs text-red-700 font-medium">
+                    {file.validationError}
+                  </div>
+                )}
+
+                <input
+                  type="text"
+                  placeholder="Descrição (opcional)"
+                  value={file.description}
+                  onChange={(e) => updateDescription(file.id, e.target.value)}
+                  disabled={file.uploading || !!file.validationError}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                />
+              </div>
 
               {file.uploading && (
                 <div className="flex items-center gap-2 text-sm text-blue-600">

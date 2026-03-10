@@ -10,6 +10,8 @@ export interface Folder {
   parent_folder_id: string | null;
   name: string;
   created_at: string;
+  is_favorite?: boolean;
+  last_accessed?: string;
 }
 
 export interface File {
@@ -27,4 +29,18 @@ export interface File {
 export interface User {
   id: string;
   email: string;
+}
+
+export interface FolderFavorite {
+  id: string;
+  user_id: string;
+  folder_id: string;
+  created_at: string;
+}
+
+export interface FolderAccess {
+  id: string;
+  user_id: string;
+  folder_id: string;
+  accessed_at: string;
 }

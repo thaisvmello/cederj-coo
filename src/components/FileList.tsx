@@ -16,6 +16,7 @@ export function FileList({ folderId }: FileListProps) {
 
   useEffect(() => {
     loadFiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [folderId]);
 
   const loadFiles = async () => {
