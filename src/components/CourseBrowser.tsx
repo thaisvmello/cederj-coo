@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Plus, BookOpen } from 'lucide-react';
+import { Search, Plus, BookOpen, Star } from 'lucide-react';
 import type { Course } from '../lib/types';
 import { CourseCard } from './CourseCard';
 import { FolderView } from './FolderView';
 import { useAuth } from '../contexts/AuthContext';
+import { NewCourseModal } from './NewCourseModal';
+import toast from 'react-hot-toast';
 
 export function CourseBrowser() {
   const { user } = useAuth();
@@ -14,6 +16,7 @@ export function CourseBrowser() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showNewModal, setShowNewModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -22,7 +25,6 @@ export function CourseBrowser() {
   const loadData = async () => {
     setLoading(true);
     
-    // Load courses
     const { data: coursesData, error: coursesError } = await supabase
       .from('courses')
       .select('*')
@@ -33,7 +35,6 @@ export function CourseBrowser() {
     } else {
       setCourses(coursesData || []);
       
-      // Load file counts per course
       const { data: filesData } = await supabase
         .from('files')
         .select('id, folder_id');
@@ -52,7 +53,6 @@ export function CourseBrowser() {
       }
     }
 
-    // Load favorites
     if (user) {
       const { data: favData } = await supabase
         .from('course_favorites')
@@ -67,7 +67,10 @@ export function CourseBrowser() {
 
   const toggleFavorite = async (e: React.MouseEvent, courseId: string) => {
     e.stopPropagation();
-    if (!user) return;
+    if (!user) {
+      toast.error('Você precisa estar logado para favoritar');
+      return;
+    }
 
     const isFav = favorites.includes(courseId);
     if (isFav) {
@@ -77,11 +80,13 @@ export function CourseBrowser() {
         .eq('user_id', user.id)
         .eq('course_id', courseId);
       setFavorites(prev => prev.filter(id => id !== courseId));
+      toast.success('Removido dos favoritos');
     } else {
       await supabase
         .from('course_favorites')
         .insert({ user_id: user.id, course_id: courseId });
       setFavorites(prev => [...prev, courseId]);
+      toast.success('Adicionado aos favoritos');
     }
   };
 
@@ -89,6 +94,9 @@ export function CourseBrowser() {
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (c.code && c.code.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const favoriteCourses = filteredCourses.filter(c => favorites.includes(c.id));
+  const otherCourses = filteredCourses.filter(c => !favorites.includes(c.id));
 
   if (selectedCourse) {
     return <FolderView course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
@@ -133,7 +141,10 @@ export function CourseBrowser() {
             className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition shadow-sm"
           />
         </div>
-        <button className="flex items-center justify-center gap-2 px-6 py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition shadow-sm">
+        <button 
+          onClick={() => setShowNewModal(true)}
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition shadow-sm"
+        >
           <Plus className="w-5 h-5" />
           Nova Disciplina
         </button>
@@ -144,18 +155,54 @@ export function CourseBrowser() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCourses.map((course) => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              fileCount={fileCounts[course.id] || 0}
-              isFavorite={favorites.includes(course.id)}
-              onClick={() => setSelectedCourse(course)}
-              onToggleFavorite={(e) => toggleFavorite(e, course.id)}
-            />
-          ))}
+        <div className="space-y-10">
+          {favoriteCourses.length > 0 && (
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                <Star className="w-4 h-4 text-amber-400 fill-current" />
+                Disciplinas em Curso
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {favoriteCourses.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    fileCount={fileCounts[course.id] || 0}
+                    isFavorite={true}
+                    onClick={() => setSelectedCourse(course)}
+                    onToggleFavorite={(e) => toggleFavorite(e, course.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+              <BookOpen className="w-4 h-4 text-gray-400" />
+              Todas as Disciplinas
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {otherCourses.map((course) => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  fileCount={fileCounts[course.id] || 0}
+                  isFavorite={false}
+                  onClick={() => setSelectedCourse(course)}
+                  onToggleFavorite={(e) => toggleFavorite(e, course.id)}
+                />
+              ))}
+            </div>
+          </section>
         </div>
+      )}
+
+      {showNewModal && (
+        <NewCourseModal 
+          onClose={() => setShowNewModal(false)} 
+          onSuccess={loadData}
+        />
       )}
     </div>
   );

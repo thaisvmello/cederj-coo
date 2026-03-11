@@ -1,0 +1,148 @@
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { X, FolderPlus, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+interface NewCourseModalProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+  const [period, setPeriod] = useState('');
+  const [isMandatory, setIsMandatory] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setLoading(true);
+    try {
+      // Verificar se já existe
+      const { data: existing } = await supabase
+        .from('courses')
+        .select('id')
+        .or(`name.ilike.${name.trim()},code.ilike.${code.trim()}`)
+        .maybeSingle();
+
+      if (existing) {
+        toast.error('Uma disciplina com este nome ou código já existe!');
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.from('courses').insert({
+        name: name.trim(),
+        code: code.trim() || null,
+        period: period.trim() || null,
+        is_mandatory: isMandatory
+      });
+
+      if (error) throw error;
+
+      toast.success('Disciplina criada com sucesso!');
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error('Error creating course:', error);
+      toast.error('Erro ao criar disciplina');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <FolderPlus className="w-5 h-5 text-blue-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Nova Disciplina</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+              Nome da disciplina *
+            </label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Contabilidade Básica I"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+              Código EAD (opcional)
+            </label>
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Ex: EAD17034"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                Tipo da disciplina
+              </label>
+              <select
+                value={isMandatory ? 'true' : 'false'}
+                onChange={(e) => setIsMandatory(e.target.value === 'true')}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              >
+                <option value="true">Obrigatória</option>
+                <option value="false">Optativa / Outro</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                Período/Semestre
+              </label>
+              <input
+                type="text"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                placeholder="Ex: 1"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? 'Criando...' : 'Criar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
