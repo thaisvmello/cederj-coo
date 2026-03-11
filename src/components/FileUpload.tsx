@@ -1,7 +1,5 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { storage } from '../lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Upload, X, Loader, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -31,9 +29,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
     const parts = nameWithoutExt.split('_');
     if (parts.length !== 3) return 'Formato: DISCIPLINA_PROVA_ANO';
-    const [, proof, year] = parts;
-    if (!['AD', 'AP'].includes(proof.toUpperCase())) return 'Prova: AD ou AP';
-    if (!/^\d{4}$/.test(year)) return 'Ano: 4 dígitos';
     return null;
   };
 
@@ -49,10 +44,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     setPendingFiles((prev) => [...prev, ...newFiles]);
   };
 
-  const removeFile = (id: string) => {
-    setPendingFiles((prev) => prev.filter((f) => f.id !== id));
-  };
-
   const uploadFile = async (pendingFile: PendingFile) => {
     if (!user) return;
 
@@ -61,19 +52,31 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      const timestamp = Date.now();
-      const storagePath = `materials/${folderId}/${timestamp}-${pendingFile.file.name}`;
-      const storageRef = ref(storage, storagePath);
+      // 1. Obter URL pré-assinada da Edge Function
+      const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
+        body: { 
+          fileName: pendingFile.file.name, 
+          fileType: pendingFile.file.type,
+          folderId 
+        }
+      });
 
-      // Upload para o Firebase
-      await uploadBytes(storageRef, pendingFile.file);
-      const downloadURL = await getDownloadURL(storageRef);
+      if (funcError) throw funcError;
 
-      // Salva metadados no Supabase (usamos a URL do Firebase no campo file_path)
+      // 2. Upload direto para o R2
+      const uploadRes = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        body: pendingFile.file,
+        headers: { 'Content-Type': pendingFile.file.type }
+      });
+
+      if (!uploadRes.ok) throw new Error('Falha no upload para o R2');
+
+      // 3. Salvar metadados no Supabase
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
         name: pendingFile.name,
-        file_path: downloadURL, // Agora guardamos a URL direta ou o path do Firebase
+        file_path: data.publicUrl,
         file_size: pendingFile.file.size,
         file_type: pendingFile.file.type,
         description: pendingFile.description || null,
@@ -82,11 +85,14 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
 
       if (dbError) throw dbError;
 
-      removeFile(pendingFile.id);
+      setPendingFiles((prev) => prev.filter((f) => f.id !== pendingFile.id));
       onUploadSuccess();
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('R2 Upload error:', error);
       toast.error(`Erro ao enviar ${pendingFile.name}`);
+      setPendingFiles((prev) =>
+        prev.map((f) => (f.id === pendingFile.id ? { ...f, uploading: false } : f))
+      );
     }
   };
 
@@ -99,20 +105,20 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 space-y-4">
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-1">Enviar Arquivos (Firebase)</h3>
-        <p className="text-sm text-gray-600">Pasta: {disciplineName}</p>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
-        <div className="flex gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold mb-1">Padrão de nomenclatura:</p>
-            <p>DISCIPLINA_PROVA_ANO</p>
-          </div>
+    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-gray-900">Upload de Materiais (Cloudflare R2)</h3>
+          <p className="text-xs text-gray-500">Pasta: {disciplineName}</p>
         </div>
+        {pendingFiles.length > 0 && (
+          <button 
+            onClick={() => setPendingFiles([])}
+            className="text-xs text-red-500 hover:underline font-medium"
+          >
+            Limpar lista
+          </button>
+        )}
       </div>
 
       {pendingFiles.length === 0 ? (
@@ -120,13 +126,14 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition cursor-pointer ${
-            isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+          className={`border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer ${
+            isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50'
           }`}
           onClick={() => fileInputRef.current?.click()}
         >
-          <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-gray-700 font-medium mb-1">Arraste arquivos aqui ou clique</p>
+          <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-600 font-semibold">Arraste arquivos ou clique para selecionar</p>
+          <p className="text-xs text-gray-400 mt-1">PDF, Imagens, Docs (Máx 50MB)</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -136,34 +143,37 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           />
         </div>
       ) : (
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {pendingFiles.map((file) => (
-            <div key={file.id} className={`border rounded-lg p-3 space-y-2 ${file.validationError ? 'border-red-200 bg-red-50' : 'border-gray-200'}`}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{file.name}</p>
-                  <p className="text-xs text-gray-500">{(file.file.size / 1024).toFixed(2)} KB</p>
+        <div className="space-y-3">
+          <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+            {pendingFiles.map((file) => (
+              <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 bg-white rounded border border-gray-200">
+                    <Upload className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-900 truncate">{file.name}</p>
+                    <p className="text-[10px] text-gray-500">{(file.file.size / 1024).toFixed(1)} KB</p>
+                  </div>
                 </div>
-                {!file.uploading && (
-                  <button onClick={() => removeFile(file.id)} className="text-gray-400 hover:text-gray-600">
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {file.uploading ? (
+                    <Loader className="w-4 h-4 text-blue-500 animate-spin" />
+                  ) : (
+                    <button onClick={() => setPendingFiles(prev => prev.filter(f => f.id !== file.id))} className="text-gray-400 hover:text-red-500">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
-              {file.uploading && (
-                <div className="flex items-center gap-2 text-sm text-blue-600">
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Enviando para o Firebase...
-                </div>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
           <button
             onClick={uploadAll}
-            disabled={pendingFiles.some((f) => f.uploading) || pendingFiles.every((f) => f.validationError)}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50"
+            disabled={pendingFiles.some(f => f.uploading)}
+            className="w-full py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            Enviar Todos
+            {pendingFiles.some(f => f.uploading) ? 'Enviando...' : `Enviar ${pendingFiles.length} arquivo(s)`}
           </button>
         </div>
       )}
