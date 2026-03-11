@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.454.0?target=deno"
-import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.454.0?target=deno"
+import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.454.0?target=deno&no-check"
+import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.454.0?target=deno&no-check"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,7 +27,7 @@ serve(async (req) => {
       throw new Error("Configurações do R2 ausentes no ambiente do Supabase.");
     }
 
-    // Configuração específica para evitar que o SDK procure arquivos locais
+    // Criamos o cliente S3 com configurações que forçam o uso apenas das credenciais fornecidas
     const r2Client = new S3Client({
       region: "auto",
       endpoint: endpoint,
@@ -35,7 +35,7 @@ serve(async (req) => {
         accessKeyId: accessKeyId,
         secretAccessKey: secretAccessKey,
       },
-      // Importante: desabilita a busca por arquivos de config locais
+      // Estas flags impedem o SDK de tentar carregar arquivos de config do sistema
       forcePathStyle: true,
     })
 
