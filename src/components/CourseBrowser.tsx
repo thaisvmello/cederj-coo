@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Plus, BookOpen, Star } from 'lucide-react';
+import { Search, Plus, BookOpen, Star, LayoutGrid, List } from 'lucide-react';
 import type { Course } from '../lib/types';
 import { CourseCard } from './CourseCard';
+import { CourseTreeView } from './CourseTreeView';
 import { FolderView } from './FolderView';
 import { useAuth } from '../contexts/AuthContext';
 import { NewCourseModal } from './NewCourseModal';
@@ -17,6 +18,7 @@ export function CourseBrowser() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'tree'>('grid');
 
   useEffect(() => {
     loadData();
@@ -141,6 +143,32 @@ export function CourseBrowser() {
             className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition shadow-sm"
           />
         </div>
+        
+        <div className="flex items-center gap-2 bg-white p-1 border border-gray-200 rounded-xl shadow-sm">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-lg transition-all ${
+              viewMode === 'grid' 
+                ? 'bg-blue-50 text-blue-600 shadow-sm' 
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+            title="Visualização em Grade"
+          >
+            <LayoutGrid className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setViewMode('tree')}
+            className={`p-2 rounded-lg transition-all ${
+              viewMode === 'tree' 
+                ? 'bg-blue-50 text-blue-600 shadow-sm' 
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+            title="Visualização em Árvore"
+          >
+            <List className="w-5 h-5" />
+          </button>
+        </div>
+
         <button 
           onClick={() => setShowNewModal(true)}
           className="flex items-center justify-center gap-2 px-6 py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition shadow-sm"
@@ -156,45 +184,63 @@ export function CourseBrowser() {
         </div>
       ) : (
         <div className="space-y-10">
-          {favoriteCourses.length > 0 && (
+          {viewMode === 'grid' ? (
+            <>
+              {favoriteCourses.length > 0 && (
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                    <Star className="w-4 h-4 text-amber-400 fill-current" />
+                    Disciplinas em Curso
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {favoriteCourses.map((course) => (
+                      <CourseCard
+                        key={course.id}
+                        course={course}
+                        fileCount={fileCounts[course.id] || 0}
+                        isFavorite={true}
+                        onClick={() => setSelectedCourse(course)}
+                        onToggleFavorite={(e) => toggleFavorite(e, course.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                  <BookOpen className="w-4 h-4 text-gray-400" />
+                  Todas as Disciplinas
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {otherCourses.map((course) => (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      fileCount={fileCounts[course.id] || 0}
+                      isFavorite={false}
+                      onClick={() => setSelectedCourse(course)}
+                      onToggleFavorite={(e) => toggleFavorite(e, course.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            </>
+          ) : (
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                <Star className="w-4 h-4 text-amber-400 fill-current" />
-                Disciplinas em Curso
+                <List className="w-4 h-4 text-gray-400" />
+                Estrutura Curricular (por Período)
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {favoriteCourses.map((course) => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    fileCount={fileCounts[course.id] || 0}
-                    isFavorite={true}
-                    onClick={() => setSelectedCourse(course)}
-                    onToggleFavorite={(e) => toggleFavorite(e, course.id)}
-                  />
-                ))}
-              </div>
+              <CourseTreeView 
+                courses={filteredCourses}
+                favorites={favorites}
+                fileCounts={fileCounts}
+                onSelectCourse={setSelectedCourse}
+                onToggleFavorite={toggleFavorite}
+              />
             </section>
           )}
-
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-              <BookOpen className="w-4 h-4 text-gray-400" />
-              Todas as Disciplinas
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {otherCourses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  fileCount={fileCounts[course.id] || 0}
-                  isFavorite={false}
-                  onClick={() => setSelectedCourse(course)}
-                  onToggleFavorite={(e) => toggleFavorite(e, course.id)}
-                />
-              ))}
-            </div>
-          </section>
         </div>
       )}
 
