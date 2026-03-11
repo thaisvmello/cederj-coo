@@ -16,7 +16,6 @@ interface PendingFile {
   description: string;
   file: File;
   uploading: boolean;
-  validationError: string | null;
 }
 
 export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUploadProps) {
@@ -25,13 +24,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFileName = (fileName: string): string | null => {
-    const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
-    const parts = nameWithoutExt.split('_');
-    if (parts.length !== 3) return 'Formato: DISCIPLINA_PROVA_ANO';
-    return null;
-  };
-
   const addFiles = (files: File[]) => {
     const newFiles = files.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
@@ -39,7 +31,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       description: '',
       file,
       uploading: false,
-      validationError: validateFileName(file.name),
     }));
     setPendingFiles((prev) => [...prev, ...newFiles]);
   };
@@ -52,6 +43,8 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
+      console.log(`[FileUpload] Iniciando upload de: ${pendingFile.name}`);
+      
       // 1. Obter URL pré-assinada da Edge Function
       const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
         body: { 
@@ -61,7 +54,16 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         }
       });
 
-      if (funcError) throw funcError;
+      if (funcError) {
+        console.error('[FileUpload] Erro na Edge Function:', funcError);
+        throw new Error(funcError.message || 'Erro ao obter URL de upload');
+      }
+
+      if (!data?.uploadUrl) {
+        throw new Error('URL de upload não retornada pela função');
+      }
+
+      console.log('[FileUpload] URL obtida, enviando para R2...');
 
       // 2. Upload direto para o R2
       const uploadRes = await fetch(data.uploadUrl, {
@@ -70,7 +72,13 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         headers: { 'Content-Type': pendingFile.file.type }
       });
 
-      if (!uploadRes.ok) throw new Error('Falha no upload para o R2');
+      if (!uploadRes.ok) {
+        const errorText = await uploadRes.text();
+        console.error('[FileUpload] Erro no R2:', errorText);
+        throw new Error('Falha no upload para o Cloudflare R2. Verifique o CORS do bucket.');
+      }
+
+      console.log('[FileUpload] Upload R2 concluído, salvando no banco...');
 
       // 3. Salvar metadados no Supabase
       const { error: dbError } = await supabase.from('files').insert({
@@ -86,10 +94,11 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       if (dbError) throw dbError;
 
       setPendingFiles((prev) => prev.filter((f) => f.id !== pendingFile.id));
+      toast.success(`${pendingFile.name} enviado!`);
       onUploadSuccess();
     } catch (error) {
-      console.error('R2 Upload error:', error);
-      toast.error(`Erro ao enviar ${pendingFile.name}`);
+      console.error('[FileUpload] Erro crítico:', error);
+      toast.error(error instanceof Error ? error.message : `Erro ao enviar ${pendingFile.name}`);
       setPendingFiles((prev) =>
         prev.map((f) => (f.id === pendingFile.id ? { ...f, uploading: false } : f))
       );
@@ -97,8 +106,11 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   };
 
   const uploadAll = async () => {
-    for (const file of pendingFiles) {
-      if (!file.uploading && !file.validationError) {
+    if (pendingFiles.length === 0) return;
+    
+    const filesToUpload = [...pendingFiles];
+    for (const file of filesToUpload) {
+      if (!file.uploading) {
         await uploadFile(file);
       }
     }
