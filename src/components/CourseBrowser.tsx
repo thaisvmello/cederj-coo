@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Plus, BookOpen, Star, LayoutGrid, List, Info, Upload } from 'lucide-react';
+import { Search, Plus, BookOpen, Star, LayoutGrid, List, Info, Upload, Folder } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { CourseCard } from './CourseCard';
 import { CourseFolderTree } from './CourseFolderTree';
