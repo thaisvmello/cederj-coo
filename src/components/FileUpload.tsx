@@ -1,7 +1,10 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { storage } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Upload, X, Loader, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 interface FileUploadProps {
   folderId: string;
@@ -27,21 +30,10 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   const validateFileName = (fileName: string): string | null => {
     const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
     const parts = nameWithoutExt.split('_');
-
-    if (parts.length !== 3) {
-      return 'Formato: DISCIPLINA_PROVA_ANO';
-    }
-
+    if (parts.length !== 3) return 'Formato: DISCIPLINA_PROVA_ANO';
     const [, proof, year] = parts;
-
-    if (!['AD', 'AP'].includes(proof.toUpperCase())) {
-      return 'Prova: AD ou AP';
-    }
-
-    if (!/^\d{4}$/.test(year)) {
-      return 'Ano: 4 dígitos';
-    }
-
+    if (!['AD', 'AP'].includes(proof.toUpperCase())) return 'Prova: AD ou AP';
+    if (!/^\d{4}$/.test(year)) return 'Ano: 4 dígitos';
     return null;
   };
 
@@ -57,12 +49,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     setPendingFiles((prev) => [...prev, ...newFiles]);
   };
 
-  const updateDescription = (id: string, description: string) => {
-    setPendingFiles((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, description } : f))
-    );
-  };
-
   const removeFile = (id: string) => {
     setPendingFiles((prev) => prev.filter((f) => f.id !== id));
   };
@@ -71,25 +57,23 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     if (!user) return;
 
     setPendingFiles((prev) =>
-      prev.map((f) =>
-        f.id === pendingFile.id ? { ...f, uploading: true } : f
-      )
+      prev.map((f) => (f.id === pendingFile.id ? { ...f, uploading: true } : f))
     );
 
     try {
       const timestamp = Date.now();
-      const filename = `${folderId}/${timestamp}-${pendingFile.file.name}`;
+      const storagePath = `materials/${folderId}/${timestamp}-${pendingFile.file.name}`;
+      const storageRef = ref(storage, storagePath);
 
-      const { error: uploadError } = await supabase.storage
-        .from('course-materials')
-        .upload(filename, pendingFile.file);
+      // Upload para o Firebase
+      await uploadBytes(storageRef, pendingFile.file);
+      const downloadURL = await getDownloadURL(storageRef);
 
-      if (uploadError) throw uploadError;
-
+      // Salva metadados no Supabase (usamos a URL do Firebase no campo file_path)
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
         name: pendingFile.name,
-        file_path: filename,
+        file_path: downloadURL, // Agora guardamos a URL direta ou o path do Firebase
         file_size: pendingFile.file.size,
         file_type: pendingFile.file.type,
         description: pendingFile.description || null,
@@ -102,7 +86,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       onUploadSuccess();
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Erro ao fazer upload do arquivo');
+      toast.error(`Erro ao enviar ${pendingFile.name}`);
     }
   };
 
@@ -114,26 +98,10 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files);
-    addFiles(files);
-  };
-
   return (
     <div className="bg-white rounded-lg shadow p-4 space-y-4">
       <div>
-        <h3 className="font-semibold text-gray-900 mb-1">Enviar Arquivos</h3>
+        <h3 className="font-semibold text-gray-900 mb-1">Enviar Arquivos (Firebase)</h3>
         <p className="text-sm text-gray-600">Pasta: {disciplineName}</p>
       </div>
 
@@ -143,28 +111,22 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           <div>
             <p className="font-semibold mb-1">Padrão de nomenclatura:</p>
             <p>DISCIPLINA_PROVA_ANO</p>
-            <p className="text-xs mt-1">Ex: ContabilidadeBasica_AD_2024</p>
           </div>
         </div>
       </div>
 
       {pendingFiles.length === 0 ? (
         <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
           className={`border-2 border-dashed rounded-lg p-8 text-center transition cursor-pointer ${
-            isDragging
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 hover:border-gray-400'
+            isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
           }`}
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-gray-700 font-medium mb-1">
-            Arraste arquivos aqui ou clique
-          </p>
-          <p className="text-sm text-gray-500">Suporte para PDFs e documentos</p>
+          <p className="text-gray-700 font-medium mb-1">Arraste arquivos aqui ou clique</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -176,63 +138,29 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       ) : (
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {pendingFiles.map((file) => (
-            <div
-              key={file.id}
-              className={`border rounded-lg p-3 space-y-2 ${
-                file.validationError
-                  ? 'border-red-200 bg-red-50'
-                  : 'border-gray-200'
-              }`}
-            >
+            <div key={file.id} className={`border rounded-lg p-3 space-y-2 ${file.validationError ? 'border-red-200 bg-red-50' : 'border-gray-200'}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
-                    {file.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {(file.file.size / 1024).toFixed(2)} KB
-                  </p>
+                  <p className="font-medium text-gray-900 truncate">{file.name}</p>
+                  <p className="text-xs text-gray-500">{(file.file.size / 1024).toFixed(2)} KB</p>
                 </div>
                 {!file.uploading && (
-                  <button
-                    onClick={() => removeFile(file.id)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
+                  <button onClick={() => removeFile(file.id)} className="text-gray-400 hover:text-gray-600">
                     <X className="w-5 h-5" />
                   </button>
                 )}
               </div>
-
-              {file.validationError && (
-                <div className="text-xs text-red-700 font-medium">
-                  {file.validationError}
-                </div>
-              )}
-
-              <input
-                type="text"
-                placeholder="Descrição (opcional)"
-                value={file.description}
-                onChange={(e) => updateDescription(file.id, e.target.value)}
-                disabled={file.uploading || !!file.validationError}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
-              />
-
               {file.uploading && (
                 <div className="flex items-center gap-2 text-sm text-blue-600">
                   <Loader className="w-4 h-4 animate-spin" />
-                  Enviando...
+                  Enviando para o Firebase...
                 </div>
               )}
             </div>
           ))}
-
           <button
             onClick={uploadAll}
-            disabled={
-              pendingFiles.some((f) => f.uploading) ||
-              pendingFiles.every((f) => f.validationError)
-            }
+            disabled={pendingFiles.some((f) => f.uploading) || pendingFiles.every((f) => f.validationError)}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50"
           >
             Enviar Todos

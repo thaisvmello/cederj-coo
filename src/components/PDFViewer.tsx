@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { X, Download } from 'lucide-react';
 import type { File } from '../lib/types';
+import toast from 'react-hot-toast';
 
 interface PDFViewerProps {
   file: File;
@@ -9,47 +8,27 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ file, onClose }: PDFViewerProps) {
-  const [url, setUrl] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  // No Firebase, já estamos guardando a URL pública no file_path
+  const url = file.file_path;
 
-  useEffect(() => {
-    const getUrl = async () => {
-      const { data } = supabase.storage
-        .from('course-materials')
-        .getPublicUrl(file.file_path);
-
-      setUrl(data.publicUrl);
-      setLoading(false);
-    };
-
-    getUrl();
-  }, [file]);
-
-  const handleDownload = async () => {
+  const handleDownload = () => {
     try {
-      const { data, error } = await supabase.storage
-        .from('course-materials')
-        .download(file.file_path);
-
-      if (error) throw error;
-
-      const downloadUrl = URL.createObjectURL(data);
       const a = document.createElement('a');
-      a.href = downloadUrl;
+      a.href = url;
       a.download = file.name;
+      a.target = '_blank';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error('Error downloading file:', error);
-      alert('Erro ao baixar arquivo');
+      toast.error('Erro ao baixar arquivo');
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div>
             <h2 className="font-semibold text-gray-900">{file.name}</h2>
@@ -74,18 +53,12 @@ export function PDFViewer({ file, onClose }: PDFViewerProps) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto bg-gray-100">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500">Carregando PDF...</p>
-            </div>
-          ) : (
-            <iframe
-              src={url}
-              title={file.name}
-              className="w-full h-full border-none"
-            />
-          )}
+        <div className="flex-1 overflow-hidden bg-gray-100">
+          <iframe
+            src={`${url}#toolbar=0`}
+            title={file.name}
+            className="w-full h-full border-none"
+          />
         </div>
       </div>
     </div>
