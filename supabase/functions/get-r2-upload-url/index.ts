@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.454.0"
-import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.454.0"
+import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.454.0?target=deno"
+import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.454.0?target=deno"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +8,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log("[get-r2-upload-url] Recebendo requisição...");
+  console.log("[get-r2-upload-url] Iniciando processamento...");
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -16,7 +16,6 @@ serve(async (req) => {
 
   try {
     const { fileName, fileType, folderId } = await req.json()
-    console.log("[get-r2-upload-url] Dados recebidos:", { fileName, fileType, folderId });
     
     const endpoint = Deno.env.get("R2_ENDPOINT");
     const accessKeyId = Deno.env.get("R2_ACCESS_KEY_ID");
@@ -25,10 +24,10 @@ serve(async (req) => {
     const publicDomain = Deno.env.get("R2_PUBLIC_DOMAIN");
 
     if (!endpoint || !accessKeyId || !secretAccessKey || !bucketName) {
-      console.error("[get-r2-upload-url] Erro: Variáveis de ambiente não configuradas no Supabase.");
-      throw new Error("Configuração do R2 incompleta no servidor.");
+      throw new Error("Configurações do R2 ausentes no ambiente do Supabase.");
     }
 
+    // Configuração específica para evitar que o SDK procure arquivos locais
     const r2Client = new S3Client({
       region: "auto",
       endpoint: endpoint,
@@ -36,6 +35,8 @@ serve(async (req) => {
         accessKeyId: accessKeyId,
         secretAccessKey: secretAccessKey,
       },
+      // Importante: desabilita a busca por arquivos de config locais
+      forcePathStyle: true,
     })
 
     const key = `materials/${folderId}/${Date.now()}-${fileName}`
@@ -45,20 +46,27 @@ serve(async (req) => {
       ContentType: fileType,
     })
 
-    console.log("[get-r2-upload-url] Gerando URL pré-assinada para:", key);
+    // Gera a URL pré-assinada
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 })
     const publicUrl = `${publicDomain}/${key}`
 
-    console.log("[get-r2-upload-url] Sucesso ao gerar URLs.");
+    console.log("[get-r2-upload-url] URL gerada com sucesso para:", key);
+
     return new Response(
       JSON.stringify({ uploadUrl, publicUrl, key }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     )
   } catch (error) {
-    console.error("[get-r2-upload-url] Erro crítico:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    console.error("[get-r2-upload-url] Erro:", error.message);
+    return new Response(
+      JSON.stringify({ error: error.message }), 
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
   }
 })
