@@ -1,196 +1,162 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronRight, Folder, ChevronDown } from 'lucide-react';
-import type { Course, Folder as FolderType } from '../lib/types';
-import { FileList } from './FileList';
-import { FileUpload } from './FileUpload';
-
-interface ExpandedFolders {
-  [key: string]: boolean;
-}
+import { Search, Plus, BookOpen } from 'lucide-react';
+import type { Course, CourseFavorite } from '../lib/types';
+import { CourseCard } from './CourseCard';
+import { FolderView } from './FolderView';
+import { useAuth } from '../contexts/AuthContext';
 
 export function CourseBrowser() {
+  const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
-  const [expandedCourses, setExpandedCourses] = useState<ExpandedFolders>({});
-  const [folders, setFolders] = useState<FolderType[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<FolderType | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [fileCounts, setFileCounts] = useState<{[key: string]: number}>({});
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadCourses();
-  }, []);
+    loadData();
+  }, [user]);
 
-  const loadCourses = async () => {
+  const loadData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    
+    // Load courses
+    const { data: coursesData, error: coursesError } = await supabase
       .from('courses')
       .select('*')
       .order('name');
 
-    if (error) {
-      console.error('Error loading courses:', error);
+    if (coursesError) {
+      console.error('Error loading courses:', coursesError);
     } else {
-      setCourses(data || []);
+      setCourses(coursesData || []);
+      
+      // Load file counts per course
+      const { data: filesData } = await supabase
+        .from('files')
+        .select('id, folder_id');
+      
       const { data: foldersData } = await supabase
         .from('folders')
-        .select('*')
-        .order('name');
-      setFolders(foldersData || []);
+        .select('id, course_id');
+
+      if (filesData && foldersData) {
+        const counts: {[key: string]: number} = {};
+        foldersData.forEach(folder => {
+          const count = filesData.filter(f => f.folder_id === folder.id).length;
+          counts[folder.course_id] = (counts[folder.course_id] || 0) + count;
+        });
+        setFileCounts(counts);
+      }
     }
+
+    // Load favorites
+    if (user) {
+      const { data: favData } = await supabase
+        .from('course_favorites')
+        .select('course_id')
+        .eq('user_id', user.id);
+      
+      setFavorites(favData?.map(f => f.course_id) || []);
+    }
+
     setLoading(false);
   };
 
-  const toggleCourse = (courseId: string) => {
-    setExpandedCourses((prev) => ({
-      ...prev,
-      [courseId]: !prev[courseId],
-    }));
+  const toggleFavorite = async (e: React.MouseEvent, courseId: string) => {
+    e.stopPropagation();
+    if (!user) return;
+
+    const isFav = favorites.includes(courseId);
+    if (isFav) {
+      await supabase
+        .from('course_favorites')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('course_id', courseId);
+      setFavorites(prev => prev.filter(id => id !== courseId));
+    } else {
+      await supabase
+        .from('course_favorites')
+        .insert({ user_id: user.id, course_id: courseId });
+      setFavorites(prev => [...prev, courseId]);
+    }
   };
 
-  const getCourseFolders = (courseId: string) => {
-    return folders.filter((f) => f.course_id === courseId && f.parent_folder_id === null);
-  };
+  const filteredCourses = courses.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.code && c.code.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
-  const getSubfolders = (parentId: string) => {
-    return folders.filter((f) => f.parent_folder_id === parentId);
-  };
-
-  const renderFolderTree = (parentId: string | null, level: number = 0) => {
-    const subfolders = folders.filter((f) => f.parent_folder_id === parentId);
-
-    return (
-      <div className={`space-y-1 ${level > 0 ? 'ml-4' : ''}`}>
-        {subfolders.map((folder) => {
-          const subfoldersCount = getSubfolders(folder.id).length;
-          const hasSubfolders = subfoldersCount > 0;
-
-          return (
-            <div key={folder.id}>
-              <button
-                onClick={() => setSelectedFolder(folder)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition ${
-                  selectedFolder?.id === folder.id
-                    ? 'bg-blue-100 text-blue-900'
-                    : 'hover:bg-gray-100 text-gray-700'
-                }`}
-              >
-                {hasSubfolders && (
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleCourse(folder.id);
-                    }}
-                  >
-                    {expandedCourses[folder.id] ? (
-                      <ChevronDown className="w-4 h-4" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4" />
-                    )}
-                  </div>
-                )}
-                {!hasSubfolders && <div className="w-4" />}
-                <Folder className="w-4 h-4" />
-                <span className="text-sm font-medium">{folder.name}</span>
-              </button>
-
-              {hasSubfolders && expandedCourses[folder.id] && (
-                <div className="ml-4">
-                  {renderFolderTree(folder.id, level + 1)}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <p className="text-gray-500">Carregando cursos...</p>
-      </div>
-    );
+  if (selectedCourse) {
+    return <FolderView course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-      <div className="lg:col-span-1 bg-white rounded-lg shadow p-4 overflow-y-auto max-h-[calc(100vh-200px)]">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Disciplinas</h2>
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
-          {courses.map((course) => (
-            <div key={course.id}>
-              <button
-                onClick={() => toggleCourse(course.id)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700 transition"
-              >
-                {expandedCourses[course.id] ? (
-                  <ChevronDown className="w-4 h-4" />
-                ) : (
-                  <ChevronRight className="w-4 h-4" />
-                )}
-                <Folder className="w-4 h-4" />
-                <span className="text-sm font-semibold">{course.name}</span>
-              </button>
-
-              {expandedCourses[course.id] && (
-                <div className="mt-1">
-                  {renderFolderTree(
-                    getCourseFolders(course.id)[0]?.id || null
-                  )}
-                  {getCourseFolders(course.id).map((folder) => (
-                    <div key={`course-${folder.id}`}>
-                      <button
-                        onClick={() => setSelectedFolder(folder)}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition ml-6 ${
-                          selectedFolder?.id === folder.id
-                            ? 'bg-blue-100 text-blue-900'
-                            : 'hover:bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        <Folder className="w-4 h-4" />
-                        <span className="text-sm">{folder.name}</span>
-                      </button>
-
-                      {expandedCourses[folder.id] && (
-                        <div className="mt-1">
-                          {renderFolderTree(folder.id, 1)}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <BookOpen className="w-6 h-6 text-blue-600" />
             </div>
-          ))}
+            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+              Acervo de Provas e Materiais
+            </h2>
+          </div>
+          <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
+            CEDERJ — Ciências Contábeis
+          </p>
+          <div className="flex items-center gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest pt-2">
+            <span className="flex items-center gap-1.5">
+              <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+              {courses.length} disciplinas
+            </span>
+            <span className="flex items-center gap-1.5">
+              <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+              {Object.values(fileCounts).reduce((a, b) => a + b, 0)} arquivos no acervo
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="lg:col-span-2 space-y-4 overflow-y-auto max-h-[calc(100vh-200px)]">
-        {selectedFolder ? (
-          <>
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">
-                {selectedFolder.name}
-              </h2>
-              <p className="text-sm text-gray-600">
-                Pasta de {courses.find((c) => c.id === selectedFolder.course_id)?.name}
-              </p>
-            </div>
-
-            <FileUpload
-              folderId={selectedFolder.id}
-              disciplineName={selectedFolder.name}
-              onUploadSuccess={loadCourses}
-            />
-            <FileList folderId={selectedFolder.id} />
-          </>
-        ) : (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-500">Selecione uma pasta para começar</p>
-          </div>
-        )}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Buscar disciplina ou código EAD..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition shadow-sm"
+          />
+        </div>
+        <button className="flex items-center justify-center gap-2 px-6 py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition shadow-sm">
+          <Plus className="w-5 h-5" />
+          Nova Disciplina
+        </button>
       </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCourses.map((course) => (
+            <CourseCard
+              key={course.id}
+              course={course}
+              fileCount={fileCounts[course.id] || 0}
+              isFavorite={favorites.includes(course.id)}
+              onClick={() => setSelectedCourse(course)}
+              onToggleFavorite={(e) => toggleFavorite(e, course.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

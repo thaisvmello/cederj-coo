@@ -1,6 +1,9 @@
 export interface Course {
   id: string;
   name: string;
+  code: string | null;
+  period: string | null;
+  is_mandatory: boolean;
   created_at: string;
 }
 
@@ -27,4 +30,10 @@ export interface File {
 export interface User {
   id: string;
   email: string;
+}
+
+export interface CourseFavorite {
+  id: string;
+  user_id: string;
+  course_id: string;
 }
