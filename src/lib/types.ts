@@ -37,3 +37,12 @@ export interface CourseFavorite {
   user_id: string;
   course_id: string;
 }
+
+export interface FolderComment {
+  id: string;
+  folder_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  user_email?: string;
+}
