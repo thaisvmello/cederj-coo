@@ -24,8 +24,20 @@ export function CourseBrowser({ initialSelectedFolder, onFolderSelect }: CourseB
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [newFolderName, setNewFolderName] = useState('');
+  const [newCourseCode, setNewCourseCode] = useState('');
+  const [newCourseName, setNewCourseName] = useState('');
   const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [showCreateCourse, setShowCreateCourse] = useState(false);
+
+  // Extract code and name from course name
+  const parseCourseName = (fullName: string): { code: string; name: string } => {
+    const match = fullName.match(/^(EAD\d{5}|EAD\d{2})\s*-\s*(.+)$/);
+    if (match) {
+      return { code: match[1], name: match[2] };
+    }
+    return { code: '', name: fullName };
+  };
 
   useEffect(() => {
     loadCourses();
@@ -131,6 +143,55 @@ export function CourseBrowser({ initialSelectedFolder, onFolderSelect }: CourseB
       setNewFolderName('');
       setShowCreateFolder(false);
       setCreateFolderParentId(null);
+    }
+  };
+
+  const createCourse = async () => {
+    if (!newCourseCode.trim() || !newCourseName.trim()) {
+      alert('Código e nome da disciplina são obrigatórios');
+      return;
+    }
+
+    const fullName = `${newCourseCode} - ${newCourseName}`;
+
+    // Check if course already exists
+    const existingCourse = courses.find((c) => c.name.toLowerCase() === fullName.toLowerCase());
+    if (existingCourse) {
+      alert('Esta disciplina já existe');
+      return;
+    }
+
+    // Create course
+    const { data: courseData, error: courseError } = await supabase
+      .from('courses')
+      .insert({ name: fullName })
+      .select()
+      .single();
+
+    if (courseError) {
+      console.error('Error creating course:', courseError);
+      alert('Erro ao criar disciplina');
+      return;
+    }
+
+    if (!courseData) return;
+
+    // Create default subfolders (AD1, AD2, AP1, AP2, AP3)
+    const subfolderNames = ['AD1', 'AD2', 'AP1', 'AP2', 'AP3'];
+    const folderInserts = subfolderNames.map((folderName) => ({
+      course_id: courseData.id,
+      parent_folder_id: null,
+      name: folderName,
+    }));
+
+    const { error: foldersError } = await supabase.from('folders').insert(folderInserts);
+
+    if (!foldersError) {
+      setCourses([...courses, courseData]);
+      setNewCourseCode('');
+      setNewCourseName('');
+      setShowCreateCourse(false);
+      loadCourses(); // Reload to get the new folders
     }
   };
 

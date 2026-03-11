@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Header } from './Header';
+import { QuickLinksBar } from './QuickLinksBar';
 import { QuickAccessBar } from './QuickAccessBar';
 import { CourseBrowser } from './CourseBrowser';
 import { Footer } from './Footer';
@@ -11,6 +12,7 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
+      <QuickLinksBar />
       <QuickAccessBar
         onSelectFolder={setSelectedFolder}
         selectedFolderId={selectedFolder?.id}
