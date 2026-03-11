@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Search, Plus, BookOpen } from 'lucide-react';
-import type { Course, CourseFavorite } from '../lib/types';
+import type { Course } from '../lib/types';
 import { CourseCard } from './CourseCard';
 import { FolderView } from './FolderView';
 import { useAuth } from '../contexts/AuthContext';

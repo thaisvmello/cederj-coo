@@ -15,7 +15,7 @@ interface PendingFile {
   description: string;
   file: File;
   uploading: boolean;
-  validationError?: string;
+  validationError: string | null;
 }
 
 export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUploadProps) {
