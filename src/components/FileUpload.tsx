@@ -44,25 +44,18 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Sessão expirada. Faça login novamente.');
 
-      // 1. Obter URL pré-assinada usando a URL completa da função
-      const response = await fetch('https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '' // Fallback se necessário
-        },
-        body: JSON.stringify({
+      // 1. Obter URL pré-assinada usando a Edge Function
+      const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
+        body: {
           fileName: pendingFile.file.name,
           fileType: pendingFile.file.type,
           folderId
-        })
+        }
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Erro ao obter URL de upload');
+      if (funcError || !data) throw new Error(funcError?.message || 'Erro ao obter URL de upload');
 
-      // 2. Upload direto para o R2
+      // 2. Upload direto para o R2 usando a URL assinada
       const uploadRes = await fetch(data.uploadUrl, {
         method: 'PUT',
         body: pendingFile.file,
