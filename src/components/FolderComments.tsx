@@ -4,6 +4,7 @@ import { Send, User, MessageSquare, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import type { FolderComment } from '../lib/types';
 import toast from 'react-hot-toast';
+import { AvatarFallback } from './AvatarFallback';
 
 interface FolderCommentsProps {
   folderId: string;
@@ -136,15 +137,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
             return (
               <div key={comment.id} className="flex gap-3 group">
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  {comment.avatar_url ? (
-                    <img 
-                      src={comment.avatar_url} 
-                      alt={displayName} 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-4 h-4 text-blue-600" />
-                  )}
+                  <AvatarFallback avatarUrl={comment.avatar_url} name={displayName} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
