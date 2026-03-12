@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, FolderPlus, AlertCircle } from 'lucide-react';
+import { X, FolderPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface NewCourseModalProps {

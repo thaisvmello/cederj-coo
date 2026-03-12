@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { ChevronRight, ChevronDown, Folder, BookOpen, Loader } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';

@@ -1,17 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Plus, BookOpen, Star, LayoutGrid, List, Info, Upload, Folder } from 'lucide-react';
-import type { Course, Folder as FolderType } from '../lib/types';
+import { Search, Plus, BookOpen, Star, LayoutGrid, List } from 'lucide-react';
+import type { Course } from '../lib/types';
 import { CourseCard } from './CourseCard';
-import { CourseFolderTree } from './CourseFolderTree';
 import { CourseTreeView } from './CourseTreeView';
 import { FolderView } from './FolderView';
-import { FileList } from './FileList';
-import { FileUpload } from './FileUpload';
-import { FolderComments } from './FolderComments';
 import { useAuth } from '../contexts/AuthContext';
 import { NewCourseModal } from './NewCourseModal';
-import toast from 'react-hot-toast';
 
 export function CourseBrowser() {
   const { user } = useAuth();
@@ -19,7 +14,6 @@ export function CourseBrowser() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [fileCounts, setFileCounts] = useState<{[key: string]: number}>({});
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [selectedFolder, setSelectedFolder] = useState<FolderType | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);

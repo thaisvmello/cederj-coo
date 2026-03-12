@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronRight, ChevronDown, Folder, Star, Layers, Filter, List, ChevronFirst, ChevronLast } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, Star, Filter, ChevronFirst, ChevronLast } from 'lucide-react';
 import type { Course } from '../lib/types';
 
 interface CourseTreeViewProps {
