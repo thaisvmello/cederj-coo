@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Send, User, MessageSquare, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import type { FolderComment } from '../lib/types';
 import toast from 'react-hot-toast';
 
 interface FolderCommentsProps {
@@ -35,7 +36,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
     if (error) {
       console.error('Error loading comments:', error);
     } else {
-      const mapped = (data || []).map(c => ({
+      const mapped = (data || []).map((c: any) => ({
         ...c,
         first_name: c.profiles?.first_name,
         last_name: c.profiles?.last_name,
@@ -60,7 +61,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       if (error) throw error;
 
       setNewComment('');
-      await loadComments(); // Recarrega a lista para mostrar o novo comentário
+      await loadComments();
       toast.success('Comentário enviado!');
     } catch (error) {
       console.error('Error posting comment:', error);

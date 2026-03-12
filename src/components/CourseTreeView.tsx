@@ -28,7 +28,6 @@ export function CourseTreeView({
   const [loadingFolders, setLoadingFolders] = useState<string[]>([]);
   const [favoriteFolders, setFavoriteFolders] = useState<FolderType[]>([]);
 
-  // Fetch favorite folders
   useEffect(() => {
     if (!user) return;
     
@@ -189,7 +188,7 @@ export function CourseTreeView({
 
             {(expandedGroups.includes(group) || grouping === 'none') && (
               <div className="divide-y divide-gray-50">
-                {groupedData[group].map((course) => {
+                {groupedData[group].map((course: Course) => {
                   const isFav = favorites.includes(course.id);
                   const isExpanded = expandedCourses.includes(course.id);
                   return (
@@ -232,7 +231,6 @@ export function CourseTreeView({
         ))}
       </div>
 
-      {/* Favorites Group */}
       {favoriteFolders.length > 0 && (
         <div className="space-y-3 pt-4">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest pl-1">Pastas Favoritas</h3>

@@ -19,11 +19,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: session } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
 
       if (session?.user) {
-        // Fetch profile data
-        const { data: profile, error } = await supabase
+        const { data: profile } = await supabase
           .from('profiles')
           .select('first_name, last_name, avatar_url')
           .eq('id', session.user.id)
@@ -46,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        const { data: profile, error } = await supabase
+        const { data: profile } = await supabase
           .from('profiles')
           .select('first_name, last_name, avatar_url')
           .eq('id', session.user.id)
@@ -70,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, first_name: string, last_name: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -80,17 +79,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     });
+    
     if (error) throw error;
 
-    // Profile will be created via trigger or we can upsert here
-    await supabase
-      .from('profiles')
-      .upsert({
-        id: (await supabase.auth.getUser()).data.user?.id,
-        first_name,
-        last_name,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'id' });
+    if (data.user) {
+      await supabase
+        .from('profiles')
+        .upsert({
+          id: data.user.id,
+          first_name,
+          last_name,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+    }
   };
 
   const signIn = async (email: string, password: string) => {
