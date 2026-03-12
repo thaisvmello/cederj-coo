@@ -33,7 +33,7 @@ export interface User {
   email: string;
   first_name?: string;
   last_name?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
 }
 
 export interface FolderComment {
@@ -44,5 +44,5 @@ export interface FolderComment {
   created_at: string;
   first_name?: string;
   last_name?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
 }
