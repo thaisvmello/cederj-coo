@@ -41,10 +41,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Sessão expirada. Faça login novamente.');
-
-      // 1. Obter URL pré-assinada usando a Edge Function
+      // 1. Chamar a Edge Function para pegar a URL assinada
       const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
         body: {
           fileName: pendingFile.file.name,
@@ -53,20 +50,18 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         }
       });
 
-      if (funcError || !data) throw new Error(funcError?.message || 'Erro ao obter URL de upload');
+      if (funcError || !data) throw new Error(funcError?.message || 'Erro na Edge Function');
 
-      // 2. Upload direto para o R2 usando a URL assinada
+      // 2. Upload direto para o R2 via PUT
       const uploadRes = await fetch(data.uploadUrl, {
         method: 'PUT',
         body: pendingFile.file,
         headers: { 'Content-Type': pendingFile.file.type }
       });
 
-      if (!uploadRes.ok) {
-        throw new Error('Falha no upload para o R2. Verifique as configurações de CORS do seu bucket.');
-      }
+      if (!uploadRes.ok) throw new Error('Falha no upload para o R2. Verifique o CORS do bucket.');
 
-      // 3. Salvar metadados no Supabase
+      // 3. Salvar no banco do Supabase
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
         name: pendingFile.name,
@@ -100,7 +95,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-gray-900">Upload de Materiais</h3>
+          <h3 className="font-bold text-gray-900">Upload de Materiais (R2)</h3>
           <p className="text-xs text-gray-500">Pasta: {disciplineName}</p>
         </div>
       </div>
