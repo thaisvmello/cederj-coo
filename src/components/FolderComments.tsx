@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Send, User, MessageSquare, Trash2 } from 'lucide-react';
+import { Send, MessageSquare, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import type { FolderComment } from '../lib/types';
 import toast from 'react-hot-toast';
@@ -22,37 +22,27 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
 
   const loadComments = async () => {
     try {
-      // Primeiro buscar os comentários
       const { data: commentsData, error: commentsError } = await supabase
         .from('folder_comments')
         .select('*')
         .eq('folder_id', folderId)
         .order('created_at', { ascending: true });
 
-      if (commentsError) {
-        console.error('Error loading comments:', commentsError);
-        toast.error('Erro ao carregar comentários');
-        return;
-      }
+      if (commentsError) throw commentsError;
 
       if (!commentsData || commentsData.length === 0) {
         setComments([]);
         return;
       }
 
-      // Buscar informações de perfil separadamente
       const userIds = Array.from(new Set(commentsData.map(comment => comment.user_id)));
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, avatar_url')
         .in('id', userIds);
 
-      if (profilesError) {
-        console.error('Error loading profiles:', profilesError);
-        // Continuar mesmo sem perfis
-      }
+      if (profilesError) console.error('Error loading profiles:', profilesError);
 
-      // Combinar comentários com perfis
       const commentsWithProfiles = commentsData.map(comment => {
         const profile = profilesData?.find(p => p.id === comment.user_id);
         return {
@@ -66,7 +56,6 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       setComments(commentsWithProfiles);
     } catch (error) {
       console.error('Error in loadComments:', error);
-      toast.error('Erro ao carregar comentários');
     }
   };
 
@@ -88,7 +77,6 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       await loadComments();
       toast.success('Comentário enviado!');
     } catch (error) {
-      console.error('Error posting comment:', error);
       toast.error('Erro ao enviar comentário');
     } finally {
       setLoading(false);
@@ -111,12 +99,11 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
   };
 
   const getDisplayName = (comment: FolderComment) => {
-    if (comment.user_id === user?.id) return 'Você';
-    
     const firstName = comment.first_name || '';
     const lastName = comment.last_name || '';
     const fullName = `${firstName} ${lastName}`.trim();
     
+    if (comment.user_id === user?.id) return `Você (${fullName || 'Eu'})`;
     return fullName || 'Estudante';
   };
 
@@ -127,17 +114,22 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
         <h3 className="text-sm font-bold text-gray-900">Comentários e Dicas</h3>
       </div>
 
-      <div className="p-4 space-y-4 max-h-80 overflow-y-auto">
+      <div className="p-4 space-y-4 max-h-80 overflow-y-auto custom-scrollbar">
         {comments.length === 0 ? (
           <p className="text-center text-gray-400 text-sm py-4">Nenhum comentário ainda. Seja o primeiro!</p>
         ) : (
           comments.map((comment) => {
             const displayName = getDisplayName(comment);
+            const initials = (comment.first_name?.[0] || '') + (comment.last_name?.[0] || '');
             
             return (
               <div key={comment.id} className="flex gap-3 group">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  <AvatarFallback avatarUrl={comment.avatar_url} name={displayName} />
+                <div className="flex-shrink-0">
+                  <AvatarFallback 
+                    avatarUrl={comment.avatar_url} 
+                    name={displayName} 
+                    size="md"
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
@@ -171,12 +163,12 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Escreva um comentário ou dica..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
           />
           <button
             type="submit"
             disabled={loading || !newComment.trim()}
-            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            className="p-2 bg-[#00394a] text-white rounded-lg hover:bg-[#004d63] transition disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
           </button>
