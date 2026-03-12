@@ -7,7 +7,7 @@ export function Header() {
   return (
     <header className="w-full z-40">
       {/* Main Header */}
-      <div className="bg-[#113E52] text-white px-4 sm:px-6 lg:px-8 py-3">
+      <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img
@@ -37,7 +37,7 @@ export function Header() {
       </div>
 
       {/* Secondary Nav */}
-      <div className="bg-[#1e293b] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
+      <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
         <div className="max-w-7xl mx-auto flex items-center gap-6 text-xs font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
           <a
             href="https://graduacao.cederj.edu.br/login/index.php"
