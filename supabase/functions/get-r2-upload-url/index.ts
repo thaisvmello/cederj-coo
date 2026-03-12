@@ -7,77 +7,83 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Lidar com preflight do CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    console.log("[get-r2-upload-url] Iniciando processo de geração de URL...");
+    console.log("[get-r2-upload-url] Requisição recebida");
 
-    // 1. Verificar Autenticação
-    const authHeader = req.headers.get('Authorization')
+    // 1. Validar Autenticação
+    const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error("[get-r2-upload-url] Erro: Cabeçalho de autorização ausente");
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: corsHeaders })
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
     }
 
-    // 2. Pegar dados da requisição
+    // 2. Extrair dados do corpo
     const { fileName, fileType, folderId } = await req.json();
-    console.log(`[get-r2-upload-url] Arquivo: ${fileName}, Tipo: ${fileType}, Pasta: ${folderId}`);
+    if (!fileName || !folderId) {
+      throw new Error("Dados insuficientes: fileName e folderId são obrigatórios.");
+    }
 
-    // 3. Pegar variáveis de ambiente
+    // 3. Carregar Configurações (Secrets)
     const endpoint = Deno.env.get("R2_ENDPOINT");
     const accessKeyId = Deno.env.get("R2_ACCESS_KEY_ID");
     const secretAccessKey = Deno.env.get("R2_SECRET_ACCESS_KEY");
     const bucketName = Deno.env.get("R2_BUCKET_NAME");
     const publicDomain = Deno.env.get("R2_PUBLIC_DOMAIN");
 
-    // Log de verificação (sem mostrar as chaves completas por segurança)
-    console.log("[get-r2-upload-url] Verificando variáveis de ambiente...");
-    if (!endpoint) console.error("[get-r2-upload-url] R2_ENDPOINT está faltando");
-    if (!accessKeyId) console.error("[get-r2-upload-url] R2_ACCESS_KEY_ID está faltando");
-    if (!bucketName) console.error("[get-r2-upload-url] R2_BUCKET_NAME está faltando");
-
     if (!endpoint || !accessKeyId || !secretAccessKey || !bucketName || !publicDomain) {
-      throw new Error('Configurações do R2 incompletas no Supabase (verifique os Secrets)');
+      console.error("[get-r2-upload-url] Erro: Variáveis de ambiente ausentes");
+      throw new Error("Configuração do R2 incompleta no servidor.");
     }
 
-    // 4. Configurar o cliente S3 Lite
-    // Importante: R2 funciona melhor com pathStyle: true
+    // 4. Configurar Cliente S3 (Otimizado para R2 no Deno)
     const s3Client = new S3Client({
-      endPoint: endpoint.replace('https://', ''),
+      endPoint: endpoint.replace(/^https?:\/\//, ''), // Remove protocolo se existir
       accessKey: accessKeyId,
       secretKey: secretAccessKey,
       region: "auto",
       useSSL: true,
-      pathStyle: true, // Força o uso de /bucket/objeto em vez de bucket.endpoint/objeto
+      pathStyle: true, // Essencial para R2
     });
 
-    // 5. Gerar nome de arquivo seguro
-    const fileExtension = fileName.split('.').pop();
-    const safeFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExtension}`;
-    const key = `materials/${folderId}/${safeFileName}`;
+    // 5. Gerar Caminho do Arquivo
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const extension = fileName.split('.').pop();
+    const key = `materials/${folderId}/${timestamp}-${randomStr}.${extension}`;
 
-    // 6. Gerar a URL assinada
-    console.log("[get-r2-upload-url] Gerando URL assinada...");
+    // 6. Gerar URL Assinada (PUT)
+    console.log(`[get-r2-upload-url] Gerando URL para: ${key}`);
     const uploadUrl = await s3Client.getPresignedUrl("PUT", key, {
       bucketName: bucketName,
       expirySeconds: 3600,
     });
-    
-    const publicUrl = `${publicDomain.replace(/\/$/, '')}/${key}`;
 
-    console.log("[get-r2-upload-url] URL gerada com sucesso!");
+    // 7. Construir URL Pública
+    const publicUrl = `${publicDomain.replace(/\/$/, '')}/${key}`;
 
     return new Response(
       JSON.stringify({ uploadUrl, publicUrl }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
+
   } catch (error) {
-    console.error("[get-r2-upload-url] Erro fatal:", error.message);
+    console.error(`[get-r2-upload-url] Erro: ${error.message}`);
     return new Response(
       JSON.stringify({ error: error.message }), 
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
-})
+});
