@@ -24,6 +24,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
 
   const loadComments = async () => {
     try {
+      // Buscar comentários
       const { data: commentsData, error: commentsError } = await supabase
         .from('folder_comments')
         .select('*')
@@ -31,22 +32,17 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
         .order('created_at', { ascending: true });
 
       if (commentsError) throw commentsError;
+      if (!commentsData) return;
 
-      if (!commentsData || commentsData.length === 0) {
-        setComments([]);
-        return;
-      }
-
-      const userIds = Array.from(new Set(commentsData.map(comment => comment.user_id)));
-      const { data: profilesData, error: profilesError } = await supabase
+      // Buscar perfis dos autores
+      const userIds = Array.from(new Set(commentsData.map(c => c.user_id)));
+      const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, avatar_url')
         .in('id', userIds);
 
-      if (profilesError) throw profilesError;
-
       const commentsWithProfiles = commentsData.map(comment => {
-        const profile = profilesData?.find((p: any) => p.id === comment.user_id);
+        const profile = profilesData?.find(p => p.id === comment.user_id);
         return {
           ...comment,
           first_name: profile?.first_name || 'Estudante',
@@ -57,7 +53,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
 
       setComments(commentsWithProfiles);
     } catch (error) {
-      console.error('Error in loadComments:', error);
+      console.error('Error loading comments:', error);
     }
   };
 
@@ -75,7 +71,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
 
       if (error) throw error;
       setNewComment('');
-      loadComments();
+      await loadComments();
       toast.success('Comentário enviado!');
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -127,7 +123,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
                     {comment.first_name} {comment.last_name}
                   </span>
                   <span className="text-[10px] text-gray-400">
-                    {new Date(comment.created_at).toLocaleDateString()}
+                    {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <div className="relative">

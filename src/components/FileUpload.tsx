@@ -42,54 +42,29 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-	   // 1. Obter a sessão
-	const { data: { session } } = await supabase.auth.getSession();
-	if (!session) throw new Error('Sessão expirada. Por favor, faça login novamente.');
+      // 1. Chamar a Edge Function usando o SDK oficial
+      const { data, error: functionError } = await supabase.functions.invoke('get-r2-upload-url', {
+        body: {
+          fileName: pendingFile.file.name,
+          fileType: pendingFile.file.type,
+          folderId
+        }
+      });
 
-	// 2. Pegar a anon key do .env (forma correta)
-	const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsY2Rod2prZGJybXJ3dWVlb2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNjc0MjQsImV4cCI6MjA4ODc0MzQyNH0.qJt8wzTFH5bH_6Yp21EpAGF0wP8mMvr38obLYv8iP5M";
+      if (functionError) throw new Error(functionError.message || 'Erro ao obter URL de upload');
 
-	// 3. Chamar a Edge Function
-	const functionUrl = `https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url`;
-
-	const response = await fetch(functionUrl, {
-	  method: 'POST',
-	  headers: {
-		'Content-Type': 'application/json',
-		'Authorization': `Bearer ${session.access_token}`,
-		'apikey': anonKey,
-	  },
-	  body: JSON.stringify({
-		fileName: pendingFile.file.name,
-		fileType: pendingFile.file.type,
-		folderId
-	  })
-	});
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Erro na função (${response.status})`);
-      }
-
-      const data = await response.json();
-
-      // 3. Upload direto para o R2 via PUT
+      // 2. Upload direto para o R2 via PUT
       const uploadRes = await fetch(data.uploadUrl, {
         method: 'PUT',
         body: pendingFile.file,
         headers: { 
           'Content-Type': pendingFile.file.type 
         }
-      }).catch(err => {
-        if (err.name === 'TypeError') throw new Error('Erro de Rede/CORS no R2: Verifique as configurações de CORS no painel da Cloudflare.');
-        throw err;
       });
 
-      if (!uploadRes.ok) {
-        throw new Error(`Falha no R2 (${uploadRes.status}): Verifique as permissões do bucket.`);
-      }
+      if (!uploadRes.ok) throw new Error('Falha no upload para o servidor de arquivos (R2)');
 
-      // 4. Salvar metadados no Supabase
+      // 3. Salvar metadados no Supabase
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
         name: pendingFile.name,
@@ -125,7 +100,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-gray-900">Upload Direto (R2)</h3>
+          <h3 className="font-bold text-gray-900">Upload de Arquivos</h3>
           <p className="text-xs text-gray-500">Destino: {disciplineName}</p>
         </div>
       </div>
