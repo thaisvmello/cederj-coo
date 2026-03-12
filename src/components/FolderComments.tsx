@@ -48,7 +48,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       if (error) throw error;
 
       setNewComment('');
-      loadComments();
+      await loadComments(); // Recarrega a lista para mostrar o novo comentário
       toast.success('Comentário enviado!');
     } catch (error) {
       console.error('Error posting comment:', error);
