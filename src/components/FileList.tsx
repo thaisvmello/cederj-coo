@@ -74,6 +74,11 @@ export function FileList({ folderId }: FileListProps) {
     downloadFile(file);
   };
 
+  const handleViewFile = (file: FileType) => {
+    setSelectedFile(file);
+    setShowViewer(true);
+  };
+
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedFileIds(files.map(f => f.id));
@@ -127,8 +132,7 @@ export function FileList({ folderId }: FileListProps) {
         </label>
         <span className="text-sm text-gray-400">{`(${selectedFileIds.length}/${files.length})`}</span>
         {selectedFileIds.length > 0 && (
-          <button
-            onClick={handleBatchDownload}
+          <button            onClick={handleBatchDownload}
             disabled={loading}
             className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition disabled:opacity-50"
           >
@@ -182,7 +186,7 @@ export function FileList({ folderId }: FileListProps) {
                     <div className="flex items-center gap-2">
                       {file.file_type === 'application/pdf' && (
                         <button
-                          onClick={(e) => handleDownload(e, file)}
+                          onClick={(e) => handleViewFile(file)}
                           className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition text-xs font-medium"
                         >
                           <Eye className="w-4 h-4" /> Ver
@@ -204,7 +208,10 @@ export function FileList({ folderId }: FileListProps) {
       </div>
 
       {showViewer && selectedFile && (
-        <PDFViewer file={selectedFile} onClose={() => setShowViewer(false)} />
+        <PDFViewer file={selectedFile} onClose={() => {
+          setShowViewer(false);
+          setSelectedFile(null);
+        }} />
       )}
     </>
   );
