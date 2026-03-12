@@ -82,7 +82,7 @@ export function CourseBrowser() {
             </div>
             <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Acervo de Materiais</h2>
           </div>
-          <p className="text-sm text-gray-500 font-medium">CEDERJ — Ciências Contábeis</p>
+          <p className="text-sm text-gray-500 font-medium"> Ciências Contábeis</p>
         </div>
       </div>
 
