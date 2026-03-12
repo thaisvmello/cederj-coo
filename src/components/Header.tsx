@@ -23,7 +23,7 @@ export function Header() {
 
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-medium text-gray-300">{user?.email}</p>
+              <p className="text-sm font-medium text-gray-300">{user?.email}</p>
             </div>
             <button
               onClick={signOut}
@@ -38,7 +38,7 @@ export function Header() {
 
       {/* Secondary Nav */}
       <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
-        <div className="max-w-7xl mx-auto flex items-center gap-6 text-xs font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
+        <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
           <a
             href="https://graduacao.cederj.edu.br/login/index.php"
             target="_blank"
