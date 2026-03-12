@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Send, MessageSquare, Trash2 } from 'lucide-react';
+import { Send, MessageSquare, Trash2, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import type { FolderComment } from '../lib/types';
 import toast from 'react-hot-toast';
@@ -16,41 +16,61 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
   const { user } = useAuth();
   const [comments, setComments] = useState<FolderComment[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadComments();
   }, [folderId]);
 
   const loadComments = async () => {
+    setLoading(true);
     try {
-      // Buscando comentários e tentando trazer o perfil relacionado em uma única consulta
-      const { data, error } = await supabase
+      // 1. Buscar apenas os comentários primeiro
+      const { data: commentsData, error: commentsError } = await supabase
         .from('folder_comments')
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('folder_id', folderId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (commentsError) throw commentsError;
 
-      // Formatando os dados para o estado do componente
-      const formattedComments = (data || []).map((comment: any) => ({
-        ...comment,
-        first_name: comment.profiles?.first_name || 'Estudante',
-        last_name: comment.profiles?.last_name || '',
-        avatar_url: comment.profiles?.avatar_url || null,
-      }));
+      if (!commentsData || commentsData.length === 0) {
+        setComments([]);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Coletar todos os IDs de usuários únicos que comentaram
+      const userIds = Array.from(new Set(commentsData.map(c => c.user_id)));
+
+      // 3. Buscar os perfis desses usuários (Agora deve funcionar se a política SELECT estiver correta)
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.warn('Erro ao buscar perfis, usando fallback:', profilesError);
+      }
+
+      // 4. Cruzar os dados
+      const formattedComments = commentsData.map(comment => {
+        const profile = profilesData?.find(p => p.id === comment.user_id);
+        return {
+          ...comment,
+          first_name: profile?.first_name || 'Estudante',
+          last_name: profile?.last_name || '',
+          avatar_url: profile?.avatar_url || null,
+        };
+      });
 
       setComments(formattedComments);
     } catch (error) {
       console.error('Erro ao carregar comentários:', error);
+      toast.error('Erro ao carregar discussão');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -58,7 +78,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
     e.preventDefault();
     if (!newComment.trim() || !user) return;
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       const { error } = await supabase.from('folder_comments').insert({
         folder_id: folderId,
@@ -74,7 +94,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       console.error('Erro ao enviar comentário:', error);
       toast.error('Erro ao enviar comentário');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -102,7 +122,12 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-        {comments.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-2">
+            <Loader className="w-6 h-6 text-blue-600 animate-spin" />
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Carregando discussão...</p>
+          </div>
+        ) : comments.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-xs text-gray-400">Nenhum comentário ainda. Seja o primeiro!</p>
           </div>
@@ -153,10 +178,10 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
           />
           <button
             type="submit"
-            disabled={loading || !newComment.trim()}
+            disabled={submitting || !newComment.trim()}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
           >
-            {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send className="w-4 h-4" />}
+            {submitting ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>
         </div>
       </form>
