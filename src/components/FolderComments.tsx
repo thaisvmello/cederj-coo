@@ -9,6 +9,14 @@ interface FolderCommentsProps {
   folderId: string;
 }
 
+interface CommentWithProfile extends FolderComment {
+  profiles?: {
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+  } | null;
+}
+
 export function FolderComments({ folderId }: FolderCommentsProps) {
   const { user } = useAuth();
   const [comments, setComments] = useState<FolderComment[]>([]);
@@ -20,30 +28,50 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
   }, [folderId]);
 
   const loadComments = async () => {
-    // Usamos um join simples (sem !inner) para não esconder comentários se o perfil falhar
-    const { data, error } = await supabase
-      .from('folder_comments')
-      .select(`
-        *,
-        profiles (
-          first_name,
-          last_name,
-          avatar_url
-        )
-      `)
-      .eq('folder_id', folderId)
-      .order('created_at', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('folder_comments')
+        .select(`
+          *,
+          profiles (
+            first_name,
+            last_name,
+            avatar_url
+          )
+        `)
+        .eq('folder_id', folderId)
+        .order('created_at', { ascending: true });
 
-    if (error) {
-      console.error('Error loading comments:', error);
-    } else {
-      const mapped = (data || []).map((c: any) => ({
-        ...c,
-        first_name: c.profiles?.first_name,
-        last_name: c.profiles?.last_name,
-        avatar_url: c.profiles?.avatar_url,
-      }));
+      if (error) {
+        console.error('Error loading comments:', error);
+        toast.error('Erro ao carregar comentários');
+        return;
+      }
+
+      // Mapear os dados para garantir que temos os nomes
+      const mapped = (data || []).map((comment: CommentWithProfile) => {
+        // Se não tiver perfil, tentar buscar do auth.users
+        if (!comment.profiles) {
+          return {
+            ...comment,
+            first_name: 'Estudante',
+            last_name: '',
+            avatar_url: null,
+          };
+        }
+
+        return {
+          ...comment,
+          first_name: comment.profiles.first_name || 'Estudante',
+          last_name: comment.profiles.last_name || '',
+          avatar_url: comment.profiles.avatar_url,
+        };
+      });
+
       setComments(mapped);
+    } catch (error) {
+      console.error('Error in loadComments:', error);
+      toast.error('Erro ao carregar comentários');
     }
   };
 
@@ -87,6 +115,16 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
     }
   };
 
+  const getDisplayName = (comment: FolderComment) => {
+    if (comment.user_id === user?.id) return 'Você';
+    
+    const firstName = comment.first_name || '';
+    const lastName = comment.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    
+    return fullName || 'Estudante';
+  };
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
@@ -99,7 +137,8 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
           <p className="text-center text-gray-400 text-sm py-4">Nenhum comentário ainda. Seja o primeiro!</p>
         ) : (
           comments.map((comment) => {
-            const displayName = `${comment.first_name || ''} ${comment.last_name || ''}`.trim() || 'Estudante';
+            const displayName = getDisplayName(comment);
+            
             return (
               <div key={comment.id} className="flex gap-3 group">
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -116,10 +155,10 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-gray-900 truncate">
-                      {comment.user_id === user?.id ? 'Você' : displayName}
+                      {displayName}
                     </span>
                     <span className="text-[10px] text-gray-400">
-                      {new Date(comment.created_at).toLocaleDateString()}
+                      {new Date(comment.created_at).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mt-0.5 break-words">{comment.content}</p>

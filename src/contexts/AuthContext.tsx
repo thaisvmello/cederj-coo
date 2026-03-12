@@ -13,6 +13,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Função para sincronizar perfil via Edge Function
+const syncUserProfile = async (token: string) => {
+  try {
+    const response = await fetch('https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/sync-user-profile', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Erro ao sincronizar perfil:', errorData);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.user;
+  } catch (error) {
+    console.error('Erro na sincronização do perfil:', error);
+    return null;
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,8 +62,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const userData = await fetchProfile(session.user.id, session.user.email || '');
-        setUser(userData);
+        // Tentar sincronizar perfil primeiro
+        const syncedUser = await syncUserProfile(session.access_token);
+        
+        if (syncedUser) {
+          setUser(syncedUser);
+        } else {
+          // Fallback para busca direta
+          const userData = await fetchProfile(session.user.id, session.user.email || '');
+          setUser(userData);
+        }
       } else {
         setUser(null);
       }
@@ -49,19 +82,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        const userData = await fetchProfile(session.user.id, session.user.email || '');
-        setUser(userData);
+        // Sincronizar perfil após login
+        const syncedUser = await syncUserProfile(session.access_token);
         
-        // Se for o primeiro login (especialmente Google), o trigger do banco cuida,
-        // mas garantimos aqui que o estado local reflita os metadados se o perfil ainda não existir
-        if (!userData.first_name && session.user.user_metadata?.full_name) {
-          const fullName = session.user.user_metadata.full_name;
-          setUser(prev => prev ? {
-            ...prev,
-            first_name: fullName.split(' ')[0],
-            last_name: fullName.split(' ').slice(1).join(' '),
-            avatar_url: session.user.user_metadata.avatar_url
-          } : null);
+        if (syncedUser) {
+          setUser(syncedUser);
+        } else {
+          // Fallback
+          const userData = await fetchProfile(session.user.id, session.user.email || '');
+          setUser(userData);
         }
       } else {
         setUser(null);
@@ -88,25 +117,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
 
     if (data.user) {
-      // O trigger handle_new_user no banco já deve criar o perfil,
-      // mas fazemos um upsert aqui por segurança e redundância
-      await supabase
-        .from('profiles')
-        .upsert({
-          id: data.user.id,
-          first_name,
-          last_name,
-          updated_at: new Date().toISOString(),
-        });
+      // Aguardar um momento para o trigger do banco processar
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Sincronizar perfil
+      if (data.session?.access_token) {
+        await syncUserProfile(data.session.access_token);
+      }
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
     if (error) throw error;
+
+    // Sincronizar perfil após login
+    if (data.session?.access_token) {
+      await syncUserProfile(data.session.access_token);
+    }
   };
 
   const signInWithGoogle = async () => {
