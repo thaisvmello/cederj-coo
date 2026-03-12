@@ -1,5 +1,5 @@
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, BookOpen, GraduationCap, Calculator } from 'lucide-react';
+import { LogOut, Calculator } from 'lucide-react';
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -39,26 +39,6 @@ export function Header() {
       {/* Secondary Nav */}
       <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
         <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
-          <a
-            href="https://graduacao.cederj.edu.br/login/index.php"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-white transition"
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            Plataforma de Estudos
-          </a>
-          <div className="w-px h-3 bg-gray-700"></div>
-          <a
-            href="https://sistacad.cederj.edu.br/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-white transition"
-          >
-            <GraduationCap className="w-3.5 h-3.5" />
-            Sistema Acadêmico (SISTACAD)
-          </a>
-          <div className="w-px h-3 bg-gray-700"></div>
           <a
             href="https://script.google.com/macros/s/AKfycbwyoOeDtL-nGdXmFstf7nHNJtC0j0STrxGwuRvnKV34K7tVvi6PEhqIe6uhSnXLe-Q1/exec"
             target="_blank"
