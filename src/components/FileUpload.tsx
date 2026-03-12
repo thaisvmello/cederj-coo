@@ -42,23 +42,30 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      console.log(`[FileUpload] Iniciando upload de ${pendingFile.name}...`);
-      
-      // 1. Obter URL de upload
-      const { data, error: functionError } = await supabase.functions.invoke('get-r2-upload-url', {
-        body: {
+      // Obter sessão para o token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sessão expirada. Entre novamente.');
+
+      // 1. Obter URL de upload via Fetch manual (padrão que funcionava)
+      const response = await fetch('https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           fileName: pendingFile.file.name,
           fileType: pendingFile.file.type,
           folderId
-        }
+        })
       });
 
-      if (functionError) {
-        console.error('[FileUpload] Erro na Edge Function:', functionError);
-        throw new Error(`Servidor de upload: ${functionError.message || 'Falha na conexão'}`);
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Erro no servidor de upload');
       }
 
-      if (!data?.uploadUrl) throw new Error('O servidor não retornou uma URL de upload válida.');
+      const data = await response.json();
 
       // 2. Upload para R2
       const uploadRes = await fetch(data.uploadUrl, {
@@ -67,7 +74,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         headers: { 'Content-Type': pendingFile.file.type }
       });
 
-      if (!uploadRes.ok) throw new Error('Falha ao enviar arquivo para o armazenamento.');
+      if (!uploadRes.ok) throw new Error('Falha no upload para o storage');
 
       // 3. Registrar no Banco
       const { error: dbError } = await supabase.from('files').insert({
@@ -85,8 +92,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       toast.success(`${pendingFile.name} enviado!`);
       onUploadSuccess();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Erro na conexão com o servidor';
-      console.error('[FileUpload] Erro detalhado:', error);
+      const msg = error instanceof Error ? error.message : 'Erro no upload';
       toast.error(msg);
       setPendingFiles((prev) =>
         prev.map((f) => (f.id === pendingFile.id ? { ...f, uploading: false, error: msg } : f))
@@ -104,10 +110,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-bold text-gray-900">Upload de Arquivos</h3>
-          <p className="text-xs text-gray-500">Destino: {disciplineName}</p>
-        </div>
+        <h3 className="font-bold text-gray-900">Upload para {disciplineName}</h3>
       </div>
 
       {pendingFiles.length === 0 ? (
@@ -121,7 +124,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 font-semibold text-sm">Arraste arquivos ou clique para selecionar</p>
+          <p className="text-gray-600 font-semibold text-sm">Clique ou arraste arquivos</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -132,27 +135,13 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="max-h-60 overflow-y-auto space-y-2 custom-scrollbar">
+          <div className="max-h-60 overflow-y-auto space-y-2">
             {pendingFiles.map((file) => (
-              <div key={file.id} className={`p-3 rounded-lg border ${file.error ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-900 truncate flex-1 mr-4">{file.name}</span>
-                  <div className="flex items-center gap-2">
-                    {file.uploading ? (
-                      <Loader className="w-4 h-4 text-blue-500 animate-spin" />
-                    ) : (
-                      <button onClick={() => setPendingFiles(prev => prev.filter(f => f.id !== file.id))} className="text-gray-400 hover:text-red-500">
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {file.error && (
-                  <div className="mt-2 flex items-start gap-1.5 text-[10px] text-red-600 font-medium">
-                    <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-                    <span>{file.error}</span>
-                  </div>
-                )}
+              <div key={file.id} className="p-3 rounded-lg border bg-gray-50 flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-900 truncate flex-1">{file.name}</span>
+                {file.uploading ? <Loader className="w-4 h-4 text-blue-500 animate-spin" /> : 
+                  <button onClick={() => setPendingFiles(p => p.filter(f => f.id !== file.id))}><X className="w-4 h-4 text-gray-400" /></button>
+                }
               </div>
             ))}
           </div>
