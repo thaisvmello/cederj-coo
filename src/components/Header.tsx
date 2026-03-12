@@ -7,7 +7,7 @@ export function Header() {
   return (
     <header className="w-full z-40">
       {/* Main Header */}
-      <div className="bg-[#0f172a] text-white px-4 sm:px-6 lg:px-8 py-3">
+      <div className="bg-[#113E52] text-white px-4 sm:px-6 lg:px-8 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img
@@ -27,7 +27,7 @@ export function Header() {
             </div>
             <button
               onClick={signOut}
-              className="p-2 hover:bg-gray-800 rounded-full transition text-gray-400 hover:text-white"
+              className="p-2 hover:bg-white/10 rounded-full transition text-gray-400 hover:text-white"
               title="Sair"
             >
               <LogOut className="w-5 h-5" />

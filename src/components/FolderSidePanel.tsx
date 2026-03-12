@@ -13,7 +13,7 @@ export function FolderSidePanel({ folder, course, onClose }: FolderSidePanelProp
   return (
     <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="p-6 border-b border-gray-100 bg-[#0f172a] text-white">
+      <div className="p-6 border-b border-gray-100 bg-[#113E52] text-white">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-500/20 rounded-lg">
