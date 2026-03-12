@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.454.0?target=deno&no-check"
-import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.454.0?target=deno&no-check"
+import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.454.0"
+import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.454.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +8,8 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log("[get-r2-upload-url] Nova requisição recebida");
+  // Log inicial para depuração
+  console.log("[get-r2-upload-url] Requisição recebida:", req.method);
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -18,17 +19,14 @@ serve(async (req) => {
     // 1. Validar Autenticação
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      console.error("[get-r2-upload-url] Erro: Cabeçalho de autorização ausente");
       return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: corsHeaders })
     }
 
     // 2. Validar Body
-    const body = await req.json();
-    const { fileName, fileType, folderId } = body;
+    const { fileName, fileType, folderId } = await req.json();
 
     if (!fileName || !fileType || !folderId) {
-      console.error("[get-r2-upload-url] Erro: Dados incompletos no body", body);
-      return new Response(JSON.stringify({ error: 'fileName, fileType e folderId são obrigatórios' }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Dados incompletos' }), { status: 400, headers: corsHeaders });
     }
 
     // 3. Obter Secrets
@@ -39,12 +37,12 @@ serve(async (req) => {
     const publicDomain = Deno.env.get("R2_PUBLIC_DOMAIN");
 
     if (!endpoint || !accessKeyId || !secretAccessKey || !bucketName || !publicDomain) {
-      console.error("[get-r2-upload-url] Erro: Configurações do R2 incompletas nos Secrets");
-      return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta (Secrets)' }), { status: 500, headers: corsHeaders });
+      console.error("[get-r2-upload-url] Erro: Secrets não configurados corretamente");
+      return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta' }), { status: 500, headers: corsHeaders });
     }
 
     // 4. Configurar Cliente S3 (R2)
-    // Usamos region "auto" para R2, mas forçamos as credenciais para evitar buscas no sistema de arquivos
+    // Forçamos as credenciais e a região para evitar que o SDK tente ler arquivos locais
     const r2Client = new S3Client({
       region: "auto",
       endpoint: endpoint,
@@ -52,7 +50,6 @@ serve(async (req) => {
         accessKeyId: accessKeyId,
         secretAccessKey: secretAccessKey,
       },
-      // Importante para evitar o erro de "path" no Deno
       forcePathStyle: true,
     })
 
@@ -67,10 +64,11 @@ serve(async (req) => {
     })
 
     // 5. Gerar URL assinada
+    // O tempo de expiração é de 1 hora (3600 segundos)
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 })
     const publicUrl = `${publicDomain.replace(/\/$/, '')}/${key}`
 
-    console.log("[get-r2-upload-url] Sucesso! Key:", key);
+    console.log("[get-r2-upload-url] URL gerada com sucesso para:", key);
 
     return new Response(
       JSON.stringify({ uploadUrl, publicUrl, key }),
