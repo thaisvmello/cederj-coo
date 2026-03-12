@@ -142,14 +142,14 @@ export function FileList({ folderId }: FileListProps) {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 flex items-center">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
                   <input
                     type="checkbox"
                     onChange={handleSelectAll}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded"
                   />
-                  <span className="ml-2 text-xs font-medium text-gray-700">Arquivo</span>
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Arquivo</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Descrição</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Tamanho</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Ações</th>
@@ -159,15 +159,17 @@ export function FileList({ folderId }: FileListProps) {
               {files.map((file) => (
                 <tr key={file.id} className="hover:bg-gray-50 transition">
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedFileIds.includes(file.id)}
+                      onChange={() => toggleSelect(file.id)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                    />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4 text-blue-600" />
                       <span className="text-sm font-medium text-gray-900 truncate">{file.name}</span>
-                      <input
-                        type="checkbox"
-                        checked={selectedFileIds.includes(file.id)}
-                        onChange={() => toggleSelect(file.id)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-                      />
                     </div>
                   </td>
                   <td className="px-6 py-4">
