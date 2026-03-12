@@ -22,6 +22,8 @@ export function CourseCard({ course, fileCount, isFavorite, onClick, onToggleFav
   const colorIndex = course.name.length % colors.length;
   const colorClass = colors[colorIndex];
 
+  const isMandatory = course.subject_type?.toLowerCase().includes('obrigatória') || course.is_mandatory;
+
   return (
     <div 
       onClick={onClick}
@@ -67,12 +69,12 @@ export function CourseCard({ course, fileCount, isFavorite, onClick, onToggleFav
           )}
 
           <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider ${
-            course.is_mandatory 
+            isMandatory 
               ? 'bg-emerald-50 text-emerald-600' 
               : 'bg-purple-50 text-purple-600'
           }`}>
             <Bookmark className="w-3 h-3" />
-            {course.is_mandatory ? 'Obrigatória' : 'Optativa'}
+            {course.subject_type || (course.is_mandatory ? 'Obrigatória' : 'Optativa')}
           </span>
         </div>
         

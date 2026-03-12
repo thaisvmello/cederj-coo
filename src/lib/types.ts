@@ -4,6 +4,7 @@ export interface Course {
   code: string | null;
   period: string | null;
   is_mandatory: boolean;
+  subject_type: string | null;
   created_at: string;
 }
 

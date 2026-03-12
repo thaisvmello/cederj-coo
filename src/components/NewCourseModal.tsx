@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, FolderPlus } from 'lucide-react';
+import { X, FolderPlus, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface NewCourseModalProps {
@@ -12,8 +12,35 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [period, setPeriod] = useState('');
-  const [isMandatory, setIsMandatory] = useState(true);
+  const [subjectType, setSubjectType] = useState('Obrigatória');
+  const [existingTypes, setExistingTypes] = useState<string[]>(['Obrigatória', 'Optativa', 'Eletiva']);
   const [loading, setLoading] = useState(false);
+  const [loadingTypes, setLoadingTypes] = useState(true);
+
+  useEffect(() => {
+    fetchExistingTypes();
+  }, []);
+
+  const fetchExistingTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('subject_type')
+        .not('subject_type', 'is', null);
+      
+      if (error) throw error;
+
+      if (data) {
+        const types = Array.from(new Set(data.map(item => item.subject_type)));
+        const combinedTypes = Array.from(new Set([...existingTypes, ...types]));
+        setExistingTypes(combinedTypes.filter(Boolean) as string[]);
+      }
+    } catch (error) {
+      console.error('Error fetching types:', error);
+    } finally {
+      setLoadingTypes(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +48,6 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
 
     setLoading(true);
     try {
-      // Verificar se já existe
       const { data: existing } = await supabase
         .from('courses')
         .select('id')
@@ -38,7 +64,8 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
         name: name.trim(),
         code: code.trim() || null,
         period: period.trim() || null,
-        is_mandatory: isMandatory
+        subject_type: subjectType,
+        is_mandatory: subjectType.toLowerCase().includes('obrigatória')
       });
 
       if (error) throw error;
@@ -102,14 +129,37 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
               <label className="block text-sm font-bold text-gray-700 mb-1.5">
                 Tipo da disciplina
               </label>
-              <select
-                value={isMandatory ? 'true' : 'false'}
-                onChange={(e) => setIsMandatory(e.target.value === 'true')}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              >
-                <option value="true">Obrigatória</option>
-                <option value="false">Optativa / Outro</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={subjectType}
+                  onChange={(e) => setSubjectType(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition appearance-none"
+                >
+                  {existingTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                  <option value="custom">+ Outro tipo...</option>
+                </select>
+                {loadingTypes && (
+                  <Loader className="absolute right-3 top-3 w-4 h-4 text-gray-400 animate-spin" />
+                )}
+              </div>
+              {subjectType === 'custom' && (
+                <input
+                  type="text"
+                  placeholder="Digite o novo tipo"
+                  className="mt-2 w-full px-4 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  onBlur={(e) => {
+                    if (e.target.value.trim()) {
+                      const newType = e.target.value.trim();
+                      setExistingTypes(prev => Array.from(new Set([...prev, newType])));
+                      setSubjectType(newType);
+                    } else {
+                      setSubjectType('Obrigatória');
+                    }
+                  }}
+                />
+              )}
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1.5">
