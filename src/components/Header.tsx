@@ -9,15 +9,15 @@ export function Header() {
       {/* Main Header */}
       <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-6">
             <img
               src="/cederjlogo.png"
               alt="CEDERJ Logo"
-              className="h-14 brightness-0 invert"
+              className="h-20 brightness-0 invert"
             />
-            <div className="border-l border-gray-600 pl-5">
-              <h1 className="text-2xl font-bold leading-tight">Ciências Contábeis</h1>
-              <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">Acervo Acadêmico</p>
+            <div className="border-l border-gray-600 pl-6">
+              <h1 className="text-3xl font-bold leading-tight">Ciências Contábeis</h1>
+              <p className="text-sm text-gray-400 uppercase tracking-widest font-medium">Acervo Acadêmico</p>
             </div>
           </div>
 

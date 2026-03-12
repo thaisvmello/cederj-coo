@@ -12,7 +12,7 @@ export function Footer() {
         <div className="pt-2">
           <div className="flex justify-center">
             <img 
-              src="/logos-consorciadas.png" 
+              src="/logos-consorciadas-transparente.png" 
               alt="Instituições Consorciadas" 
               className="max-w-4xl w-full mx-auto" 
             />
