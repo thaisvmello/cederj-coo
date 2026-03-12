@@ -24,39 +24,33 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
 
   const loadComments = async () => {
     try {
-      // Buscar comentários
-      const { data: commentsData, error: commentsError } = await supabase
+      // Buscando comentários e tentando trazer o perfil relacionado em uma única consulta
+      const { data, error } = await supabase
         .from('folder_comments')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name,
+            avatar_url
+          )
+        `)
         .eq('folder_id', folderId)
         .order('created_at', { ascending: true });
 
-      if (commentsError) throw commentsError;
-      if (!commentsData || commentsData.length === 0) {
-        setComments([]);
-        return;
-      }
+      if (error) throw error;
 
-      // Buscar perfis dos autores (Agora visíveis via RLS público)
-      const userIds = Array.from(new Set(commentsData.map(c => c.user_id)));
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, avatar_url')
-        .in('id', userIds);
+      // Formatando os dados para o estado do componente
+      const formattedComments = (data || []).map((comment: any) => ({
+        ...comment,
+        first_name: comment.profiles?.first_name || 'Estudante',
+        last_name: comment.profiles?.last_name || '',
+        avatar_url: comment.profiles?.avatar_url || null,
+      }));
 
-      const commentsWithProfiles = commentsData.map(comment => {
-        const profile = profilesData?.find(p => p.id === comment.user_id);
-        return {
-          ...comment,
-          first_name: profile?.first_name || 'Estudante',
-          last_name: profile?.last_name || '',
-          avatar_url: profile?.avatar_url || null,
-        };
-      });
-
-      setComments(commentsWithProfiles);
+      setComments(formattedComments);
     } catch (error) {
-      console.error('Error loading comments:', error);
+      console.error('Erro ao carregar comentários:', error);
     }
   };
 
@@ -77,7 +71,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       await loadComments();
       toast.success('Comentário enviado!');
     } catch (error) {
-      console.error('Error adding comment:', error);
+      console.error('Erro ao enviar comentário:', error);
       toast.error('Erro ao enviar comentário');
     } finally {
       setLoading(false);
@@ -95,7 +89,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       setComments(prev => prev.filter(c => c.id !== id));
       toast.success('Comentário removido');
     } catch (error) {
-      console.error('Error deleting comment:', error);
+      console.error('Erro ao remover comentário:', error);
       toast.error('Erro ao remover comentário');
     }
   };
