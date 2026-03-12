@@ -21,9 +21,9 @@ export function Footer() {
           </p>
           <div className="flex justify-center">
             <img 
-              src="/instituicoes-consorciadas.png" 
+              src="/logos-consorciadas.png" 
               alt="Instituições Consorciadas" 
-              className="max-w-4xl w-full mx-auto rounded-lg" 
+              className="max-w-4xl w-full mx-auto" 
             />
           </div>
         </div>
