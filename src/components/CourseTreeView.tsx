@@ -1,15 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronRight, ChevronDown, Folder, Star, Filter, ChevronFirst, ChevronLast, Loader } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, Star, Filter, Loader } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
-
-interface CourseTreeViewProps {
-  courses: Course[];
-  favorites: string[];
-  fileCounts: { [key: string]: number };
-  onSelectFolder: (course: Course, folder: FolderType) => void;
-  onToggleFavorite: (e: React.MouseEvent, courseId: string) => void;
-}
 
 type GroupingCriteria = 'period' | 'type' | 'none';
 
@@ -19,7 +11,13 @@ export function CourseTreeView({
   fileCounts, 
   onSelectFolder, 
   onToggleFavorite 
-}: CourseTreeViewProps) {
+}: {
+  courses: Course[];
+  favorites: string[];
+  fileCounts: { [key: string]: number };
+  onSelectFolder: (course: Course, folder: FolderType) => void;
+  onToggleFavorite: (e: React.MouseEvent, courseId: string) => void;
+}) {
   const [grouping, setGrouping] = useState<GroupingCriteria>('period');
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [expandedCourses, setExpandedCourses] = useState<string[]>([]);
@@ -34,7 +32,6 @@ export function CourseTreeView({
       if (grouping === 'period') {
         key = (course.period && course.period !== '-' ? `${course.period}º Período` : 'Sem Período');
       } else {
-        // Usa subject_type se existir, senão cai no fallback baseado em is_mandatory
         key = course.subject_type || (course.is_mandatory ? 'Obrigatórias' : 'Optativas / Outras');
       }
       
@@ -124,10 +121,10 @@ export function CourseTreeView({
             <Filter className="w-3.5 h-3.5" /> Agrupar por:
           </span>
           <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
-            {['period', 'type', 'none'].map((mode) => (
+            {(['period', 'type', 'none'] as const).map((mode) => (
               <button
                 key={mode}
-                onClick={() => { setGrouping(mode as GroupingCriteria); setExpandedGroups([]); }}
+                onClick={() => { setGrouping(mode); setExpandedGroups([]); }}
                 className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all ${grouping === mode ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 {mode === 'period' ? 'Período' : mode === 'type' ? 'Tipo' : 'Sem Agrupamento'}
