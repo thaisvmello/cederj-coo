@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, X, Loader, AlertCircle } from 'lucide-react';
+import { Upload, X, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
