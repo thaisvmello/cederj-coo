@@ -9,14 +9,6 @@ interface FolderCommentsProps {
   folderId: string;
 }
 
-interface CommentWithProfile extends FolderComment {
-  profiles?: {
-    first_name: string | null;
-    last_name: string | null;
-    avatar_url: string | null;
-  } | null;
-}
-
 export function FolderComments({ folderId }: FolderCommentsProps) {
   const { user } = useAuth();
   const [comments, setComments] = useState<FolderComment[]>([]);
@@ -29,46 +21,48 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
 
   const loadComments = async () => {
     try {
-      const { data, error } = await supabase
+      // Primeiro buscar os comentários
+      const { data: commentsData, error: commentsError } = await supabase
         .from('folder_comments')
-        .select(`
-          *,
-          profiles (
-            first_name,
-            last_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('folder_id', folderId)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('Error loading comments:', error);
+      if (commentsError) {
+        console.error('Error loading comments:', commentsError);
         toast.error('Erro ao carregar comentários');
         return;
       }
 
-      // Mapear os dados para garantir que temos os nomes
-      const mapped = (data || []).map((comment: CommentWithProfile) => {
-        // Se não tiver perfil, tentar buscar do auth.users
-        if (!comment.profiles) {
-          return {
-            ...comment,
-            first_name: 'Estudante',
-            last_name: '',
-            avatar_url: null,
-          };
-        }
+      if (!commentsData || commentsData.length === 0) {
+        setComments([]);
+        return;
+      }
 
+      // Buscar informações de perfil separadamente
+      const userIds = Array.from(new Set(commentsData.map(comment => comment.user_id)));
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        // Continuar mesmo sem perfis
+      }
+
+      // Combinar comentários com perfis
+      const commentsWithProfiles = commentsData.map(comment => {
+        const profile = profilesData?.find(p => p.id === comment.user_id);
         return {
           ...comment,
-          first_name: comment.profiles.first_name || 'Estudante',
-          last_name: comment.profiles.last_name || '',
-          avatar_url: comment.profiles.avatar_url,
+          first_name: profile?.first_name || 'Estudante',
+          last_name: profile?.last_name || '',
+          avatar_url: profile?.avatar_url || null,
         };
       });
 
-      setComments(mapped);
+      setComments(commentsWithProfiles);
     } catch (error) {
       console.error('Error in loadComments:', error);
       toast.error('Erro ao carregar comentários');
