@@ -47,13 +47,12 @@ export function Auth() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <img 
-            src="/logo-cecierj.png" 
-            alt="Fundação CECIERJ" 
-            className="h-20 mx-auto mb-4 object-contain"
-          />
-          <p className="text-gray-600 font-medium">
-            Acervo Acadêmico — Ciências Contábeis
+          {/* Removida a logo do CEDERJ */}
+          <p className="text-gray-600 font-medium text-lg">
+            Acervo Acadêmico
+          </p>
+          <p className="text-gray-500 font-medium">
+            Ciências Contábeis
           </p>
         </div>
 
