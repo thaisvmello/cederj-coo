@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { ChevronRight, ChevronDown, Folder, Star, Filter, Loader } from 'lucide-react';
@@ -18,12 +20,38 @@ export function CourseTreeView({
   onSelectFolder: (course: Course, folder: FolderType) => void;
   onToggleFavorite: (e: React.MouseEvent, courseId: string) => void;
 }) {
+  const { user } = useAuth();
   const [grouping, setGrouping] = useState<GroupingCriteria>('period');
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [expandedCourses, setExpandedCourses] = useState<string[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
   const [foldersByCourse, setFoldersByCourse] = useState<Record<string, FolderType[]>>({});
   const [loadingFolders, setLoadingFolders] = useState<string[]>([]);
+
+  // Fetch favorite folders
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchFavoriteFolders = async () => {
+      const { data: favoriteFolderIds } = await supabase
+        .from('folder_favorites')
+        .select('folder_id')
+        .eq('user_id', user.id);
+      
+      const favoriteFoldersData = await supabase
+        .from('folders')
+        .select('*')
+        .in('id', favoriteFolderIds || []);
+      
+      setFavoriteFolders(favoriteFoldersData || []);
+    };
+    
+    fetchFavoriteFolders();
+  }, [user]);
+
+  const favoriteFolders = useMemo(() => {
+    return favoriteFolders || [];
+  }, [favoriteFolders]);
 
   const groupedData = useMemo(() => {
     if (grouping === 'none') return { 'Todas as Disciplinas': courses };
@@ -202,6 +230,134 @@ export function CourseTreeView({
           </div>
         ))}
       </div>
+
+      {/* Favorites Group */}
+      {favoriteFolders.length > 0 && (
+        <div className="border-l border-blue-500 pl-4 pt-4 pb-2">
+          <h3 className="text-sm font-bold text-blue-600">Favoritos</h3>
+          {favoriteFolders.map(folder => (
+            <div key={folder.id} className="p-2 border border-gray-200 rounded-lg cursor-pointer" onClick={() => onSelectFolder({ course: null, folder })}>
+              <Folder className="w-4 h-4 text-blue-500" />
+              <span>{folder.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Existing Course Tree */}
+      {sortedGroupKeys.map((group) => (
+        <div key={group} className="border-b border-gray-100 last:border-0">
+          {grouping !== 'none' && (
+            <button
+              onClick={() => toggleGroup(group)}
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                {expandedGroups.includes(group) ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${
+                    group.includes('Período') ? 'bg-blue-50 text-blue-700' : 
+                    group.toLowerCase().includes('obrigatória') ? 'bg-emerald-50 text-emerald-700' : 
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {group}
+                  </span>
+                  <span className="text-xs text-gray-400 font-medium">({groupedData[group].length})</span>
+                </div>
+              </div>
+            </button>
+          )}
+
+          {(expandedGroups.includes(group) || grouping === 'none') && (
+            <div className="divide-y divide-gray-50">
+              {groupedData[group].map((course) => {
+                const isFav = favorites.includes(course.id);
+                const isExpanded = expandedCourses.includes(course.id);
+                return (
+                  <div key={course.id} className="bg-white">
+                    <div 
+                      className={`flex items-center justify-between p-4 pl-6 hover:bg-gray-50 cursor-pointer group transition-all`}
+                      onClick={() => toggleCourse(course.id)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                        <Folder className={`w-4 h-4 flex-shrink-0 ${isFav ? 'text-amber-400' : 'text-blue-400'}`} />
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600">{course.name}</h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-gray-400 font-medium uppercase">{course.code || 'S/ COD'}</span>
+                            <span className="text-[10px] text-gray-300">•</span>
+                            <span className="text-[10px] text-gray-400">{fileCounts[course.id] || 0} arquivos</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={(e) => onToggleFavorite(e, course.id)} className={`p-2 rounded-full ${isFav ? 'text-amber-400' : 'text-gray-300 hover:text-amber-400'}`}>
+                        <Star className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
+                      </button>
+                    </div>
+                    {isExpanded && (
+                      <div className="bg-gray-50/30 pb-2">
+                        {loadingFolders.includes(course.id) ? (
+                          <div className="pl-10 py-3 flex items-center gap-2 text-xs text-gray-400">
+                            <Loader className="w-3 h-3 animate-spin" /> Carregando pastas...
+                          </div>
+                        ) : renderFolders(course)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Existing Folder Selection */}
+      {selectedFolder && (
+        <>
+          <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
+            {/* Folder Side Panel */}
+            <div className="p-6 border-b border-gray-100 bg-[#00394a] text-white">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/20 rounded-lg">
+                    <Folder className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold leading-tight">{selectedFolder.name}</h2>
+                    <p className="text-xs text-gray-400 uppercase tracking-wider">{selectedFolder.course?.name}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={onClose}
+                  className="p-2 hover:bg-white/10 rounded-full transition text-gray-400 hover:text-white"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  Arquivos Disponíveis
+                </div>
+                <FileList folderId={selectedFolder.id} />
+              </section>
+
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                  <MessageSquare className="w-4 h-4 text-blue-600" />
+                  Discussão e Dicas
+                </div>
+                <FolderComments folderId={selectedFolder.id} />
+              </section>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
