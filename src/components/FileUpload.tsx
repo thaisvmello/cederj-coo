@@ -42,28 +42,29 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      // 1. Obter a sessão e a chave anon
-      const { data: { session } } = await supabase.auth.getSession();
-      const anonKey = (supabase as any).supabaseKey; // Pega a chave anon do cliente
-      
-      if (!session) throw new Error('Sessão expirada. Por favor, faça login novamente.');
+	   // 1. Obter a sessão
+	const { data: { session } } = await supabase.auth.getSession();
+	if (!session) throw new Error('Sessão expirada. Por favor, faça login novamente.');
 
-      // 2. Chamar a Edge Function
-      const functionUrl = `https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url`;
-      
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': anonKey, // Obrigatório para o gateway do Supabase
-        },
-        body: JSON.stringify({
-          fileName: pendingFile.file.name,
-          fileType: pendingFile.file.type,
-          folderId
-        })
-      });
+	// 2. Pegar a anon key do .env (forma correta)
+	const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsY2Rod2prZGJybXJ3dWVlb2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNjc0MjQsImV4cCI6MjA4ODc0MzQyNH0.qJt8wzTFH5bH_6Yp21EpAGF0wP8mMvr38obLYv8iP5M";
+
+	// 3. Chamar a Edge Function
+	const functionUrl = `https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url`;
+
+	const response = await fetch(functionUrl, {
+	  method: 'POST',
+	  headers: {
+		'Content-Type': 'application/json',
+		'Authorization': `Bearer ${session.access_token}`,
+		'apikey': anonKey,
+	  },
+	  body: JSON.stringify({
+		fileName: pendingFile.file.name,
+		fileType: pendingFile.file.type,
+		folderId
+	  })
+	});
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
