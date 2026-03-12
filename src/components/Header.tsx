@@ -7,17 +7,17 @@ export function Header() {
   return (
     <header className="w-full z-40">
       {/* Main Header */}
-      <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-3">
+      <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             <img
               src="/cederjlogo.png"
               alt="CEDERJ Logo"
-              className="h-10 brightness-0 invert"
+              className="h-14 brightness-0 invert"
             />
-            <div className="border-l border-gray-600 pl-4">
-              <h1 className="text-lg font-bold leading-tight">Ciências Contábeis</h1>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wider">Acervo Acadêmico</p>
+            <div className="border-l border-gray-600 pl-5">
+              <h1 className="text-2xl font-bold leading-tight">Ciências Contábeis</h1>
+              <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">Acervo Acadêmico</p>
             </div>
           </div>
 
