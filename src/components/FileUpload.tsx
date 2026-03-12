@@ -42,11 +42,13 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      // 1. Obter a sessão para o token de autorização
+      // 1. Obter a sessão e a chave anon
       const { data: { session } } = await supabase.auth.getSession();
+      const anonKey = (supabase as any).supabaseKey; // Pega a chave anon do cliente
+      
       if (!session) throw new Error('Sessão expirada. Por favor, faça login novamente.');
 
-      // 2. Chamar a Edge Function usando a URL completa (mais robusto)
+      // 2. Chamar a Edge Function
       const functionUrl = `https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url`;
       
       const response = await fetch(functionUrl, {
@@ -54,6 +56,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          'apikey': anonKey, // Obrigatório para o gateway do Supabase
         },
         body: JSON.stringify({
           fileName: pendingFile.file.name,
