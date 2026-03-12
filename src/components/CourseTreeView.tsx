@@ -1,10 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronRight, ChevronDown, Folder, Star, Filter, Loader, X, FileText, MessageSquare } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, Star, Filter, Loader } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { useAuth } from '../contexts/AuthContext';
-import { FileList } from './FileList';
-import { FolderComments } from './FolderComments';
 
 type GroupingCriteria = 'period' | 'type' | 'none';
 
@@ -18,7 +16,7 @@ export function CourseTreeView({
   courses: Course[];
   favorites: string[];
   fileCounts: { [key: string]: number };
-  onSelectFolder: (course: Course | null, folder: FolderType) => void;
+  onSelectFolder: (course: Course, folder: FolderType) => void;
   onToggleFavorite: (e: React.MouseEvent, courseId: string) => void;
 }) {
   const { user } = useAuth();
@@ -40,9 +38,15 @@ export function CourseTreeView({
         .select('folder_id')
         .eq('user_id', user.id);
       
-      const favoriteFoldersData = await supabase        .from('folders')
+      if (!favoriteFolderIds || favoriteFolderIds.length === 0) {
+        setFavoriteFolders([]);
+        return;
+      }
+
+      const { data: favoriteFoldersData } = await supabase
+        .from('folders')
         .select('*')
-        .in('id', favoriteFolderIds || []);
+        .in('id', favoriteFolderIds.map(f => f.folder_id));
       
       setFavoriteFolders(favoriteFoldersData || []);
     };
@@ -114,7 +118,8 @@ export function CourseTreeView({
 
       return (
         <div key={folder.id}>
-          <div             className={`flex items-center justify-between py-2 pr-4 hover:bg-blue-50/50 cursor-pointer group transition-colors ${level === 0 ? 'pl-10' : `pl-${10 + (level * 4)}`}`}
+          <div 
+            className={`flex items-center justify-between py-2 pr-4 hover:bg-blue-50/50 cursor-pointer group transition-colors ${level === 0 ? 'pl-10' : `pl-${10 + (level * 4)}`}`}
             onClick={(e) => {
               e.stopPropagation();
               if (hasSubfolders) toggleFolder(folder.id);
@@ -229,14 +234,30 @@ export function CourseTreeView({
 
       {/* Favorites Group */}
       {favoriteFolders.length > 0 && (
-        <div className="border-l border-blue-500 pl-4 pt-4 pb-2">
-          <h3 className="text-sm font-bold text-blue-600">Favoritos</h3>
-          {favoriteFolders.map((folder: FolderType) => (
-            <div key={folder.id} className="p-2 border border-gray-200 rounded-lg cursor-pointer" onClick={() => onSelectFolder(null, folder)}>
-              <Folder className="w-4 h-4 text-blue-500" />
-              <span>{folder.name}</span>
-            </div>
-          ))}
+        <div className="space-y-3 pt-4">
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest pl-1">Pastas Favoritas</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {favoriteFolders.map((folder: FolderType) => {
+              const course = courses.find(c => c.id === folder.course_id);
+              if (!course) return null;
+              
+              return (
+                <button 
+                  key={folder.id} 
+                  className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 transition text-left group"
+                  onClick={() => onSelectFolder(course, folder)}
+                >
+                  <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition">
+                    <Folder className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-900 truncate">{folder.name}</p>
+                    <p className="text-[10px] text-gray-500 truncate">{course.name}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
