@@ -17,24 +17,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchProfile = async (userId: string, email: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, avatar_url')
+      .eq('id', userId)
+      .single();
+
+    return {
+      id: userId,
+      email: email || '',
+      first_name: profile?.first_name,
+      last_name: profile?.last_name,
+      avatar_url: profile?.avatar_url,
+    };
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, avatar_url')
-          .eq('id', session.user.id)
-          .single();
-
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          first_name: profile?.first_name,
-          last_name: profile?.last_name,
-          avatar_url: profile?.avatar_url,
-        });
+        const userData = await fetchProfile(session.user.id, session.user.email || '');
+        setUser(userData);
       } else {
         setUser(null);
       }
@@ -43,21 +47,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, avatar_url')
-          .eq('id', session.user.id)
-          .single();
-
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          first_name: profile?.first_name,
-          last_name: profile?.last_name,
-          avatar_url: profile?.avatar_url,
-        });
+        const userData = await fetchProfile(session.user.id, session.user.email || '');
+        setUser(userData);
+        
+        // Se for o primeiro login (especialmente Google), o trigger do banco cuida,
+        // mas garantimos aqui que o estado local reflita os metadados se o perfil ainda não existir
+        if (!userData.first_name && session.user.user_metadata?.full_name) {
+          const fullName = session.user.user_metadata.full_name;
+          setUser(prev => prev ? {
+            ...prev,
+            first_name: fullName.split(' ')[0],
+            last_name: fullName.split(' ').slice(1).join(' '),
+            avatar_url: session.user.user_metadata.avatar_url
+          } : null);
+        }
       } else {
         setUser(null);
       }
@@ -83,6 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
 
     if (data.user) {
+      // O trigger handle_new_user no banco já deve criar o perfil,
+      // mas fazemos um upsert aqui por segurança e redundância
       await supabase
         .from('profiles')
         .upsert({
@@ -90,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           first_name,
           last_name,
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
+        });
     }
   };
 
@@ -106,11 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'select_account',
-        },
+        redirectTo: window.location.origin,
       },
     });
     if (error) throw error;

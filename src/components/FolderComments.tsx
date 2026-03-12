@@ -20,11 +20,12 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
   }, [folderId]);
 
   const loadComments = async () => {
+    // Usamos um join simples (sem !inner) para não esconder comentários se o perfil falhar
     const { data, error } = await supabase
       .from('folder_comments')
       .select(`
         *,
-        profiles!inner (
+        profiles (
           first_name,
           last_name,
           avatar_url
@@ -101,12 +102,12 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
             const displayName = `${comment.first_name || ''} ${comment.last_name || ''}`.trim() || 'Estudante';
             return (
               <div key={comment.id} className="flex gap-3 group">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {comment.avatar_url ? (
                     <img 
                       src={comment.avatar_url} 
                       alt={displayName} 
-                      className="w-full h-full object-cover rounded-full"
+                      className="w-full h-full object-cover"
                     />
                   ) : (
                     <User className="w-4 h-4 text-blue-600" />
