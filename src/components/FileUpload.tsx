@@ -42,19 +42,34 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      // 1. Chamar a Edge Function para pegar a URL assinada
-      const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
-        body: {
+      // 1. Obter a sessão para o token de autorização
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sessão expirada. Por favor, faça login novamente.');
+
+      // 2. Chamar a Edge Function usando a URL completa (mais robusto)
+      const functionUrl = `https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url`;
+      
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
           fileName: pendingFile.file.name,
           fileType: pendingFile.file.type,
           folderId
-        }
+        })
       });
 
-      if (funcError || !data) throw new Error(funcError?.message || 'Erro ao obter URL de upload');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Erro na função (${response.status})`);
+      }
 
-      // 2. Upload direto para o R2 via PUT
-      // Nota: Se o R2 retornar 403, pode ser erro de assinatura ou CORS
+      const data = await response.json();
+
+      // 3. Upload direto para o R2 via PUT
       const uploadRes = await fetch(data.uploadUrl, {
         method: 'PUT',
         body: pendingFile.file,
@@ -62,17 +77,15 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           'Content-Type': pendingFile.file.type 
         }
       }).catch(err => {
-        if (err.name === 'TypeError') throw new Error('Erro de Rede/CORS: Verifique as configurações de CORS no painel do R2.');
+        if (err.name === 'TypeError') throw new Error('Erro de Rede/CORS no R2: Verifique as configurações de CORS no painel da Cloudflare.');
         throw err;
       });
 
       if (!uploadRes.ok) {
-        const errorText = await uploadRes.text();
-        console.error('[FileUpload] Erro R2:', errorText);
         throw new Error(`Falha no R2 (${uploadRes.status}): Verifique as permissões do bucket.`);
       }
 
-      // 3. Salvar metadados no Supabase
+      // 4. Salvar metadados no Supabase
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
         name: pendingFile.name,
