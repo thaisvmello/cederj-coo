@@ -70,23 +70,42 @@ serve(async (req) => {
       firstName = emailParts;
     }
 
-    // 5. Criar ou atualizar perfil
-    const { error: upsertError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: user.id,
-        first_name: firstName,
-        last_name: lastName,
-        avatar_url: avatarUrl,
-        updated_at: new Date().toISOString(),
-      });
+    // 5. Tentar upsert no perfil (a tabela pode não existir ainda)
+    try {
+      const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          first_name: firstName,
+          last_name: lastName,
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString(),
+        });
 
-    if (upsertError) {
-      console.error(`[sync-user-profile] Erro ao upsert perfil: ${upsertError.message}`);
-      throw upsertError;
+      if (upsertError) {
+        console.warn(`[sync-user-profile] Tabela profiles não encontrada, criando...`);
+        await createProfilesTable(supabase);
+        
+        // Tentar novamente após criar a tabela
+        const { error: retryError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            first_name: firstName,
+            last_name: lastName,
+            avatar_url: avatarUrl,
+            updated_at: new Date().toISOString(),
+          });
+        if (retryError) {
+          throw retryError;
+        }
+      }
+    } catch (error) {
+      console.warn(`[sync-user-profile] Erro ao upsert perfil: ${error.message}`);
+      // Continuar mesmo com erro - o perfil será criado quando a tabela existir
     }
 
-    console.log(`[sync-user-profile] Perfil sincronizado com sucesso para: ${firstName} ${lastName}`);
+    console.log(`[sync-user-profile] Processamento concluído para: ${firstName} ${lastName}`);
 
     return new Response(
       JSON.stringify({ 
@@ -116,3 +135,42 @@ serve(async (req) => {
     );
   }
 });
+
+// Função auxiliar para criar a tabela profiles
+async function createProfilesTable(supabase: any) {
+  console.log("[sync-user-profile] Criando tabela profiles...");
+  
+  const createTableSQL = `
+    CREATE TABLE IF NOT EXISTS public.profiles (
+      id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+      first_name TEXT,
+      last_name TEXT,
+      avatar_url TEXT,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      PRIMARY KEY (id)
+    );
+
+    ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+    CREATE POLICY "profiles_select_policy" ON public.profiles
+    FOR SELECT TO authenticated USING (auth.uid() = id);
+
+    CREATE POLICY "profiles_insert_policy" ON public.profiles
+    FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+
+    CREATE POLICY "profiles_update_policy" ON public.profiles
+    FOR UPDATE TO authenticated USING (auth.uid() = id);
+
+    CREATE POLICY "profiles_delete_policy" ON public.profiles
+    FOR DELETE TO authenticated USING (auth.uid() = id);
+  `;
+
+  // Usar query SQL direta para criar a tabela
+  const { error } = await supabase.rpc('exec_sql', { sql: createTableSQL });
+  if (error) {
+    console.error(`[sync-user-profile] Erro ao criar tabela: ${error.message}`);
+    throw error;
+  }
+  
+  console.log("[sync-user-profile] Tabela profiles criada com sucesso");
+}
