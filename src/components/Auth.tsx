@@ -45,11 +45,13 @@ export function Auth() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Acervo CEDERJ
-          </h1>
-          <p className="text-gray-600">
-            Plataforma de Armazenamento de Materiais de Estudo
+          <img 
+            src="/logo-cecierj.png" 
+            alt="Fundação CECIERJ" 
+            className="h-20 mx-auto mb-4 object-contain"
+          />
+          <p className="text-gray-600 font-medium">
+            Acervo Acadêmico — Ciências Contábeis
           </p>
         </div>
 
@@ -145,34 +147,6 @@ export function Auth() {
               {isSignUp ? 'Entrar' : 'Criar nova'}
             </button>
           </p>
-        </div>
-
-        <div className="mt-8 pt-6 border-t border-gray-200 space-y-2 text-sm">
-          <p className="text-gray-600 mb-3 font-semibold">Acesso rápido:</p>
-          <a
-            href="https://graduacao.cederj.edu.br/login/index.php"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-blue-600 hover:text-blue-700 hover:underline"
-          >
-            Plataforma de Estudos CEDERJ
-          </a>
-          <a
-            href="https://sistacad.cederj.edu.br/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-blue-600 hover:text-blue-700 hover:underline"
-          >
-            Sistema Acadêmico
-          </a>
-          <a
-            href="https://script.google.com/macros/s/AKfycbwyoOeDtL-nGdXmFstf7nHNJtC0j0STrxGwuRvnKV34K7tVvi6PEhqIe6uhSnXLe-Q1/exec"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-blue-600 hover:text-blue-700 hover:underline"
-          >
-            Calculadora de Notas
-          </a>
         </div>
       </div>
     </div>
