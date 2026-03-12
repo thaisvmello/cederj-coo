@@ -30,9 +30,14 @@ export function CourseTreeView({
   const groupedData = useMemo(() => {
     if (grouping === 'none') return { 'Todas as Disciplinas': courses };
     return courses.reduce((acc, course) => {
-      let key = grouping === 'period' 
-        ? (course.period && course.period !== '-' ? `${course.period}º Período` : 'Sem Período')
-        : (course.is_mandatory ? 'Obrigatórias' : 'Optativas / Outras');
+      let key = '';
+      if (grouping === 'period') {
+        key = (course.period && course.period !== '-' ? `${course.period}º Período` : 'Sem Período');
+      } else {
+        // Usa subject_type se existir, senão cai no fallback baseado em is_mandatory
+        key = course.subject_type || (course.is_mandatory ? 'Obrigatórias' : 'Optativas / Outras');
+      }
+      
       if (!acc[key]) acc[key] = [];
       acc[key].push(course);
       return acc;
@@ -143,7 +148,11 @@ export function CourseTreeView({
                 <div className="flex items-center gap-3">
                   {expandedGroups.includes(group) ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${group.includes('Período') ? 'bg-blue-50 text-blue-700' : group.includes('Obrigatórias') ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>
+                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${
+                      group.includes('Período') ? 'bg-blue-50 text-blue-700' : 
+                      group.toLowerCase().includes('obrigatória') ? 'bg-emerald-50 text-emerald-700' : 
+                      'bg-gray-100 text-gray-700'
+                    }`}>
                       {group}
                     </span>
                     <span className="text-xs text-gray-400 font-medium">({groupedData[group].length})</span>
