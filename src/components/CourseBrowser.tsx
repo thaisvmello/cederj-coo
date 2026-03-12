@@ -4,6 +4,7 @@ import { Search, Plus, BookOpen, Star, LayoutGrid, List, Info, Upload, Folder } 
 import type { Course, Folder as FolderType } from '../lib/types';
 import { CourseCard } from './CourseCard';
 import { CourseFolderTree } from './CourseFolderTree';
+import { CourseTreeView } from './CourseTreeView';
 import { FolderView } from './FolderView';
 import { FileList } from './FileList';
 import { FileUpload } from './FileUpload';
@@ -59,6 +60,19 @@ export function CourseBrowser() {
 
   const favoriteCourses = filteredCourses.filter(c => favorites.includes(c.id));
   const otherCourses = filteredCourses.filter(c => !favorites.includes(c.id));
+
+  const handleToggleFavorite = async (e: React.MouseEvent, courseId: string) => {
+    e.stopPropagation();
+    if (!user) return;
+
+    const isFav = favorites.includes(courseId);
+    if (isFav) {
+      await supabase.from('course_favorites').delete().eq('user_id', user.id).eq('course_id', courseId);
+    } else {
+      await supabase.from('course_favorites').insert({ user_id: user.id, course_id: courseId });
+    }
+    loadData();
+  };
 
   // Se estiver no modo Grid e uma disciplina for selecionada, mostra a FolderView antiga
   if (viewMode === 'grid' && selectedCourse) {
@@ -134,11 +148,7 @@ export function CourseBrowser() {
                     fileCount={fileCounts[course.id] || 0}
                     isFavorite={true}
                     onClick={() => setSelectedCourse(course)}
-                    onToggleFavorite={async (e) => {
-                      e.stopPropagation();
-                      await supabase.from('course_favorites').delete().eq('user_id', user?.id).eq('course_id', course.id);
-                      loadData();
-                    }}
+                    onToggleFavorite={(e) => handleToggleFavorite(e, course.id)}
                   />
                 ))}
               </div>
@@ -157,70 +167,25 @@ export function CourseBrowser() {
                   fileCount={fileCounts[course.id] || 0}
                   isFavorite={false}
                   onClick={() => setSelectedCourse(course)}
-                  onToggleFavorite={async (e) => {
-                    e.stopPropagation();
-                    await supabase.from('course_favorites').insert({ user_id: user?.id, course_id: course.id });
-                    loadData();
-                  }}
+                  onToggleFavorite={(e) => handleToggleFavorite(e, course.id)}
                 />
               ))}
             </div>
           </section>
         </div>
       ) : (
-        /* Visualização em Árvore (Estilo Explorador) */
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-          <div className="lg:col-span-1">
-            <CourseFolderTree 
-              courses={filteredCourses} 
-              selectedFolderId={selectedFolder?.id || null}
-              onSelectFolder={(course, folder) => {
-                setSelectedCourse(course);
-                setSelectedFolder(folder);
-              }}
-            />
-          </div>
-          
-          <div className="lg:col-span-3 space-y-6">
-            {selectedFolder ? (
-              <>
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                  <h2 className="text-2xl font-bold text-gray-900">{selectedFolder.name}</h2>
-                  <p className="text-sm text-gray-500 mt-1">Pasta de {selectedCourse?.name}</p>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
-                  <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800">
-                    <p className="font-bold mb-1">Padrão de nomenclatura:</p>
-                    <p className="font-mono">DISCIPLINA_PROVA_ANO</p>
-                    <p className="text-xs mt-1 opacity-70">Ex: ContabilidadeBasica_AD_2024</p>
-                  </div>
-                </div>
-
-                <FileUpload 
-                  folderId={selectedFolder.id} 
-                  disciplineName={selectedFolder.name} 
-                  onUploadSuccess={loadData} 
-                />
-
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                  <div className="xl:col-span-2">
-                    <FileList folderId={selectedFolder.id} />
-                  </div>
-                  <div>
-                    <FolderComments folderId={selectedFolder.id} />
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="bg-white rounded-xl border border-gray-200 p-20 text-center shadow-sm">
-                <Folder className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-gray-900">Selecione uma pasta</h3>
-                <p className="text-sm text-gray-500">Navegue pelas disciplinas na barra lateral para ver os arquivos.</p>
-              </div>
-            )}
-          </div>
+        /* Visualização em Árvore Agrupada por Período */
+        <div className="space-y-6">
+          <CourseTreeView 
+            courses={filteredCourses}
+            favorites={favorites}
+            fileCounts={fileCounts}
+            onSelectCourse={(course) => {
+              setSelectedCourse(course);
+              setViewMode('grid'); // Muda para grid para abrir a FolderView
+            }}
+            onToggleFavorite={handleToggleFavorite}
+          />
         </div>
       )}
 
