@@ -15,10 +15,7 @@ export function Footer() {
           </p>
         </div>
         
-        <div className="pt-4 space-y-6">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-            Instituições de Ensino Superior Consorciadas
-          </p>
+        <div className="pt-4">
           <div className="flex justify-center">
             <img 
               src="/logos-consorciadas.png" 
