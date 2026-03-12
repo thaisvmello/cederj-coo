@@ -12,9 +12,6 @@ serve(async (req) => {
   }
 
   try {
-    console.log("[sync-user-profile] Requisição recebida");
-
-    // 1. Validar Autenticação
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Não autorizado' }), { 
@@ -25,7 +22,6 @@ serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     
-    // 2. Criar cliente Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://tlcdhwjkdbrmrwueeokj.supabase.co';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -35,7 +31,6 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 3. Verificar token e obter usuário
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
@@ -45,32 +40,23 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[sync-user-profile] Sincronizando perfil para usuário: ${user.id}`);
-
-    // 4. Extrair dados do usuário
     let firstName = '';
     let lastName = '';
     let avatarUrl = '';
 
-    // Se vier do Google
     if (user.user_metadata?.full_name) {
       const fullName = user.user_metadata.full_name;
       firstName = fullName.split(' ')[0];
       lastName = fullName.split(' ').slice(1).join(' ');
       avatarUrl = user.user_metadata.avatar_url || '';
-    } 
-    // Se vier de cadastro manual
-    else if (user.user_metadata?.first_name || user.user_metadata?.last_name) {
+    } else if (user.user_metadata?.first_name || user.user_metadata?.last_name) {
       firstName = user.user_metadata.first_name || '';
       lastName = user.user_metadata.last_name || '';
-    }
-    // Se não tiver nome, usar email como fallback
-    else {
+    } else {
       const emailParts = user.email?.split('@')[0] || 'Usuário';
       firstName = emailParts;
     }
 
-    // 5. Tentar upsert no perfil (a tabela pode não existir ainda)
     try {
       const { error: upsertError } = await supabase
         .from('profiles')
@@ -83,29 +69,11 @@ serve(async (req) => {
         });
 
       if (upsertError) {
-        console.warn(`[sync-user-profile] Tabela profiles não encontrada, criando...`);
-        await createProfilesTable(supabase);
-        
-        // Tentar novamente após criar a tabela
-        const { error: retryError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: user.id,
-            first_name: firstName,
-            last_name: lastName,
-            avatar_url: avatarUrl,
-            updated_at: new Date().toISOString(),
-          });
-        if (retryError) {
-          throw retryError;
-        }
+        console.warn(`Erro ao upsert perfil: ${upsertError.message}`);
       }
     } catch (error) {
-      console.warn(`[sync-user-profile] Erro ao upsert perfil: ${error.message}`);
-      // Continuar mesmo com erro - o perfil será criado quando a tabela existir
+      console.warn(`Erro ao salvar perfil: ${error.message}`);
     }
-
-    console.log(`[sync-user-profile] Processamento concluído para: ${firstName} ${lastName}`);
 
     return new Response(
       JSON.stringify({ 
@@ -125,7 +93,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[sync-user-profile] Erro: ${error.message}`);
+    console.error(`Erro na Edge Function: ${error.message}`);
     return new Response(
       JSON.stringify({ error: error.message }), 
       { 
@@ -135,42 +103,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Função auxiliar para criar a tabela profiles
-async function createProfilesTable(supabase: any) {
-  console.log("[sync-user-profile] Criando tabela profiles...");
-  
-  const createTableSQL = `
-    CREATE TABLE IF NOT EXISTS public.profiles (
-      id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-      first_name TEXT,
-      last_name TEXT,
-      avatar_url TEXT,
-      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      PRIMARY KEY (id)
-    );
-
-    ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
-    CREATE POLICY "profiles_select_policy" ON public.profiles
-    FOR SELECT TO authenticated USING (auth.uid() = id);
-
-    CREATE POLICY "profiles_insert_policy" ON public.profiles
-    FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
-
-    CREATE POLICY "profiles_update_policy" ON public.profiles
-    FOR UPDATE TO authenticated USING (auth.uid() = id);
-
-    CREATE POLICY "profiles_delete_policy" ON public.profiles
-    FOR DELETE TO authenticated USING (auth.uid() = id);
-  `;
-
-  // Usar query SQL direta para criar a tabela
-  const { error } = await supabase.rpc('exec_sql', { sql: createTableSQL });
-  if (error) {
-    console.error(`[sync-user-profile] Erro ao criar tabela: ${error.message}`);
-    throw error;
-  }
-  
-  console.log("[sync-user-profile] Tabela profiles criada com sucesso");
-}
