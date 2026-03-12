@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, X, Loader, AlertCircle } from 'lucide-react';
+import { Upload, X, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -13,7 +13,6 @@ interface FileUploadProps {
 interface PendingFile {
   id: string;
   name: string;
-  description: string;
   file: File;
   uploading: boolean;
 }
@@ -28,7 +27,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     const newFiles = files.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
-      description: '',
       file,
       uploading: false,
     }));
@@ -43,27 +41,26 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      console.log(`[FileUpload] Iniciando upload de: ${pendingFile.name}`);
-      
-      // 1. Obter URL pré-assinada da Edge Function
-      const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
-        body: { 
-          fileName: pendingFile.file.name, 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sessão expirada. Faça login novamente.');
+
+      // 1. Obter URL pré-assinada usando a URL completa da função
+      const response = await fetch('https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '' // Fallback se necessário
+        },
+        body: JSON.stringify({
+          fileName: pendingFile.file.name,
           fileType: pendingFile.file.type,
-          folderId 
-        }
+          folderId
+        })
       });
 
-      if (funcError) {
-        console.error('[FileUpload] Erro na Edge Function:', funcError);
-        throw new Error(funcError.message || 'Erro ao obter URL de upload');
-      }
-
-      if (!data?.uploadUrl) {
-        throw new Error('URL de upload não retornada pela função');
-      }
-
-      console.log('[FileUpload] URL obtida, enviando para R2...');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao obter URL de upload');
 
       // 2. Upload direto para o R2
       const uploadRes = await fetch(data.uploadUrl, {
@@ -73,12 +70,8 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       });
 
       if (!uploadRes.ok) {
-        const errorText = await uploadRes.text();
-        console.error('[FileUpload] Erro no R2:', errorText);
-        throw new Error('Falha no upload para o Cloudflare R2. Verifique o CORS do bucket.');
+        throw new Error('Falha no upload para o R2. Verifique as configurações de CORS do seu bucket.');
       }
-
-      console.log('[FileUpload] Upload R2 concluído, salvando no banco...');
 
       // 3. Salvar metadados no Supabase
       const { error: dbError } = await supabase.from('files').insert({
@@ -87,7 +80,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         file_path: data.publicUrl,
         file_size: pendingFile.file.size,
         file_type: pendingFile.file.type,
-        description: pendingFile.description || null,
         uploaded_by: user.id,
       });
 
@@ -97,8 +89,8 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       toast.success(`${pendingFile.name} enviado!`);
       onUploadSuccess();
     } catch (error) {
-      console.error('[FileUpload] Erro crítico:', error);
-      toast.error(error instanceof Error ? error.message : `Erro ao enviar ${pendingFile.name}`);
+      console.error('[FileUpload] Erro:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro no upload');
       setPendingFiles((prev) =>
         prev.map((f) => (f.id === pendingFile.id ? { ...f, uploading: false } : f))
       );
@@ -106,13 +98,8 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   };
 
   const uploadAll = async () => {
-    if (pendingFiles.length === 0) return;
-    
-    const filesToUpload = [...pendingFiles];
-    for (const file of filesToUpload) {
-      if (!file.uploading) {
-        await uploadFile(file);
-      }
+    for (const file of pendingFiles) {
+      if (!file.uploading) await uploadFile(file);
     }
   };
 
@@ -120,17 +107,9 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-gray-900">Upload de Materiais (Cloudflare R2)</h3>
+          <h3 className="font-bold text-gray-900">Upload de Materiais</h3>
           <p className="text-xs text-gray-500">Pasta: {disciplineName}</p>
         </div>
-        {pendingFiles.length > 0 && (
-          <button 
-            onClick={() => setPendingFiles([])}
-            className="text-xs text-red-500 hover:underline font-medium"
-          >
-            Limpar lista
-          </button>
-        )}
       </div>
 
       {pendingFiles.length === 0 ? (
@@ -145,7 +124,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         >
           <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
           <p className="text-gray-600 font-semibold">Arraste arquivos ou clique para selecionar</p>
-          <p className="text-xs text-gray-400 mt-1">PDF, Imagens, Docs (Máx 50MB)</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -156,34 +134,22 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+          <div className="max-h-60 overflow-y-auto space-y-2">
             {pendingFiles.map((file) => (
               <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 bg-white rounded border border-gray-200">
-                    <Upload className="w-4 h-4 text-blue-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">{file.name}</p>
-                    <p className="text-[10px] text-gray-500">{(file.file.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {file.uploading ? (
-                    <Loader className="w-4 h-4 text-blue-500 animate-spin" />
-                  ) : (
-                    <button onClick={() => setPendingFiles(prev => prev.filter(f => f.id !== file.id))} className="text-gray-400 hover:text-red-500">
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                <span className="text-sm font-medium text-gray-900 truncate">{file.name}</span>
+                {file.uploading ? <Loader className="w-4 h-4 text-blue-500 animate-spin" /> : (
+                  <button onClick={() => setPendingFiles(prev => prev.filter(f => f.id !== file.id))} className="text-gray-400 hover:text-red-500">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
           <button
             onClick={uploadAll}
             disabled={pendingFiles.some(f => f.uploading)}
-            className="w-full py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition disabled:opacity-50"
           >
             {pendingFiles.some(f => f.uploading) ? 'Enviando...' : `Enviar ${pendingFiles.length} arquivo(s)`}
           </button>

@@ -8,10 +8,17 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log("[get-r2-upload-url] Iniciando processamento...");
+  console.log("[get-r2-upload-url] Processando requisição...");
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
+  }
+
+  // Verificação manual de autenticação
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    console.error("[get-r2-upload-url] Não autorizado: Cabeçalho ausente");
+    return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: corsHeaders })
   }
 
   try {
@@ -24,18 +31,13 @@ serve(async (req) => {
     const publicDomain = Deno.env.get("R2_PUBLIC_DOMAIN");
 
     if (!endpoint || !accessKeyId || !secretAccessKey || !bucketName) {
-      throw new Error("Configurações do R2 ausentes no ambiente do Supabase.");
+      throw new Error("Configurações do R2 ausentes no Supabase (Secrets).");
     }
 
-    // Criamos o cliente S3 com configurações que forçam o uso apenas das credenciais fornecidas
     const r2Client = new S3Client({
       region: "auto",
       endpoint: endpoint,
-      credentials: {
-        accessKeyId: accessKeyId,
-        secretAccessKey: secretAccessKey,
-      },
-      // Estas flags impedem o SDK de tentar carregar arquivos de config do sistema
+      credentials: { accessKeyId, secretAccessKey },
       forcePathStyle: true,
     })
 
@@ -46,7 +48,6 @@ serve(async (req) => {
       ContentType: fileType,
     })
 
-    // Gera a URL pré-assinada
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 })
     const publicUrl = `${publicDomain}/${key}`
 
@@ -54,19 +55,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ uploadUrl, publicUrl, key }),
-      { 
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error("[get-r2-upload-url] Erro:", error.message);
     return new Response(
       JSON.stringify({ error: error.message }), 
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
