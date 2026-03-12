@@ -1,6 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.454.0?target=deno"
-import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.454.0?target=deno"
+import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.454.0"
+import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3.454.0"
+
+// Correção para o erro "The path argument must be of type string"
+// O SDK da AWS tenta ler a pasta HOME para buscar configurações.
+if (!Deno.env.get("HOME")) {
+  Deno.env.set("HOME", "/tmp");
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,8 +14,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log("[get-r2-upload-url] Requisição recebida");
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -32,7 +36,7 @@ serve(async (req) => {
       throw new Error('Secrets do R2 não configurados no Supabase');
     }
 
-    // Configuração ultra-específica para Deno não tentar ler arquivos locais
+    // Criando o cliente com configurações que evitam buscas no sistema de arquivos
     const r2Client = new S3Client({
       region: "auto",
       endpoint: endpoint,
@@ -53,15 +57,20 @@ serve(async (req) => {
       ContentType: fileType,
     });
 
+    // Gera a URL para o upload (expira em 1 hora)
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 });
+    
+    // URL final para salvar no banco de dados
     const publicUrl = `${publicDomain.replace(/\/$/, '')}/${key}`;
+
+    console.log(`[get-r2-upload-url] URL gerada com sucesso para: ${fileName}`);
 
     return new Response(
       JSON.stringify({ uploadUrl, publicUrl }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error("[get-r2-upload-url] Erro:", error.message);
+    console.error("[get-r2-upload-url] Erro fatal:", error.message);
     return new Response(
       JSON.stringify({ error: error.message }), 
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
