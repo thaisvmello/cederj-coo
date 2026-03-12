@@ -20,16 +20,31 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
   }, [folderId]);
 
   const loadComments = async () => {
+    // Select comments and join with profiles to get first_name, last_name, avatar_url
     const { data, error } = await supabase
       .from('folder_comments')
-      .select('*')
+      .select(`
+        *,
+        profiles!inner (
+          first_name,
+          last_name,
+          avatar_url
+        )
+      `)
       .eq('folder_id', folderId)
       .order('created_at', { ascending: true });
 
     if (error) {
       console.error('Error loading comments:', error);
     } else {
-      setComments(data || []);
+      // Map data to include profile fields at top level for easier use
+      const mapped = (data || []).map(c => ({
+        ...c,
+        first_name: c.profiles?.first_name,
+        last_name: c.profiles?.last_name,
+        avatar_url: c.profiles?.avatar_url,
+      }));
+      setComments(mapped);
     }
   };
 
@@ -84,32 +99,43 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
         {comments.length === 0 ? (
           <p className="text-center text-gray-400 text-sm py-4">Nenhum comentário ainda. Seja o primeiro!</p>
         ) : (
-          comments.map((comment) => (
-            <div key={comment.id} className="flex gap-3 group">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <User className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-gray-900 truncate">
-                    {comment.user_id === user?.id ? 'Você' : 'Estudante'}
-                  </span>
-                  <span className="text-[10px] text-gray-400">
-                    {new Date(comment.created_at).toLocaleDateString()}
-                  </span>
+          comments.map((comment) => {
+            const displayName = `${comment.first_name || ''} ${comment.last_name || ''}`.trim() || 'Estudante';
+            return (
+              <div key={comment.id} className="flex gap-3 group">
+                {comment.avatar_url ? (
+                  <img
+                    src={comment.avatar_url}
+                    alt={displayName}
+                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-blue-600" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-gray-900 truncate">
+                      {comment.user_id === user?.id ? 'Você' : displayName}
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      {new Date(comment.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-0.5 break-words">{comment.content}</p>
                 </div>
-                <p className="text-sm text-gray-600 mt-0.5 break-words">{comment.content}</p>
+                {comment.user_id === user?.id && (
+                  <button 
+                    onClick={() => deleteComment(comment.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-              {comment.user_id === user?.id && (
-                <button 
-                  onClick={() => deleteComment(comment.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 transition"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

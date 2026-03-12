@@ -31,6 +31,9 @@ export interface File {
 export interface User {
   id: string;
   email: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
 }
 
 export interface CourseFavorite {
@@ -46,4 +49,8 @@ export interface FolderComment {
   content: string;
   created_at: string;
   user_email?: string;
+  // We'll join profiles, so we can add these optionally:
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
 }
