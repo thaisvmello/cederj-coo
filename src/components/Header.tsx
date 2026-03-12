@@ -10,14 +10,14 @@ export function Header() {
       <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <img
-              src="/cederjlogo.png"
-              alt="CEDERJ Logo"
+            {/* Nova logo oficial */}
+            <img 
+              src="dyad-media://media/cederj-coo/.dyad/media/67e67f1b067bd9be1b349ec7ee9384ed.png" 
+              alt="CEDERJ Logo" 
               className="h-20 brightness-0 invert"
             />
             <div className="border-l border-gray-600 pl-6">
-              <h1 className="text-3xl font-bold leading-tight">Ciências Contábeis</h1>
-              <p className="text-sm text-gray-400 uppercase tracking-widest font-medium">Acervo Acadêmico</p>
+              <h1 className="text-3xl font-bold leading-tight">Acervo de Materiais</h1>
             </div>
           </div>
 
