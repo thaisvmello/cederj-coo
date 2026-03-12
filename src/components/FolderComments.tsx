@@ -32,9 +32,12 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
         .order('created_at', { ascending: true });
 
       if (commentsError) throw commentsError;
-      if (!commentsData) return;
+      if (!commentsData || commentsData.length === 0) {
+        setComments([]);
+        return;
+      }
 
-      // Buscar perfis dos autores
+      // Buscar perfis dos autores (Agora visíveis via RLS público)
       const userIds = Array.from(new Set(commentsData.map(c => c.user_id)));
       const { data: profilesData } = await supabase
         .from('profiles')
