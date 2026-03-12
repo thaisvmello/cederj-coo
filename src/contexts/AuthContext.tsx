@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '../lib/types';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
@@ -13,7 +14,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Função para sincronizar perfil via Edge Function
 const syncUserProfile = async (token: string) => {
   try {
     const response = await fetch('https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/sync-user-profile', {
@@ -62,13 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Tentar sincronizar perfil primeiro
         const syncedUser = await syncUserProfile(session.access_token);
-        
         if (syncedUser) {
           setUser(syncedUser);
         } else {
-          // Fallback para busca direta
           const userData = await fetchProfile(session.user.id, session.user.email || '');
           setUser(userData);
         }
@@ -80,15 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
-        // Sincronizar perfil após login
         const syncedUser = await syncUserProfile(session.access_token);
-        
         if (syncedUser) {
           setUser(syncedUser);
         } else {
-          // Fallback
           const userData = await fetchProfile(session.user.id, session.user.email || '');
           setUser(userData);
         }
@@ -117,10 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
 
     if (data.user) {
-      // Aguardar um momento para o trigger do banco processar
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Sincronizar perfil
       if (data.session?.access_token) {
         await syncUserProfile(data.session.access_token);
       }
@@ -135,7 +126,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) throw error;
 
-    // Sincronizar perfil após login
     if (data.session?.access_token) {
       await syncUserProfile(data.session.access_token);
     }
