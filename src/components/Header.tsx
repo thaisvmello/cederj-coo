@@ -1,5 +1,5 @@
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, BookOpen, GraduationCap, Calculator, LayoutGrid } from 'lucide-react';
+import { LogOut, BookOpen, GraduationCap, Calculator } from 'lucide-react';
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -22,11 +22,6 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-[#1e293b] hover:bg-[#334155] rounded-lg transition text-sm font-medium border border-gray-700">
-              <LayoutGrid className="w-4 h-4" />
-              Acervo de Materiais
-            </button>
-            <div className="h-8 w-px bg-gray-700 hidden sm:block"></div>
             <div className="text-right hidden sm:block">
               <p className="text-xs font-medium text-gray-300">{user?.email}</p>
             </div>
