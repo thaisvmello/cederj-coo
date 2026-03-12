@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Send, User, MessageSquare, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import type { FolderComment } from '../lib/types';
 import toast from 'react-hot-toast';
 
 interface FolderCommentsProps {
@@ -20,7 +19,6 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
   }, [folderId]);
 
   const loadComments = async () => {
-    // Select comments and join with profiles to get first_name, last_name, avatar_url
     const { data, error } = await supabase
       .from('folder_comments')
       .select(`
@@ -37,7 +35,6 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
     if (error) {
       console.error('Error loading comments:', error);
     } else {
-      // Map data to include profile fields at top level for easier use
       const mapped = (data || []).map(c => ({
         ...c,
         first_name: c.profiles?.first_name,
@@ -92,7 +89,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
         <MessageSquare className="w-4 h-4 text-gray-500" />
-        <h3 className="text-sm font-bold text-gray-700">Comentários e Dicas</h3>
+        <h3 className="text-sm font-bold text-gray-900">Comentários e Dicas</h3>
       </div>
 
       <div className="p-4 space-y-4 max-h-80 overflow-y-auto">
@@ -103,17 +100,17 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
             const displayName = `${comment.first_name || ''} ${comment.last_name || ''}`.trim() || 'Estudante';
             return (
               <div key={comment.id} className="flex gap-3 group">
-                {comment.avatar_url ? (
-                  <img
-                    src={comment.avatar_url}
-                    alt={displayName}
-                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  {comment.avatar_url ? (
+                    <img 
+                      src={comment.avatar_url} 
+                      alt={displayName} 
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  ) : (
                     <User className="w-4 h-4 text-blue-600" />
-                  </div>
-                )}
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-gray-900 truncate">
@@ -146,7 +143,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Escreva um comentário ou dica..."
-            className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
           />
           <button
             type="submit"
