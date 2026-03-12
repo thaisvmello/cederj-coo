@@ -1,4 +1,4 @@
-import { Star, Folder } from 'lucide-react';
+import { Star, Folder, Hash, Calendar, Bookmark } from 'lucide-react';
 import type { Course } from '../lib/types';
 
 interface CourseCardProps {
@@ -25,46 +25,62 @@ export function CourseCard({ course, fileCount, isFavorite, onClick, onToggleFav
   return (
     <div 
       onClick={onClick}
-      className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-all cursor-pointer relative"
+      className="group bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer relative flex flex-col h-full"
     >
       <button 
         onClick={onToggleFavorite}
-        className={`absolute top-4 right-4 p-1 rounded-full transition ${
-          isFavorite ? 'text-amber-400' : 'text-gray-300 hover:text-amber-400'
+        className={`absolute top-4 right-4 p-2 rounded-full transition-all z-10 ${
+          isFavorite 
+            ? 'text-amber-400 bg-amber-50' 
+            : 'text-gray-300 hover:text-amber-400 hover:bg-amber-50'
         }`}
       >
         <Star className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
       </button>
 
-      <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-xl ${colorClass}`}>
+      <div className="flex items-start gap-4 mb-4">
+        <div className={`p-3 rounded-xl shrink-0 ${colorClass}`}>
           <Folder className="w-6 h-6" />
         </div>
         
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-gray-900 text-sm leading-tight mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">
+        <div className="flex-1 min-w-0 pr-8">
+          <h3 className="font-bold text-gray-900 text-base leading-tight group-hover:text-blue-600 transition-colors line-clamp-2">
             {course.name}
           </h3>
-          <p className="text-xs text-gray-500 font-medium mb-3">
-            {course.code || 'SEM CÓDIGO'}
-          </p>
-          
-          <div className="flex flex-wrap gap-2 mb-3">
-            {course.period && (
-              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded uppercase">
-                {course.period}
-              </span>
-            )}
-            <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${
-              course.is_mandatory ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600'
-            }`}>
-              {course.is_mandatory ? 'Obrigatória' : 'Optativa'}
+        </div>
+      </div>
+
+      <div className="mt-auto space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {course.code && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md uppercase tracking-wider">
+              <Hash className="w-3 h-3" />
+              {course.code}
             </span>
-          </div>
+          )}
           
-          <p className="text-[10px] text-gray-400 font-medium">
+          {course.period && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-md uppercase tracking-wider">
+              <Calendar className="w-3 h-3" />
+              {course.period}º Período
+            </span>
+          )}
+
+          <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider ${
+            course.is_mandatory 
+              ? 'bg-emerald-50 text-emerald-600' 
+              : 'bg-purple-50 text-purple-600'
+          }`}>
+            <Bookmark className="w-3 h-3" />
+            {course.is_mandatory ? 'Obrigatória' : 'Optativa'}
+          </span>
+        </div>
+        
+        <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+          <span className="text-[11px] text-gray-400 font-semibold uppercase tracking-widest">
             {fileCount} {fileCount === 1 ? 'arquivo' : 'arquivos'}
-          </p>
+          </span>
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </div>
       </div>
     </div>

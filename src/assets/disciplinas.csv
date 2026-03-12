@@ -1,0 +1,79 @@
+﻿name;description;subject_type;semester
+Introdução à Informática;EAD01077;Obrigatória;1
+Teoria da Contabilidade I;EAD17001;Obrigatória;1
+Contabilidade I;EAD17002;Obrigatória;1
+Matemática aplicada à Contabilidade I;EAD17003;Obrigatória;1
+Contabilidade II;EAD17004;Obrigatória;2
+Matemática aplicada à Contabilidade II;EAD17005;Obrigatória;2
+Métodos e Técnicas de Pesquisa em Contabilidade;EAD17006;Obrigatória;2
+Matemática Financeira;EAD17007;Obrigatória;2
+Contabilidade Intermediária;EAD17008;Obrigatória;3
+Contabilidade de Custos;EAD17009;Obrigatória;3
+Economia I;EAD17011;Obrigatória;3
+Introdução à Administração e Comportamento Organizacional;EAD17012;Obrigatória;3
+Contabilidade Gerencial;EAD17013;Obrigatória;4
+Instituições de Direito aplicada à Contabilidade;EAD17014;Obrigatória;4
+Economia II;EAD17015;Obrigatória;4
+Contabilidade Avançada I;EAD17016;Obrigatória;4
+Contabilidade Avançada II;EAD17017;Obrigatória;5
+Legislação Tributária;EAD17018;Obrigatória;5
+Métodos Quantitativos I;EAD17019;Obrigatória;5
+Estágio Supervisionado;EAD17020;Obrigatória;5
+Legislação Empresarial;EAD17021;Obrigatória;5
+Orçamento e Planejamento Empresarial;EAD17022;Obrigatória;6
+Métodos Quantitativos II;EAD17023;Obrigatória;6
+Legislação Social e Trabalhista;EAD17024;Obrigatória;6
+Contabilidade Tributária;EAD17025;Obrigatória;6
+Controladoria;EAD17027;Obrigatória;7
+Análise Econômico-financeira;EAD17028;Obrigatória;7
+Orçamento e Planejamento Governamental;EAD17032;Obrigatória;7
+Projeto de Pesquisa em Contabilidade;EAD17035;Obrigatória;7
+Administração Financeira I;EAD17033;Obrigatória;8
+Auditoria;EAD17034;Obrigatória;8
+Contabilidade Governamental;EAD17037;Obrigatória;8
+Monografia;EAD17038;Obrigatória;8
+Ética Profissional;EAD17041;Obrigatória;9
+Perícia Contábil;EAD17042;Obrigatória;9
+Libras;EAD00031;Optativa de Escolha Condicionada;
+Teoria das Finanças Públicas;EAD11019;Optativas de Livre Escolha;
+Gestão de Pessoas no Setor Público;EAD11026;Optativas de Livre Escolha;
+Auditoria e Controladoria;EAD11036;Optativas de Livre Escolha;
+Negociação e Arbitragem;EAD11037;Optativas de Livre Escolha;
+Empreendedorismo Governamental;EAD11061;Optativas de Livre Escolha;
+Licitação, Contratos e Convênios;EAD11062;Optativas de Livre Escolha;
+Gestão da Qualidade no Setor Público;EAD11063;Optativas de Livre Escolha;
+Planejamento Governamental;EAD11082;Optativas de Livre Escolha;
+Gestão de Projetos Públicos;EAD11085;Optativas de Livre Escolha;
+Políticas Públicas;EAD11088;Optativas de Livre Escolha;
+Inovação na Administração Pública;EAD11092;Optativas de Livre Escolha;
+Regulação de Serviços Públicos;EAD11093;Optativas de Livre Escolha;
+Direito e Legislação Tributária;EAD11098;Optativas de Livre Escolha;
+Marketing e Sociedade;EAD11099;Optativas de Livre Escolha;
+Redação Oficial;EAD11100;Optativas de Livre Escolha;
+Teoria da Contabilidade II;EAD17029;Optativa de Escolha Condicionada;
+Mercado Financeiro;EAD17030;Optativa de Escolha Condicionada;
+Contabilidade Trabalhista;EAD17031;Optativa de Escolha Condicionada;
+Administração Financeira II;EAD17039;Optativa de Escolha Condicionada;
+Avaliação de Empresas;EAD17043;Atividade de Extensão - Disciplina;
+Gestão de Riscos;EAD17044;Atividade de Extensão - Disciplina;
+Simulação Empresarial;EAD17045;Atividade de Extensão - Disciplina;
+Gestão, Tecnologia e Inovação I;EAD17046;Atividade de Extensão - Disciplina;
+Análise de Investimentos;EAD17047;Atividade de Extensão - Disciplina;
+Mercado Mobiliário;EAD17048;Atividade de Extensão - Disciplina;
+Auditoria e Contabilidade Governamental;EAD17049;Optativa de Escolha Condicionada;
+Análise Balanços Governamental;EAD17050;Optativa de Escolha Condicionada;
+Contabilidade Socioambiental;EAD17051;Optativa de Escolha Condicionada;
+Aspectos Contábeis das Empresas Seguradoras;EAD17052;Optativa de Escolha Condicionada;
+Aspectos Contábeis das Instituições Financeira;EAD17053;Optativa de Escolha Condicionada;
+Fundamentos de Atuária;EAD17054;Optativa de Escolha Condicionada;
+Filosofia das Organizações;EAD17055;Optativa de Escolha Condicionada;
+Marketing;EAD17056;Optativa de Escolha Condicionada;
+Gestão de Projetos;EAD17057;Optativa de Escolha Condicionada;
+Combinação de Negócios;EAD17058;Optativa de Escolha Condicionada;
+Contabilidade Governamental Avançada;EAD17059;Optativa de Escolha Condicionada;
+Gestão de Planejamento Tributário;EAD17060;Optativa de Escolha Condicionada;
+Finanças Pessoais;EAD17061;Atividade de Extensão - Disciplina;
+Gestão, Desenvolvimento e Inovação I;EAD17062;Atividade de Extensão - Disciplina;
+Gestão, Desenvolvimento e Inovação II;EAD17063;Atividade de Extensão - Disciplina;
+Requisitos Curriculares Suplementares (RCS) Extensão;EAD17010;Atividade de Extensão - Disciplina;
+Atividades Científicos Cultural;EAD17040;Atividades Acadêmicas Complementares (Disciplina);
