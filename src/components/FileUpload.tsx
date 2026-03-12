@@ -42,7 +42,9 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      // 1. Chamar a Edge Function usando o SDK oficial
+      console.log(`[FileUpload] Iniciando upload de ${pendingFile.name}...`);
+      
+      // 1. Obter URL de upload
       const { data, error: functionError } = await supabase.functions.invoke('get-r2-upload-url', {
         body: {
           fileName: pendingFile.file.name,
@@ -51,20 +53,23 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         }
       });
 
-      if (functionError) throw new Error(functionError.message || 'Erro ao obter URL de upload');
+      if (functionError) {
+        console.error('[FileUpload] Erro na Edge Function:', functionError);
+        throw new Error(`Servidor de upload: ${functionError.message || 'Falha na conexão'}`);
+      }
 
-      // 2. Upload direto para o R2 via PUT
+      if (!data?.uploadUrl) throw new Error('O servidor não retornou uma URL de upload válida.');
+
+      // 2. Upload para R2
       const uploadRes = await fetch(data.uploadUrl, {
         method: 'PUT',
         body: pendingFile.file,
-        headers: { 
-          'Content-Type': pendingFile.file.type 
-        }
+        headers: { 'Content-Type': pendingFile.file.type }
       });
 
-      if (!uploadRes.ok) throw new Error('Falha no upload para o servidor de arquivos (R2)');
+      if (!uploadRes.ok) throw new Error('Falha ao enviar arquivo para o armazenamento.');
 
-      // 3. Salvar metadados no Supabase
+      // 3. Registrar no Banco
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
         name: pendingFile.name,
@@ -77,11 +82,11 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       if (dbError) throw dbError;
 
       setPendingFiles((prev) => prev.filter((f) => f.id !== pendingFile.id));
-      toast.success(`${pendingFile.name} enviado com sucesso!`);
+      toast.success(`${pendingFile.name} enviado!`);
       onUploadSuccess();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Erro desconhecido';
-      console.error('[FileUpload] Erro:', msg);
+      const msg = error instanceof Error ? error.message : 'Erro na conexão com o servidor';
+      console.error('[FileUpload] Erro detalhado:', error);
       toast.error(msg);
       setPendingFiles((prev) =>
         prev.map((f) => (f.id === pendingFile.id ? { ...f, uploading: false, error: msg } : f))
@@ -116,7 +121,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 font-semibold">Arraste arquivos ou clique para selecionar</p>
+          <p className="text-gray-600 font-semibold text-sm">Arraste arquivos ou clique para selecionar</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -127,11 +132,11 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="max-h-60 overflow-y-auto space-y-2">
+          <div className="max-h-60 overflow-y-auto space-y-2 custom-scrollbar">
             {pendingFiles.map((file) => (
               <div key={file.id} className={`p-3 rounded-lg border ${file.error ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-900 truncate flex-1 mr-4">{file.name}</span>
+                  <span className="text-xs font-medium text-gray-900 truncate flex-1 mr-4">{file.name}</span>
                   <div className="flex items-center gap-2">
                     {file.uploading ? (
                       <Loader className="w-4 h-4 text-blue-500 animate-spin" />
