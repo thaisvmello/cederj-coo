@@ -13,35 +13,48 @@ interface FolderViewProps {
 }
 
 export function FolderView({ course, onBack }: FolderViewProps) {
-  const [folders, setFolders] = useState<FolderType[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<FolderType | null>(null);
+  const [mainFolders, setMainFolders] = useState<FolderType[]>([]);
+  const [subFolders, setSubFolders] = useState<FolderType[]>([]);
+  const [selectedMainFolder, setSelectedMainFolder] = useState<FolderType | null>(null);
+  const [activeFolder, setActiveFolder] = useState<FolderType | null>(null);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
   const [showNewFolder, setShowNewFolder] = useState(false);
 
   useEffect(() => {
-    loadFolders();
+    loadMainFolders();
   }, [course.id]);
 
-  const loadFolders = async () => {
+  const loadMainFolders = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('folders')
       .select('*')
       .eq('course_id', course.id)
+      .is('parent_folder_id', null)
       .order('name');
 
-    if (error) {
-      console.error('Error loading folders:', error);
-    } else {
-      const folderList = data || [];
-      setFolders(folderList);
-      // Seleciona a primeira pasta se nenhuma estiver selecionada
-      if (folderList.length > 0 && !selectedFolder) {
-        setSelectedFolder(folderList[0]);
+    if (!error && data) {
+      setMainFolders(data);
+      if (data.length > 0 && !selectedMainFolder) {
+        handleSelectMainFolder(data[0]);
       }
     }
     setLoading(false);
+  };
+
+  const handleSelectMainFolder = async (folder: FolderType) => {
+    setSelectedMainFolder(folder);
+    setActiveFolder(folder); // Por padrão, foca na pasta pai
+    
+    // Carregar subpastas (ADs, APs, etc)
+    const { data } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('parent_folder_id', folder.id)
+      .order('name');
+    
+    setSubFolders(data || []);
   };
 
   if (loading) {
@@ -95,55 +108,83 @@ export function FolderView({ course, onBack }: FolderViewProps) {
         </div>
       </div>
 
+      {/* Pastas Principais */}
       <div className="space-y-4">
         <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pastas de Materiais</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {folders.map((folder) => (
+          {mainFolders.map((folder) => (
             <button
               key={folder.id}
-              onClick={() => setSelectedFolder(folder)}
+              onClick={() => handleSelectMainFolder(folder)}
               className={`flex flex-col items-center justify-center p-6 rounded-xl border transition-all ${
-                selectedFolder?.id === folder.id
+                selectedMainFolder?.id === folder.id
                   ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
                   : 'bg-white border-gray-200 hover:border-gray-300'
               }`}
             >
               <Folder className={`w-8 h-8 mb-3 ${
-                selectedFolder?.id === folder.id ? 'text-blue-500' : 'text-gray-400'
+                selectedMainFolder?.id === folder.id ? 'text-blue-500' : 'text-gray-400'
               }`} />
               <span className={`text-xs font-bold text-center line-clamp-2 ${
-                selectedFolder?.id === folder.id ? 'text-gray-900' : 'text-gray-600'
+                selectedMainFolder?.id === folder.id ? 'text-gray-900' : 'text-gray-600'
               }`}>
                 {folder.name}
               </span>
             </button>
           ))}
-          {folders.length === 0 && (
-            <div className="col-span-full py-8 text-center border-2 border-dashed border-gray-200 rounded-xl">
-              <p className="text-sm text-gray-400">Nenhuma pasta criada ainda.</p>
-            </div>
-          )}
         </div>
       </div>
 
-      {showUpload && selectedFolder && (
+      {/* Subpastas (ADs, APs) */}
+      {selectedMainFolder && subFolders.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Subpastas de {selectedMainFolder.name}</h3>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setActiveFolder(selectedMainFolder)}
+              className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${
+                activeFolder?.id === selectedMainFolder.id
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+              }`}
+            >
+              Geral
+            </button>
+            {subFolders.map((sub) => (
+              <button
+                key={sub.id}
+                onClick={() => setActiveFolder(sub)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${
+                  activeFolder?.id === sub.id
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                }`}
+              >
+                {sub.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showUpload && activeFolder && (
         <FileUpload 
-          folderId={selectedFolder.id} 
-          disciplineName={selectedFolder.name}
+          folderId={activeFolder.id} 
+          disciplineName={activeFolder.name}
           onUploadSuccess={() => {
             setShowUpload(false);
-            loadFolders();
+            loadMainFolders();
           }}
         />
       )}
 
-      {selectedFolder && (
+      {activeFolder && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <FileList folderId={selectedFolder.id} />
+            <FileList folderId={activeFolder.id} />
           </div>
           <div className="space-y-4">
-            <FolderComments folderId={selectedFolder.id} />
+            <FolderComments folderId={activeFolder.id} />
           </div>
         </div>
       )}
@@ -153,7 +194,7 @@ export function FolderView({ course, onBack }: FolderViewProps) {
           courseId={course.id}
           parentFolderId={null}
           onClose={() => setShowNewFolder(false)}
-          onSuccess={loadFolders}
+          onSuccess={loadMainFolders}
         />
       )}
     </div>
