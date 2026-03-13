@@ -52,9 +52,9 @@ export function Auth() {
             alt="Acervo Acadêmico" 
             className="h-32 mx-auto mb-4 object-contain" 
           />
-          <p className="text-gray-600 font-medium text-lg">
-            Faça seu login para começar a colaborar com nosso acervo :)
-          </p>
+          <h2 className="text-gray-800 font-bold text-xl">
+            Acervo Acadêmico
+          </h2>
           <p className="text-gray-500 font-medium">
             Ciências Contábeis
           </p>
