@@ -1,313 +1,313 @@
-import { useState, useEffect } from 'react';
-import { Calculator as CalcIcon, RotateCcw, GraduationCap, Info } from 'lucide-react';
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { Loader, AlertCircle, FileText, Upload, X } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useFileValidation } from '../hooks/useFileValidation';
+import toast from 'react-hot-toast';
 
-export function Calculator() {
-  const [ad1, setAd1] = useState('');
-  const [ap1, setAp1] = useState('');
-  const [ad2, setAd2] = useState('');
-  const [ap2, setAp2] = useState('');
-  const [ap3, setAp3] = useState('');
+interface FileUploadWithValidationProps {
+  folderId: string;
+  disciplineName: string;
+  onUploadSuccess: () => void;
+}
 
-  const [results, setResults] = useState({
-    n1: '',
-    n2: '',
-    n: '',
-    nf: '',
-    ap1Aprovacao: '',
-    ap2Aprovacao: '',
-    ap3Aprovacao: '',
-    situacao: ''
-  });
+interface PendingFile {
+  id: string;
+  name: string;
+  file: File;
+  uploading: boolean;
+  uploaded: boolean;
+  isDuplicate: boolean;
+  error?: string;
+}
 
-  function toNumber(value: string): number {
-    if (!value) return 0;
-    const num = parseFloat(value.replace(',', '.'));
-    return Math.max(0, isNaN(num) ? 0 : num);
-  }
+export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuccess }: FileUploadWithValidationProps) {
+  const { user } = useAuth();
+  const { checkDuplicates } = useFileValidation();
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
-  function roundToOne(num: number): number {
-    return Math.round((num + Number.EPSILON) * 10) / 10;
-  }
+  const handleFileSelect = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
 
-  useEffect(() => {
-    const ad1Num = toNumber(ad1);
-    const ap1Num = toNumber(ap1);
-    const ad2Num = toNumber(ad2);
-    const ap2Num = toNumber(ap2);
-    const ap3Num = toNumber(ap3);
+    const newFiles: PendingFile[] = Array.from(files).map(file => ({
+      id: Math.random().toString(36).substring(2, 9),
+      name: file.name,
+      file,
+      uploading: false,
+      uploaded: false,
+      isDuplicate: false,
+    }));
 
-    // N1 = AD1 * 0.2 + AP1 * 0.8
-    const n1 = ad1Num * 0.2 + ap1Num * 0.8;
-    
-    // N2 = AD2 * 0.2 + AP2 * 0.8
-    const n2 = ad2Num * 0.2 + ap2Num * 0.8;
-    
-    // N = (N1 + N2) / 2
-    const n = (n1 + n2) / 2;
-    
-    // NF = N >= 6 ? N : (Math.max(N1, N2) + AP3) / 2
-    const nf = n >= 6 ? n : (Math.max(n1, n2) + ap3Num) / 2;
+    // Verificar duplicatas
+    const duplicates = await checkDuplicates(
+      folderId,
+      newFiles.map(f => ({ name: f.name, size: f.file.size }))
+    );
 
-    // Notas necessárias para aprovação
-    const ap1Aprovacao = ad1 ? Math.ceil((6 - ad1Num * 0.2) / 0.8 * 10) / 10 : null;
-    const ap2Aprovacao = ad1 && ap1 && ad2 ? Math.ceil((12 - n1 - ad2Num * 0.2) / 0.8 * 10) / 10 : null;
-    const ap3Aprovacao = n < 6 && n > 0 ? Math.ceil((10 - Math.max(n1, n2)) * 10) / 10 : null;
+    const filesWithDuplicateCheck = newFiles.map(f => ({
+      ...f,
+      isDuplicate: duplicates.includes(f.name),
+    }));
 
-    // Situação
-    let situacao = '';
-    if (ad1 || ap1 || ad2 || ap2 || ap3) {
-      if (n >= 6) {
-        situacao = 'APROVADO';
-      } else if (n < 6 && ap3Num === 0) {
-        situacao = 'FAZER AP3';
-      } else if (n < 6 && ap3Num > 0) {
-        if (nf >= 5) {
-          situacao = 'APROVADO';
-        } else {
-          situacao = 'REPROVADO';
+    setPendingFiles(prev => [...prev, ...filesWithDuplicateCheck]);
+  };
+
+  const removeFile = (id: string) => {
+    setPendingFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  const uploadFile = async (pendingFile: PendingFile): Promise<boolean> => {
+    if (!user) return false;
+
+    setPendingFiles(prev =>
+      prev.map(f => (f.id === pendingFile.id ? { ...f, uploading: true, error: undefined } : f))
+    );
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const anonKey = (supabase as any).supabaseKey;
+      
+      if (!session) throw new Error('Sessão expirada. Por favor, faça login novamente.');
+
+      const functionUrl = `https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url`;
+      
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': anonKey,
+        },
+        body: JSON.stringify({
+          fileName: pendingFile.file.name,
+          fileType: pendingFile.file.type,
+          folderId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Erro na função (${response.status})`);
+      }
+
+      const data = await response.json();
+
+      const uploadRes = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        body: pendingFile.file,
+        headers: { 
+          'Content-Type': pendingFile.file.type 
         }
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error(`Falha no upload (${uploadRes.status})`);
+      }
+
+      const { error: dbError } = await supabase.from('files').insert({
+        folder_id: folderId,
+        name: pendingFile.name,
+        file_path: data.publicUrl,
+        file_size: pendingFile.file.size,
+        file_type: pendingFile.file.type,
+        uploaded_by: user.id,
+      });
+
+      if (dbError) throw dbError;
+
+      setPendingFiles(prev =>
+        prev.map(f => (f.id === pendingFile.id ? { ...f, uploading: false, uploaded: true } : f))
+      );
+      
+      return true;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error('[FileUploadWithValidation] Erro:', msg);
+      
+      setPendingFiles(prev =>
+        prev.map(f => (f.id === pendingFile.id ? { ...f, uploading: false, error: msg } : f))
+      );
+      
+      return false;
+    }
+  };
+
+  const uploadAll = async () => {
+    const filesToUpload = pendingFiles.filter(f => !f.uploading && !f.uploaded && !f.isDuplicate);
+    if (filesToUpload.length === 0) return;
+
+    setIsUploading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const file of filesToUpload) {
+      const success = await uploadFile(file);
+      if (success) {
+        successCount++;
+      } else {
+        errorCount++;
       }
     }
 
-    setResults({
-      n1: n1 > 0 || ap1 || ad1 ? roundToOne(n1).toFixed(1) : '',
-      n2: n2 > 0 || ap2 || ad2 ? roundToOne(n2).toFixed(1) : '',
-      n: n > 0 ? roundToOne(n).toFixed(1) : '',
-      nf: nf > 0 && (ap3 || n < 6) ? roundToOne(nf).toFixed(1) : '',
-      ap1Aprovacao: ap1Aprovacao !== null && ap1Aprovacao > 0 ? ap1Aprovacao.toFixed(1) : '',
-      ap2Aprovacao: ap2Aprovacao !== null && ap2Aprovacao > 0 ? ap2Aprovacao.toFixed(1) : '',
-      ap3Aprovacao: n >= 6 ? 'Não precisa :)' : (ap3Aprovacao !== null && ap3Aprovacao > 0 ? ap3Aprovacao.toFixed(1) : ''),
-      situacao
-    });
-  }, [ad1, ap1, ad2, ap2, ap3]);
+    setIsUploading(false);
 
-  const reset = () => {
-    setAd1('');
-    setAp1('');
-    setAd2('');
-    setAp2('');
-    setAp3('');
-  };
-
-  const getSituacaoStyle = () => {
-    switch (results.situacao) {
-      case 'APROVADO': return 'bg-blue-100 border-blue-300 text-blue-800';
-      case 'FAZER AP3': return 'bg-orange-100 border-orange-300 text-orange-800';
-      case 'REPROVADO': return 'bg-red-100 border-red-300 text-red-800';
-      default: return 'bg-gray-100 border-gray-300 text-gray-600';
+    if (errorCount === 0) {
+      toast.success(`${successCount} arquivo(s) enviado(s) com sucesso!`);
+      onUploadSuccess();
+    } else if (successCount > 0) {
+      toast.success(`${successCount} arquivo(s) enviado(s), ${errorCount} com erro`);
+    } else {
+      toast.error('Erro ao enviar arquivos');
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelect(e.dataTransfer.files);
+  };
+
+  const allUploaded = pendingFiles.length > 0 && pendingFiles.every(f => f.uploaded || f.isDuplicate);
+  const hasErrors = pendingFiles.some(f => f.error);
+  const hasDuplicates = pendingFiles.some(f => f.isDuplicate);
+  const validFiles = pendingFiles.filter(f => !f.isDuplicate && !f.uploaded);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-blue-50 rounded-lg">
-          <CalcIcon className="w-6 h-6 text-blue-600" />
-        </div>
+    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 shadow-sm">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Calculadora de Notas CEDERJ</h2>
-          <p className="text-sm text-gray-500">Calcule suas notas e veja sua situação acadêmica</p>
+          <h3 className="font-bold text-gray-900">Enviar Arquivos</h3>
+          <p className="text-xs text-gray-500">Destino: {disciplineName}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Formulário de Notas */}
-        <div className="space-y-6">
-          {/* Primeira Unidade */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-blue-600" />
-              Primeiro Ciclo (AD1 + AP1)
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  AD1 (Avaliação a Distância)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  value={ad1}
-                  onChange={(e) => setAd1(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-medium focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  placeholder="0.0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  AP1 (Avaliação Presencial)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  value={ap1}
-                  onChange={(e) => setAp1(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-medium focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  placeholder="0.0"
-                />
-              </div>
-            </div>
-            {results.n1 && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <span className="text-sm text-blue-700 font-medium">N1 = </span>
-                <span className="text-lg font-bold text-blue-800">{results.n1}</span>
-                <span className="text-xs text-blue-600 ml-2">(AD1 × 0.2 + AP1 × 0.8)</span>
-              </div>
-            )}
-          </div>
+      {/* Drop Zone */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+          isDragging 
+            ? 'border-blue-500 bg-blue-50' 
+            : 'border-gray-200 hover:border-gray-300'
+        }`}
+      >
+        <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragging ? 'text-blue-500' : 'text-gray-300'}`} />
+        <p className="text-sm font-medium text-gray-700 mb-1">
+          Arraste arquivos aqui ou
+        </p>
+        <label className="inline-block">
+          <span className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold cursor-pointer hover:bg-blue-700 transition">
+            Selecione do computador
+          </span>
+          <input
+            type="file"
+            multiple
+            onChange={(e) => handleFileSelect(e.target.files)}
+            className="hidden"
+          />
+        </label>
+      </div>
 
-          {/* Segunda Unidade */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-emerald-600" />
-              Segundo Ciclo (AD2 + AP2)
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  AD2 (Avaliação a Distância)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  value={ad2}
-                  onChange={(e) => setAd2(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-medium focus:ring-2 focus:ring-emerald-500 outline-none transition"
-                  placeholder="0.0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  AP2 (Avaliação Presencial)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  value={ap2}
-                  onChange={(e) => setAp2(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-medium focus:ring-2 focus:ring-emerald-500 outline-none transition"
-                  placeholder="0.0"
-                />
-              </div>
-            </div>
-            {results.n2 && (
-              <div className="mt-4 p-3 bg-emerald-50 rounded-lg">
-                <span className="text-sm text-emerald-700 font-medium">N2 = </span>
-                <span className="text-lg font-bold text-emerald-800">{results.n2}</span>
-                <span className="text-xs text-emerald-600 ml-2">(AD2 × 0.2 + AP2 × 0.8)</span>
-              </div>
-            )}
-          </div>
-
-          {/* AP3 - Prova Final */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-amber-600" />
-              Prova Final (AP3)
-            </h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                AP3 (Avaliação Presencial Final)
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="10"
-                step="0.1"
-                value={ap3}
-                onChange={(e) => setAp3(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-medium focus:ring-2 focus:ring-amber-500 outline-none transition"
-                placeholder="0.0"
-              />
-              <p className="text-xs text-gray-500 mt-2">Preencha apenas se precisar fazer a prova final</p>
-            </div>
-          </div>
-
-          {/* Botão Limpar */}
-          <button
-            onClick={reset}
-            className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition flex items-center justify-center gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Limpar Tudo
-          </button>
+      {/* Aviso de duplicatas */}
+      {hasDuplicates && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700">
+            Alguns arquivos já existem na pasta e foram marcados como duplicados.
+          </p>
         </div>
+      )}
 
-        {/* Resultados */}
-        <div className="space-y-6">
-          {/* Médias Calculadas */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <h3 className="font-bold text-gray-900 mb-4">📊 Médias Calculadas</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Média Final (N)</span>
-                <span className="text-xl font-bold text-gray-900">{results.n || '-'}</span>
+      {/* Lista de arquivos */}
+      {pendingFiles.length > 0 && (
+        <div className="space-y-3">
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {pendingFiles.map((file) => (
+              <div 
+                key={file.id} 
+                className={`p-3 rounded-lg border flex items-center justify-between ${
+                  file.error 
+                    ? 'bg-red-50 border-red-200' 
+                    : file.uploaded
+                    ? 'bg-green-50 border-green-200'
+                    : file.isDuplicate
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-gray-50 border-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <FileText className={`w-4 h-4 shrink-0 ${
+                    file.error ? 'text-red-400' 
+                    : file.uploaded ? 'text-green-500' 
+                    : file.isDuplicate ? 'text-amber-500'
+                    : 'text-blue-500'
+                  }`} />
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium text-gray-900 truncate block">{file.name}</span>
+                    {file.isDuplicate && (
+                      <span className="text-[10px] text-amber-600 font-medium">Arquivo duplicado</span>
+                    )}
+                    {file.error && (
+                      <span className="text-[10px] text-red-600 font-medium">{file.error}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {file.uploading && <Loader className="w-4 h-4 text-blue-500 animate-spin" />}
+                  {file.uploaded && <span className="text-xs text-green-600 font-medium">✓ Enviado</span>}
+                  {!file.uploaded && !file.uploading && (
+                    <button
+                      onClick={() => removeFile(file.id)}
+                      className="p-1 text-gray-400 hover:text-red-500 transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Nota Final (se tiver AP3) (NF)</span>
-                <span className="text-xl font-bold text-gray-900">{results.nf || '-'}</span>
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* Situação */}
-          {results.situacao && (
-            <div className={`rounded-xl border-2 p-6 shadow-sm ${getSituacaoStyle()}`}>
-              <h3 className="font-bold mb-2">📋 Situação</h3>
-              <p className="text-3xl font-extrabold">{results.situacao}</p>
-            </div>
+          {!allUploaded && validFiles.length > 0 && (
+            <button
+              onClick={uploadAll}
+              disabled={isUploading}
+              className="w-full py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isUploading ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Enviar {validFiles.length} arquivo(s)
+                </>
+              )}
+            </button>
           )}
 
-          {/* Notas Necessárias para Aprovação */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Info className="w-5 h-5 text-purple-600" />
-              Notas Necessárias para Aprovação
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                <span className="text-sm text-purple-700">AP1 mínima</span>
-                <span className="text-lg font-bold text-purple-800">
-                  {results.ap1Aprovacao || 'Preencha AD1'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                <span className="text-sm text-purple-700">AP2 mínima</span>
-                <span className="text-lg font-bold text-purple-800">
-                  {results.ap2Aprovacao || 'Preencha AD1, AP1 e AD2'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                <span className="text-sm text-purple-700">AP3 mínima</span>
-                <span className="text-lg font-bold text-purple-800">
-                  {results.ap3Aprovacao || 'Preencha as notas'}
-                </span>
-              </div>
+          {allUploaded && !hasErrors && (
+            <div className="text-center py-2">
+              <p className="text-sm text-green-600 font-medium">Todos os arquivos foram enviados!</p>
             </div>
-          </div>
-
-          {/* Fórmulas */}
-          <div className="bg-blue-50 rounded-xl border border-blue-100 p-4">
-            <h4 className="font-bold text-blue-900 text-sm mb-2">📐 Fórmulas</h4>
-            <ul className="text-xs text-blue-700 space-y-1">
-              <li>• N1 = AD1 × 0.2 + AP1 × 0.8</li>
-              <li>• N2 = AD2 × 0.2 + AP2 × 0.8</li>
-              <li>• N = (N1 + N2) / 2</li>
-              <li>• NF = (maior(N1,N2) + AP3) / 2</li>
-              <li>• Aprovação direta: N ≥ 6.0</li>
-              <li>• Aprovação final: NF ≥ 5.0</li>
-            </ul>
-          </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
