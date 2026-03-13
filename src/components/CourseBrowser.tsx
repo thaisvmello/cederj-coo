@@ -9,7 +9,12 @@ import { FolderSidePanel } from './FolderSidePanel';
 import { useAuth } from '../contexts/AuthContext';
 import { NewCourseModal } from './NewCourseModal';
 
-export function CourseBrowser() {
+interface CourseBrowserProps {
+  onNavigateToSubPage?: (isInSubPage: boolean) => void;
+  goHome?: boolean;
+}
+
+export function CourseBrowser({ onNavigateToSubPage, goHome }: CourseBrowserProps) {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -26,6 +31,20 @@ export function CourseBrowser() {
   useEffect(() => {
     loadData();
   }, [user]);
+
+  // Notificar o Dashboard quando entrar/sair de subpágina
+  useEffect(() => {
+    const isInSubPage = selectedCourse !== null || selectedFolder !== null;
+    onNavigateToSubPage?.(isInSubPage);
+  }, [selectedCourse, selectedFolder, onNavigateToSubPage]);
+
+  // Voltar para a página inicial quando goHome mudar para true
+  useEffect(() => {
+    if (goHome === false) {
+      setSelectedCourse(null);
+      setSelectedFolder(null);
+    }
+  }, [goHome]);
 
   const loadData = async () => {
     setLoading(true);

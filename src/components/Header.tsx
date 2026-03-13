@@ -1,8 +1,13 @@
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield } from 'lucide-react';
+import { LogOut, Calculator, Shield, Home } from 'lucide-react';
 
-export function Header() {
+interface HeaderProps {
+  showHomeButton?: boolean;
+  onGoHome?: () => void;
+}
+
+export function Header({ showHomeButton = false, onGoHome }: HeaderProps) {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
 
@@ -37,6 +42,18 @@ export function Header() {
               </div>
               <p className="text-sm font-bold text-white">{user?.email}</p>
             </div>
+            
+            {/* Botão de Início - aparece apenas em subpáginas */}
+            {showHomeButton && onGoHome && (
+              <button 
+                onClick={onGoHome}
+                className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
+                title="Voltar ao Início"
+              >
+                <Home className="w-5 h-5" />
+              </button>
+            )}
+            
             <button 
               onClick={signOut}
               className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
