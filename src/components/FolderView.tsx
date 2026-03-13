@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronLeft, Folder, Plus, Upload, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Folder, Upload, ChevronRight, FolderPlus } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { FileList } from './FileList';
-import { FileUpload } from './FileUpload';
-import { NewFolderModal } from './NewFolderModal';
+import { FileUploadWithValidation } from './FileUploadWithValidation';
+import { FolderRequestModal } from './FolderRequestModal';
 import { FolderComments } from './FolderComments';
+import { FolderWarningBanner } from './FolderWarningBanner';
 
 interface FolderViewProps {
   course: Course;
@@ -17,7 +18,7 @@ export function FolderView({ course, onBack }: FolderViewProps) {
   const [selectedFolder, setSelectedFolder] = useState<FolderType | null>(null);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
-  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
   useEffect(() => {
     loadFolders();
@@ -36,7 +37,6 @@ export function FolderView({ course, onBack }: FolderViewProps) {
     } else {
       const folderList = data || [];
       setFolders(folderList);
-      // Seleciona a primeira pasta se nenhuma estiver selecionada
       if (folderList.length > 0 && !selectedFolder) {
         setSelectedFolder(folderList[0]);
       }
@@ -79,11 +79,11 @@ export function FolderView({ course, onBack }: FolderViewProps) {
 
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setShowNewFolder(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+            onClick={() => setShowRequestModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm font-semibold text-amber-700 hover:bg-amber-100 transition"
           >
-            <Plus className="w-4 h-4" />
-            Nova Pasta
+            <FolderPlus className="w-4 h-4" />
+            Solicitar Pasta
           </button>
           <button 
             onClick={() => setShowUpload(!showUpload)}
@@ -94,6 +94,9 @@ export function FolderView({ course, onBack }: FolderViewProps) {
           </button>
         </div>
       </div>
+
+      {/* Aviso fixo sobre duplicidade */}
+      <FolderWarningBanner />
 
       <div className="space-y-4">
         <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pastas de Materiais</h3>
@@ -121,13 +124,19 @@ export function FolderView({ course, onBack }: FolderViewProps) {
           {folders.length === 0 && (
             <div className="col-span-full py-8 text-center border-2 border-dashed border-gray-200 rounded-xl">
               <p className="text-sm text-gray-400">Nenhuma pasta criada ainda.</p>
+              <button
+                onClick={() => setShowRequestModal(true)}
+                className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium"
+              >
+                Solicitar criação de pasta
+              </button>
             </div>
           )}
         </div>
       </div>
 
       {showUpload && selectedFolder && (
-        <FileUpload 
+        <FileUploadWithValidation 
           folderId={selectedFolder.id} 
           disciplineName={selectedFolder.name}
           onUploadSuccess={() => {
@@ -148,11 +157,11 @@ export function FolderView({ course, onBack }: FolderViewProps) {
         </div>
       )}
 
-      {showNewFolder && (
-        <NewFolderModal 
+      {showRequestModal && (
+        <FolderRequestModal 
           courseId={course.id}
-          parentFolderId={null}
-          onClose={() => setShowNewFolder(false)}
+          courseName={course.name}
+          onClose={() => setShowRequestModal(false)}
           onSuccess={loadFolders}
         />
       )}

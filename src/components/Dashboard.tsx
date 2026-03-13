@@ -1,5 +1,6 @@
 import { Header } from './Header';
 import { CourseBrowser } from './CourseBrowser';
+import { AdminFolderRequests } from './AdminFolderRequests';
 import { Footer } from './Footer';
 
 export function Dashboard() {
@@ -7,7 +8,8 @@ export function Dashboard() {
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
       <Header />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+        <AdminFolderRequests />
         <CourseBrowser />
       </main>
 
