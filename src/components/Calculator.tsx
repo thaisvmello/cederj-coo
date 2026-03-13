@@ -164,7 +164,7 @@ export function Calculator() {
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
               <GraduationCap className="w-5 h-5 text-emerald-600" />
-              Segunda Unidade
+              Segundo Ciclo
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
