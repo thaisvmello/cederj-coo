@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Download, FileText, Eye, Loader, Trash2, Pencil, X, Check } from 'lucide-react';
+import { Download, FileText, Eye, Loader, Trash2, Pencil, X, Check, Archive } from 'lucide-react';
 import type { File as FileType } from '../lib/types';
 import { PDFViewer } from './PDFViewer';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
+import JSZip from 'jszip';
 
 interface FileListProps {
   folderId: string;
@@ -22,6 +23,7 @@ export function FileList({ folderId }: FileListProps) {
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [zipping, setZipping] = useState(false);
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
 
@@ -104,6 +106,66 @@ export function FileList({ folderId }: FileListProps) {
     setSelectedFileIds([]);
   };
 
+  const handleDownloadAllAsZip = async () => {
+    if (files.length === 0) return;
+    
+    setZipping(true);
+    const toastId = toast.loading('Preparando arquivo ZIP...');
+    
+    try {
+      const zip = new JSZip();
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const file of files) {
+        try {
+          const response = await fetch(file.file_path);
+          if (!response.ok) throw new Error(`Failed to fetch ${file.name}`);
+          const blob = await response.blob();
+          zip.file(file.name, blob);
+          successCount++;
+        } catch (err) {
+          console.error(`Error adding ${file.name} to zip:`, err);
+          errorCount++;
+        }
+      }
+
+      if (successCount === 0) {
+        toast.error('Nenhum arquivo pôde ser baixado', { id: toastId });
+        setZipping(false);
+        return;
+      }
+
+      toast.loading('Gerando arquivo ZIP...', { id: toastId });
+      
+      const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
+      
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `arquivos-${folderId}-${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      if (errorCount > 0) {
+        toast.success(`${successCount} arquivos baixados, ${errorCount} com erro`, { id: toastId });
+      } else {
+        toast.success(`${successCount} arquivos baixados com sucesso!`, { id: toastId });
+      }
+    } catch (error) {
+      console.error('Error creating zip:', error);
+      toast.error('Erro ao criar arquivo ZIP', { id: toastId });
+    } finally {
+      setZipping(false);
+    }
+  };
+
   const handleDeleteFile = async (fileId: string) => {
     if (!isAdmin) return;
     
@@ -177,7 +239,7 @@ export function FileList({ folderId }: FileListProps) {
   return (
     <>
       {/* Selection Controls */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <input
           type="checkbox"
           checked={selectedFileIds.length === files.length && files.length > 0}
@@ -188,6 +250,7 @@ export function FileList({ folderId }: FileListProps) {
           {selectedFileIds.length === files.length && files.length > 0 ? 'Selecionar tudo' : 'Selecionar todos'}
         </label>
         <span className="text-sm text-gray-400">{`(${selectedFileIds.length}/${files.length})`}</span>
+        
         {selectedFileIds.length > 0 && (
           <button
             onClick={handleBatchDownload}
@@ -197,6 +260,25 @@ export function FileList({ folderId }: FileListProps) {
             Baixar Selecionados
           </button>
         )}
+        
+        {/* Botão de Download ZIP */}
+        <button
+          onClick={handleDownloadAllAsZip}
+          disabled={zipping || files.length === 0}
+          className="ml-auto px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-50 flex items-center gap-2"
+        >
+          {zipping ? (
+            <>
+              <Loader className="w-4 h-4 animate-spin" />
+              Compactando...
+            </>
+          ) : (
+            <>
+              <Archive className="w-4 h-4" />
+              Baixar Tudo (ZIP)
+            </>
+          )}
+        </button>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
