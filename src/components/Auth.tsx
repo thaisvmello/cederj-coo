@@ -53,7 +53,7 @@ export function Auth() {
             className="h-40 mx-auto mb-4 object-contain" 
           />
           <div className="space-y-1">
-            <h2 className="text-gray-800 font-bold text-xl"> Faça seu login para começar a colaborar com nosso acervo :)
+            <h2 className="text-gray-800 font-bold text-l0"> Faça seu login para começar a colaborar com nosso acervo :)
             </h2>
             <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">
             </p>
