@@ -19,6 +19,9 @@ export function Header() {
               <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
                 Acervo Acadêmico
               </h1>
+              <p className="text-xs sm:text-sm font-medium text-blue-300/80 uppercase tracking-[0.2em] mt-0.5">
+                Ciências Contábeis
+              </p>
             </div>
           </div>
 
