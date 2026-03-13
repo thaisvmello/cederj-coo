@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Send, MessageSquare, Trash2, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useAdmin } from '../hooks/useAdmin';
 import type { FolderComment } from '../lib/types';
 import toast from 'react-hot-toast';
 import { AvatarFallback } from './AvatarFallback';
@@ -14,6 +15,7 @@ interface FolderCommentsProps {
 
 export function FolderComments({ folderId }: FolderCommentsProps) {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const [comments, setComments] = useState<FolderComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
@@ -110,11 +112,21 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
     }
   };
 
+  // Admin pode deletar qualquer comentário, usuário normal só os seus
+  const canDelete = (comment: FolderComment) => {
+    return isAdmin || user?.id === comment.user_id;
+  };
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 flex flex-col h-full max-h-[500px]">
       <div className="p-4 border-b border-gray-50 flex items-center gap-2">
         <MessageSquare className="w-4 h-4 text-blue-500" />
         <h3 className="text-sm font-bold text-gray-900">Comentários e Dicas</h3>
+        {isAdmin && (
+          <span className="ml-auto text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+            Admin
+          </span>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
@@ -148,10 +160,11 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
                   <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 p-2 rounded-lg rounded-tl-none">
                     {comment.content}
                   </p>
-                  {user?.id === comment.user_id && (
+                  {canDelete(comment) && (
                     <button 
                       onClick={() => handleDelete(comment.id)}
                       className="absolute -right-2 -top-2 p-1 bg-white border border-gray-100 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+                      title={isAdmin && user?.id !== comment.user_id ? "Admin: Remover comentário" : "Remover comentário"}
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>

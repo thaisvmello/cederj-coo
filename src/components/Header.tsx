@@ -1,8 +1,10 @@
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Calculator } from 'lucide-react';
+import { useAdmin } from '../hooks/useAdmin';
+import { LogOut, Calculator, Shield } from 'lucide-react';
 
 export function Header() {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
 
   return (
     <header className="w-full z-40">
@@ -24,7 +26,15 @@ export function Header() {
 
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-0.5">Usuário</p>
+              <div className="flex items-center gap-2 justify-end mb-0.5">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Usuário</p>
+                {isAdmin && (
+                  <span className="inline-flex items-center gap-1 text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-medium">
+                    <Shield className="w-3 h-3" />
+                    Admin
+                  </span>
+                )}
+              </div>
               <p className="text-sm font-bold text-white">{user?.email}</p>
             </div>
             <button 

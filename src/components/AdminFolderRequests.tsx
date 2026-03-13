@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Check, X, Clock, FolderPlus, Loader, AlertCircle } from 'lucide-react';
+import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -18,32 +19,18 @@ interface FolderRequest {
 
 export function AdminFolderRequests() {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const [requests, setRequests] = useState<FolderRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    checkAdminAndLoad();
-  }, [user]);
-
-  const checkAdminAndLoad = async () => {
-    if (!user) return;
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profile?.role === 'admin') {
-      setIsAdmin(true);
+    if (isAdmin) {
       loadRequests();
     } else {
-      setIsAdmin(false);
       setLoading(false);
     }
-  };
+  }, [isAdmin]);
 
   const loadRequests = async () => {
     setLoading(true);

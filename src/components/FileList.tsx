@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Download, FileText, Eye, Loader } from 'lucide-react';
+import { Download, FileText, Eye, Loader, Trash2, Pencil, X, Check } from 'lucide-react';
 import type { File as FileType } from '../lib/types';
 import { PDFViewer } from './PDFViewer';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { useAdmin } from '../hooks/useAdmin';
 
 interface FileListProps {
   folderId: string;
@@ -18,7 +19,11 @@ export function FileList({ folderId }: FileListProps) {
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [showViewer, setShowViewer] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileType | null>(null);
+  const [editingFileId, setEditingFileId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
 
   useEffect(() => {
     loadFiles();
@@ -56,7 +61,6 @@ export function FileList({ folderId }: FileListProps) {
       a.click();
       document.body.removeChild(a);
 
-      // Log access
       if (user) {
         await supabase.from('folder_access').insert({
           folder_id: file.folder_id,
@@ -90,7 +94,6 @@ export function FileList({ folderId }: FileListProps) {
   const handleBatchDownload = async () => {
     if (selectedFileIds.length === 0) return;
     setLoading(true);
-    // Download sequentially to avoid overwhelming
     for (const id of selectedFileIds) {
       const file = files.find(f => f.id === id);
       if (file) {
@@ -99,6 +102,60 @@ export function FileList({ folderId }: FileListProps) {
     }
     setLoading(false);
     setSelectedFileIds([]);
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    if (!isAdmin) return;
+    
+    setDeletingId(fileId);
+    try {
+      const { error } = await supabase
+        .from('files')
+        .delete()
+        .eq('id', fileId);
+
+      if (error) throw error;
+
+      setFiles(prev => prev.filter(f => f.id !== fileId));
+      toast.success('Arquivo excluído com sucesso');
+    } catch (error) {
+      console.error('Erro ao excluir arquivo:', error);
+      toast.error('Erro ao excluir arquivo');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const startRename = (file: FileType) => {
+    setEditingFileId(file.id);
+    setEditingName(file.name);
+  };
+
+  const cancelRename = () => {
+    setEditingFileId(null);
+    setEditingName('');
+  };
+
+  const handleRename = async (fileId: string) => {
+    if (!isAdmin || !editingName.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('files')
+        .update({ name: editingName.trim() })
+        .eq('id', fileId);
+
+      if (error) throw error;
+
+      setFiles(prev => prev.map(f => 
+        f.id === fileId ? { ...f, name: editingName.trim() } : f
+      ));
+      toast.success('Arquivo renomeado com sucesso');
+      cancelRename();
+    } catch (error) {
+      console.error('Erro ao renomear arquivo:', error);
+      toast.error('Erro ao renomear arquivo');
+    }
   };
 
   if (loading) {
@@ -132,7 +189,8 @@ export function FileList({ folderId }: FileListProps) {
         </label>
         <span className="text-sm text-gray-400">{`(${selectedFileIds.length}/${files.length})`}</span>
         {selectedFileIds.length > 0 && (
-          <button            onClick={handleBatchDownload}
+          <button
+            onClick={handleBatchDownload}
             disabled={loading}
             className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition disabled:opacity-50"
           >
@@ -171,10 +229,38 @@ export function FileList({ folderId }: FileListProps) {
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-gray-900 truncate">{file.name}</span>
-                    </div>
+                    {editingFileId === file.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          className="px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleRename(file.id);
+                            if (e.key === 'Escape') cancelRename();
+                          }}
+                        />
+                        <button
+                          onClick={() => handleRename(file.id)}
+                          className="p-1 text-green-600 hover:bg-green-50 rounded"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={cancelRename}
+                          className="p-1 text-gray-400 hover:bg-gray-100 rounded"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-900 truncate">{file.name}</span>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-gray-600 truncate block max-w-xs">{file.description || '-'}</span>
@@ -196,7 +282,32 @@ export function FileList({ folderId }: FileListProps) {
                         onClick={(e) => handleDownload(e, file)}
                         className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition text-xs font-medium"
                       >
-                        <Download className="w-4 h-4" /> Baixar                      </button>
+                        <Download className="w-4 h-4" /> Baixar
+                      </button>
+                      
+                      {/* Admin Controls */}
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={() => startRename(file)}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition text-xs font-medium"
+                          >
+                            <Pencil className="w-4 h-4" /> Renomear
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFile(file.id)}
+                            disabled={deletingId === file.id}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition text-xs font-medium disabled:opacity-50"
+                          >
+                            {deletingId === file.id ? (
+                              <Loader className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                            Excluir
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

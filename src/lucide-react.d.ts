@@ -37,4 +37,11 @@ declare module 'lucide-react' {
   export const FolderPlus: Icon;
   export const ChevronLeft: Icon;
   export const User: Icon;
+  export const Pencil: Icon;
+  export const Check: Icon;
+  export const Shield: Icon;
+  export const AlertTriangle: Icon;
+  export const AlertCircle: Icon;
+  export const CheckCircle: Icon;
+  export const Clock: Icon;
 }
