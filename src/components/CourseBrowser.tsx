@@ -9,13 +9,17 @@ import { FolderSidePanel } from './FolderSidePanel';
 import { useAuth } from '../contexts/AuthContext';
 import { NewCourseModal } from './NewCourseModal';
 
-export function CourseBrowser() {
+interface CourseBrowserProps {
+  onSubPageChange?: (isSubPage: boolean) => void;
+  isSubPage?: boolean;
+}
+
+export function CourseBrowser({ onSubPageChange, isSubPage }: CourseBrowserProps) {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [fileCounts, setFileCounts] = useState<{[key: string]: number}>({});
   const [totalFiles, setTotalFiles] = useState(0);
-  const [totalFolders, setTotalFolders] = useState(0);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<{course: Course, folder: FolderType} | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,6 +30,19 @@ export function CourseBrowser() {
   useEffect(() => {
     loadData();
   }, [user]);
+
+  useEffect(() => {
+    const isSubPage = !!selectedCourse;
+    console.log('Subpage state changed:', isSubPage, selectedCourse?.name);
+    onSubPageChange?.(isSubPage);
+  }, [selectedCourse, onSubPageChange]);
+
+  useEffect(() => {
+    if (isSubPage === false && selectedCourse) {
+      console.log('Resetting selected course due to isSubPage false');
+      setSelectedCourse(null);
+    }
+  }, [isSubPage, selectedCourse]);
 
   const loadData = async () => {
     setLoading(true);
@@ -41,7 +58,6 @@ export function CourseBrowser() {
     const { data: foldersData } = await supabase.from('folders').select('id, course_id');
     
     setTotalFiles(filesData?.length || 0);
-    setTotalFolders(foldersData?.length || 0);
     
     if (filesData && foldersData) {
       const counts: {[key: string]: number} = {};
