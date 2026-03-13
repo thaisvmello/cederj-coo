@@ -7,19 +7,18 @@ export function Header() {
   return (
     <header className="w-full z-40">
       {/* Main Header */}
-      <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-3">
+      <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img 
-              src="/acervo-logo.png" 
+              src="/57002beae21c30a2d583825b8ea17010.png" 
               alt="Logo Acervo Acadêmico" 
-              className="h-16 w-auto object-contain brightness-0 invert" 
+              className="h-14 w-auto object-contain" 
             />
-            <div className="border-l border-white/20 pl-4 hidden sm:block">
-              <h1 className="text-xl font-bold leading-tight tracking-tight">
+            <div className="border-l border-white/20 pl-4">
+              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
                 Acervo Acadêmico
               </h1>
-              <p className="text-[10px] text-gray-400 uppercase tracking-widest">Ciências Contábeis</p>
             </div>
           </div>
 

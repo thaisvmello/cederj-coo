@@ -48,47 +48,19 @@ export function Auth() {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <img 
-            src="/acervo-logo.png" 
+            src="/57002beae21c30a2d583825b8ea17010.png" 
             alt="Acervo Acadêmico" 
-            className="h-32 mx-auto mb-2 object-contain" 
+            className="h-20 mx-auto mb-4 object-contain" 
           />
+          <p className="text-gray-600 font-medium text-lg">
+            Acervo Acadêmico
+          </p>
           <p className="text-gray-500 font-medium">
             Ciências Contábeis
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isSignUp && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome
-                </label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Nome"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sobrenome
-                </label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Sobrenome"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Email
@@ -133,6 +105,35 @@ export function Auth() {
               </button>
             </div>
           </div>
+
+          {isSignUp && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nome
+                </label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Seu primeiro nome"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sobrenome
+                </label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Seu sobrenome"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+            </>
+          )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
