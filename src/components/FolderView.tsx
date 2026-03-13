@@ -45,9 +45,8 @@ export function FolderView({ course, onBack }: FolderViewProps) {
 
   const handleSelectMainFolder = async (folder: FolderType) => {
     setSelectedMainFolder(folder);
-    setActiveFolder(folder); // Por padrão, foca na pasta pai
+    setActiveFolder(folder);
     
-    // Carregar subpastas (ADs, APs, etc)
     const { data } = await supabase
       .from('folders')
       .select('*')
@@ -108,7 +107,6 @@ export function FolderView({ course, onBack }: FolderViewProps) {
         </div>
       </div>
 
-      {/* Pastas Principais */}
       <div className="space-y-4">
         <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pastas de Materiais</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
@@ -135,7 +133,6 @@ export function FolderView({ course, onBack }: FolderViewProps) {
         </div>
       </div>
 
-      {/* Subpastas (ADs, APs) */}
       {selectedMainFolder && subFolders.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Subpastas de {selectedMainFolder.name}</h3>
