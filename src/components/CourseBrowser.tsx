@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Plus, BookOpen, Star, LayoutGrid, List } from 'lucide-react';
+import { Search, Plus, BookOpen, Star, LayoutGrid, List, FileText, Folder } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { CourseCard } from './CourseCard';
 import { CourseTreeView } from './CourseTreeView';
@@ -14,6 +14,8 @@ export function CourseBrowser() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [fileCounts, setFileCounts] = useState<{[key: string]: number}>({});
+  const [totalFiles, setTotalFiles] = useState(0);
+  const [totalFolders, setTotalFolders] = useState(0);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<{course: Course, folder: FolderType} | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,6 +39,10 @@ export function CourseBrowser() {
 
     const { data: filesData } = await supabase.from('files').select('folder_id');
     const { data: foldersData } = await supabase.from('folders').select('id, course_id');
+    
+    setTotalFiles(filesData?.length || 0);
+    setTotalFolders(foldersData?.length || 0);
+    
     if (filesData && foldersData) {
       const counts: {[key: string]: number} = {};
       foldersData.forEach((folder: { id: string, course_id: string }) => {
@@ -75,14 +81,29 @@ export function CourseBrowser() {
   return (
     <div className="space-y-8 relative">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-lg">
               <BookOpen className="w-6 h-6 text-blue-600" />
             </div>
             <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Acervo de Provas e Materiais</h2>
           </div>
-          <p className="text-sm text-gray-500 font-medium"> Ciências Contábeis</p>
+          <p className="text-sm text-gray-500 font-medium">CEDERJ - Ciências Contábeis</p>
+          
+          {/* Stats Counter */}
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-1.5">
+              <Folder className="w-4 h-4 text-blue-500" />
+              <span className="font-semibold">{courses.length}</span>
+              <span>disciplinas</span>
+            </div>
+            <span className="text-gray-300">·</span>
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-emerald-500" />
+              <span className="font-semibold">{totalFiles}</span>
+              <span>arquivos no acervo</span>
+            </div>
+          </div>
         </div>
       </div>
 
