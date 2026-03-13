@@ -1,60 +1,72 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { CourseTreeView } from './CourseTreeView';
+import { FolderView } from './FolderView';
+import type { Course } from '../lib/types';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Calculator } from 'lucide-react';
 
-export function Header() {
-  const { user, signOut } = useAuth();
+export function CourseBrowser() {
+  const { user } = useAuth();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [fileCounts, setFileCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const { data: coursesData } = await supabase.from('courses').select('*').order('name');
+      setCourses(coursesData || []);
+
+      if (user) {
+        const { data: favs } = await supabase.from('course_favorites').select('course_id').eq('user_id', user.id);
+        setFavorites(favs?.map(f => f.course_id) || []);
+      }
+
+      const { data: files } = await supabase.from('files').select('folder_id, folders(course_id)');
+      const counts: Record<string, number> = {};
+      files?.forEach((f: any) => {
+        const courseId = f.folders?.course_id;
+        if (courseId) counts[courseId] = (counts[courseId] || 0) + 1;
+      });
+      setFileCounts(counts);
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent, courseId: string) => {
+    e.stopPropagation();
+    if (!user) return;
+    if (favorites.includes(courseId)) {
+      await supabase.from('course_favorites').delete().eq('user_id', user.id).eq('course_id', courseId);
+      setFavorites(prev => prev.filter(id => id !== courseId));
+    } else {
+      await supabase.from('course_favorites').insert({ user_id: user.id, course_id: courseId });
+      setFavorites(prev => [...prev, courseId]);
+    }
+  };
+
+  if (loading) return <div className="flex justify-center p-12 text-gray-500">Carregando disciplinas...</div>;
+
+  if (selectedCourse) {
+    return <FolderView course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
+  }
 
   return (
-    <header className="w-full z-40">
-      {/* Main Header */}
-      <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img 
-              src="/57002beae21c30a2d583825b8ea17010.png" 
-              alt="Logo Acervo Acadêmico" 
-              className="h-14 w-auto object-contain" 
-            />
-            <div className="border-l border-white/20 pl-4">
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
-                Acervo Acadêmico
-              </h1>
-              <p className="text-xs sm:text-sm font-medium text-blue-300/80 uppercase tracking-[0.2em] mt-0.5">
-                Ciências Contábeis
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-0.5">Usuário</p>
-              <p className="text-sm font-bold text-white">{user?.email}</p>
-            </div>
-            <button 
-              onClick={signOut}
-              className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
-              title="Sair"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Secondary Nav */}
-      <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-10 sm:px-10 lg:px-10 py-2">
-        <div className="max-w-1xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
-          <a 
-            href="https://script.google.com/macros/s/AKfycbwyoOeDtL-nGdXmFstf7nHNJtC0j0STrxGwuRvnKV34K7tVvi6PEhqIe6uhSnXLe-Q1/exec" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-white transition-colors py-5"
-          >
-            <Calculator className="w-3.5 h-3.5 text-blue-600" />
-            Calculadora de Notas
-          </a>
-        </div>
-      </div>
-    </header>
+    <CourseTreeView 
+      courses={courses}
+      favorites={favorites}
+      fileCounts={fileCounts}
+      onSelectFolder={(course) => setSelectedCourse(course)}
+      onToggleFavorite={handleToggleFavorite}
+    />
   );
 }
