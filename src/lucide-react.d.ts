@@ -37,4 +37,5 @@ declare module 'lucide-react' {
   export const FolderPlus: Icon;
   export const ChevronLeft: Icon;
   export const User: Icon;
+  export const LayoutTemplate: Icon;
 }
