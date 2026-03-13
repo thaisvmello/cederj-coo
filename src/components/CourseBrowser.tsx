@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Search, Plus, BookOpen, Star, LayoutGrid, List, FileText, Folder } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
@@ -11,10 +11,10 @@ import { NewCourseModal } from './NewCourseModal';
 
 interface CourseBrowserProps {
   onNavigateToSubPage?: (isInSubPage: boolean) => void;
-  goHome?: boolean;
+  goHomeTrigger?: number;
 }
 
-export function CourseBrowser({ onNavigateToSubPage, goHome }: CourseBrowserProps) {
+export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrowserProps) {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -27,6 +27,7 @@ export function CourseBrowser({ onNavigateToSubPage, goHome }: CourseBrowserProp
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'tree'>('grid');
+  const prevGoHomeTriggerRef = useRef(goHomeTrigger);
 
   useEffect(() => {
     loadData();
@@ -38,13 +39,14 @@ export function CourseBrowser({ onNavigateToSubPage, goHome }: CourseBrowserProp
     onNavigateToSubPage?.(isInSubPage);
   }, [selectedCourse, selectedFolder, onNavigateToSubPage]);
 
-  // Voltar para a página inicial quando goHome mudar para true
+  // Voltar para a página inicial quando o botão Home for clicado
   useEffect(() => {
-    if (goHome === false) {
+    if (goHomeTrigger !== undefined && goHomeTrigger !== prevGoHomeTriggerRef.current) {
+      prevGoHomeTriggerRef.current = goHomeTrigger;
       setSelectedCourse(null);
       setSelectedFolder(null);
     }
-  }, [goHome]);
+  }, [goHomeTrigger]);
 
   const loadData = async () => {
     setLoading(true);

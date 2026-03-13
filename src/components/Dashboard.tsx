@@ -7,9 +7,10 @@ import { Footer } from './Footer';
 
 export function Dashboard() {
   const [isInSubPage, setIsInSubPage] = useState(false);
+  const [goHomeTrigger, setGoHomeTrigger] = useState(0);
 
   const handleGoHome = () => {
-    setIsInSubPage(false);
+    setGoHomeTrigger(prev => prev + 1);
   };
 
   return (
@@ -24,7 +25,7 @@ export function Dashboard() {
         <AdminCourseRequests />
         <CourseBrowser 
           onNavigateToSubPage={setIsInSubPage}
-          goHome={!isInSubPage}
+          goHomeTrigger={goHomeTrigger}
         />
       </main>
 
