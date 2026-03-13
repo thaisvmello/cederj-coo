@@ -1,29 +1,25 @@
 import { supabase } from '../lib/supabase';
 
 export function useFileValidation() {
-  const checkDuplicate = async (folderId: string, fileName: string, fileSize: number): Promise<boolean> => {
+  const checkDuplicates = async (folderId: string, files: { name: string; size: number }[]): Promise<string[]> => {
+    if (files.length === 0) return [];
+
     const { data, error } = await supabase
       .from('files')
-      .select('id')
-      .eq('folder_id', folderId)
-      .eq('name', fileName)
-      .eq('file_size', fileSize)
-      .maybeSingle();
+      .select('name, file_size')
+      .eq('folder_id', folderId);
 
-    if (error) {
-      console.error('Erro ao verificar duplicata:', error);
-      return false;
+    if (error || !data) {
+      console.error('Erro ao verificar duplicatas:', error);
+      return [];
     }
 
-    return !!data;
-  };
-
-  const checkDuplicates = async (folderId: string, files: { name: string; size: number }[]): Promise<string[]> => {
     const duplicates: string[] = [];
-
     for (const file of files) {
-      const isDuplicate = await checkDuplicate(folderId, file.name, file.size);
-      if (isDuplicate) {
+      const exists = data.some(
+        (dbFile: any) => dbFile.name === file.name && dbFile.file_size === file.size
+      );
+      if (exists) {
         duplicates.push(file.name);
       }
     }
@@ -31,5 +27,5 @@ export function useFileValidation() {
     return duplicates;
   };
 
-  return { checkDuplicate, checkDuplicates };
+  return { checkDuplicates };
 }
