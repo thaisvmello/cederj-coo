@@ -1,13 +1,8 @@
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home } from 'lucide-react';
+import { LogOut, Calculator, Shield } from 'lucide-react';
 
-interface HeaderProps {
-  showHomeButton?: boolean;
-  onHomeClick?: () => void;
-}
-
-export function Header({ showHomeButton, onHomeClick }: HeaderProps) {
+export function Header() {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
 
@@ -42,15 +37,6 @@ export function Header({ showHomeButton, onHomeClick }: HeaderProps) {
               </div>
               <p className="text-sm font-bold text-white">{user?.email}</p>
             </div>
-            {showHomeButton && onHomeClick && (
-              <button 
-                onClick={onHomeClick}
-                className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
-                title="Voltar ao Início"
-              >
-                <Home className="w-5 h-5" />
-              </button>
-            )}
             <button 
               onClick={signOut}
               className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"

@@ -46,5 +46,4 @@ declare module 'lucide-react' {
   export const Clock: Icon;
   export const Archive: Icon;
   export const RefreshCw: Icon;
-  export const Home: Icon;
 }
