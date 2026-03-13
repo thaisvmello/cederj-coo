@@ -42,7 +42,7 @@ export function Header() {
       </div>
 
       {/* Secondary Nav */}
-      <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-10 sm:px-6 lg:px-8 py-2">
+      <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-10 sm:px-10 lg:px-8 py-2">
         <div className="max-w-1xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
           <a 
             href="https://script.google.com/macros/s/AKfycbwyoOeDtL-nGdXmFstf7nHNJtC0j0STrxGwuRvnKV34K7tVvi6PEhqIe6uhSnXLe-Q1/exec" 
