@@ -13,6 +13,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Função para sincronizar perfil via Edge Function
 const syncUserProfile = async (token: string) => {
   try {
     const response = await fetch('https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/sync-user-profile', {
@@ -24,6 +25,8 @@ const syncUserProfile = async (token: string) => {
     });
 
     if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Erro ao sincronizar perfil:', errorData);
       return null;
     }
 
@@ -40,55 +43,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string, email: string) => {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, avatar_url')
-        .eq('id', userId)
-        .single();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, avatar_url')
+      .eq('id', userId)
+      .single();
 
-      return {
-        id: userId,
-        email: email || '',
-        first_name: profile?.first_name,
-        last_name: profile?.last_name,
-        avatar_url: profile?.avatar_url,
-      };
-    } catch (error) {
-      return { id: userId, email: email || '' };
-    }
+    return {
+      id: userId,
+      email: email || '',
+      first_name: profile?.first_name,
+      last_name: profile?.last_name,
+      avatar_url: profile?.avatar_url,
+    };
   };
 
   useEffect(() => {
     const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const syncedUser = await syncUserProfile(session.access_token);
-          if (syncedUser) {
-            setUser(syncedUser);
-          } else {
-            const userData = await fetchProfile(session.user.id, session.user.email || '');
-            setUser(userData);
-          }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Tentar sincronizar perfil primeiro
+        const syncedUser = await syncUserProfile(session.access_token);
+        
+        if (syncedUser) {
+          setUser(syncedUser);
         } else {
-          setUser(null);
+          // Fallback para busca direta
+          const userData = await fetchProfile(session.user.id, session.user.email || '');
+          setUser(userData);
         }
-      } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
-      } finally {
-        setLoading(false);
+      } else {
+        setUser(null);
       }
+      setLoading(false);
     };
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
+        // Sincronizar perfil após login
         const syncedUser = await syncUserProfile(session.access_token);
+        
         if (syncedUser) {
           setUser(syncedUser);
         } else {
+          // Fallback
           const userData = await fetchProfile(session.user.id, session.user.email || '');
           setUser(userData);
         }
@@ -116,8 +116,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) throw error;
 
-    if (data.user && data.session?.access_token) {
-      await syncUserProfile(data.session.access_token);
+    if (data.user) {
+      // Aguardar um momento para o trigger do banco processar
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Sincronizar perfil
+      if (data.session?.access_token) {
+        await syncUserProfile(data.session.access_token);
+      }
     }
   };
 
@@ -129,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) throw error;
 
+    // Sincronizar perfil após login
     if (data.session?.access_token) {
       await syncUserProfile(data.session.access_token);
     }

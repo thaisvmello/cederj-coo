@@ -48,16 +48,16 @@ export function Auth() {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <img 
-            src="/acervo-login.png" 
+            src="/57002beae21c30a2d583825b8ea17010.png" 
             alt="Acervo Acadêmico" 
-            className="h-40 mx-auto mb-4 object-contain" 
+            className="h-20 mx-auto mb-4 object-contain" 
           />
-          <div className="space-y-1">
-            <h2 className="text-gray-800 font-bold text-l3">Faça seu login para começar a colaborar com nosso acervo :) Bons estudos!
-            </h2>
-            <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">
-            </p>
-          </div>
+          <p className="text-gray-600 font-medium text-lg">
+            Acervo Acadêmico
+          </p>
+          <p className="text-gray-500 font-medium">
+            Ciências Contábeis
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

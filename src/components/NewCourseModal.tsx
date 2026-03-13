@@ -31,7 +31,7 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
       if (error) throw error;
 
       if (data) {
-        const types = Array.from(new Set(data.map((item: { subject_type: string | null }) => item.subject_type)));
+        const types = Array.from(new Set(data.map(item => item.subject_type)));
         const combinedTypes = Array.from(new Set([...existingTypes, ...types]));
         setExistingTypes(combinedTypes.filter(Boolean) as string[]);
       }

@@ -26,6 +26,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
   const loadComments = async () => {
     setLoading(true);
     try {
+      // 1. Buscar apenas os comentários primeiro
       const { data: commentsData, error: commentsError } = await supabase
         .from('folder_comments')
         .select('*')
@@ -40,8 +41,10 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
         return;
       }
 
-      const userIds = Array.from(new Set(commentsData.map((c: { user_id: string }) => c.user_id)));
+      // 2. Coletar todos os IDs de usuários únicos que comentaram
+      const userIds = Array.from(new Set(commentsData.map(c => c.user_id)));
 
+      // 3. Buscar os perfis desses usuários (Agora deve funcionar se a política SELECT estiver correta)
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, avatar_url')
@@ -51,8 +54,9 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
         console.warn('Erro ao buscar perfis, usando fallback:', profilesError);
       }
 
-      const formattedComments = commentsData.map((comment: any) => {
-        const profile = profilesData?.find((p: any) => p.id === comment.user_id);
+      // 4. Cruzar os dados
+      const formattedComments = commentsData.map(comment => {
+        const profile = profilesData?.find(p => p.id === comment.user_id);
         return {
           ...comment,
           first_name: profile?.first_name || 'Estudante',
