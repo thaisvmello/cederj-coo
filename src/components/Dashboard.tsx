@@ -1,12 +1,17 @@
-"use client";
+import { Header } from './Header';
+import { CourseBrowser } from './CourseBrowser';
+import { Footer } from './Footer';
 
-import React from 'react';
-
-export default function Dashboard() {
+export function Dashboard() {
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
-      <p className="text-gray-600">Bem-vindo ao Acervo Acadêmico.</p>
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+      <Header />
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+        <CourseBrowser />
+      </main>
+
+      <Footer />
     </div>
   );
 }
