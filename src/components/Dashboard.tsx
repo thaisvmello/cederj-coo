@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import CourseBrowser from './CourseBrowser';
+import React from 'react';
 
 export default function Dashboard() {
-  return null;
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <p className="text-gray-600">Bem-vindo ao Acervo Acadêmico.</p>
+    </div>
+  );
 }

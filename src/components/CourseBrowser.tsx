@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import React from 'react';
 
 export default function CourseBrowser() {
   return null;
