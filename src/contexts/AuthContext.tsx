@@ -24,8 +24,6 @@ const syncUserProfile = async (token: string) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Erro ao sincronizar perfil:', errorData);
       return null;
     }
 
@@ -42,36 +40,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string, email: string) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('first_name, last_name, avatar_url')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, avatar_url')
+        .eq('id', userId)
+        .single();
 
-    return {
-      id: userId,
-      email: email || '',
-      first_name: profile?.first_name,
-      last_name: profile?.last_name,
-      avatar_url: profile?.avatar_url,
-    };
+      return {
+        id: userId,
+        email: email || '',
+        first_name: profile?.first_name,
+        last_name: profile?.last_name,
+        avatar_url: profile?.avatar_url,
+      };
+    } catch (error) {
+      return { id: userId, email: email || '' };
+    }
   };
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const syncedUser = await syncUserProfile(session.access_token);
-        if (syncedUser) {
-          setUser(syncedUser);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const syncedUser = await syncUserProfile(session.access_token);
+          if (syncedUser) {
+            setUser(syncedUser);
+          } else {
+            const userData = await fetchProfile(session.user.id, session.user.email || '');
+            setUser(userData);
+          }
         } else {
-          const userData = await fetchProfile(session.user.id, session.user.email || '');
-          setUser(userData);
+          setUser(null);
         }
-      } else {
-        setUser(null);
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAuth();
@@ -109,11 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) throw error;
 
-    if (data.user) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      if (data.session?.access_token) {
-        await syncUserProfile(data.session.access_token);
-      }
+    if (data.user && data.session?.access_token) {
+      await syncUserProfile(data.session.access_token);
     }
   };
 
