@@ -54,10 +54,8 @@ export function Auth() {
           />
           <div className="space-y-1">
             <h2 className="text-gray-800 font-bold text-xl">
-              Acervo Acadêmico
             </h2>
             <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">
-              Ciências Contábeis
             </p>
           </div>
         </div>
