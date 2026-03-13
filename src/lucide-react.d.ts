@@ -45,4 +45,5 @@ declare module 'lucide-react' {
   export const CheckCircle: Icon;
   export const Clock: Icon;
   export const Archive: Icon;
+  export const RefreshCw: Icon;
 }

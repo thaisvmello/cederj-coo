@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, X, Loader, AlertCircle, FileText } from 'lucide-react';
+import { Loader, AlertCircle, FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -24,7 +24,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Inicializar com arquivos vazios - os arquivos virão do componente pai
   const uploadFile = async (pendingFile: PendingFile): Promise<boolean> => {
     if (!user) return false;
 
