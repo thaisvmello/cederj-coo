@@ -1,7 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, Calculator } from 'lucide-react';
 
-export function CourseBrowser() {
+export function Header() {
   const { user, signOut } = useAuth();
 
   return (
@@ -42,15 +42,15 @@ export function CourseBrowser() {
       </div>
 
       {/* Secondary Nav */}
-      <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
-        <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
+      <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-10 sm:px-10 lg:px-10 py-2">
+        <div className="max-w-1xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
           <a 
             href="https://script.google.com/macros/s/AKfycbwyoOeDtL-nGdXmFstf7nHNJtC0j0STrxGwuRvnKV34K7tVvi6PEhqIe6uhSnXLe-Q1/exec" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-white transition-colors py-1"
+            className="flex items-center gap-1.5 hover:text-white transition-colors py-5"
           >
-            <Calculator className="w-3.5 h-3.5 text-blue-400" />
+            <Calculator className="w-3.5 h-3.5 text-blue-600" />
             Calculadora de Notas
           </a>
         </div>
