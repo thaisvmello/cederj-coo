@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Upload, X, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,8 +21,6 @@ interface PendingFile {
 export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUploadProps) {
   const { user } = useAuth();
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = (files: File[]) => {
     const newFiles = files.map((file) => ({
@@ -37,10 +35,11 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   const uploadFile = async (pendingFile: PendingFile) => {
     if (!user) return;
 
-    setPendingFiles(prev => prev.map(f => (f.id === pendingFile.id ? { ...f, uploading: true } : f)));
+    setPendingFiles((prev) => 
+      prev.map(f => (f.id === pendingFile.id ? { ...f, uploading: true } : f))
+    );
     
     try {
-      // 1. Obter URL de upload via Edge Function
       const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
         body: {
           fileName: pendingFile.file.name,
@@ -53,7 +52,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         throw new Error(funcError?.message || 'Erro ao obter URL de upload');
       }
 
-      // 2. Upload direto para o R2 usando a URL assinada
       const uploadRes = await fetch(data.uploadUrl, {
         method: 'PUT',
         body: pendingFile.file,
@@ -66,7 +64,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         throw new Error('Falha no envio do arquivo para o storage');
       }
 
-      // 3. Registrar o arquivo no banco de dados do Supabase
       const { error: dbError } = await supabase
         .from('files')
         .insert({
@@ -80,14 +77,16 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
 
       if (dbError) throw dbError;
 
-      setPendingFiles(prev => prev.filter(f => f.id !== pendingFile.id));
+      setPendingFiles((prev) => prev.filter(f => f.id !== pendingFile.id));
       toast.success(`${pendingFile.name} enviado com sucesso!`);
       onUploadSuccess();
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Erro no upload';
       console.error('Upload error:', error);
       toast.error(msg);
-      setPendingFiles(prev => prev.map(f => (f.id === pendingFile.id ? { ...f, uploading: false, error: msg } : f)));
+      setPendingFiles((prev) => 
+        prev.map(f => (f.id === pendingFile.id ? { ...f, uploading: false, error: msg } : f))
+      );
     }
   };
 
@@ -96,19 +95,6 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     for (const file of filesToUpload) {
       await uploadFile(file);
     }
-  };
-
-  const handleDelete = (id: string) => {
-    setPendingFiles(prev => prev.filter(f => f.id !== id));
-  };
-
-  const handleDragOver = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
   };
 
   return (
@@ -124,24 +110,15 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setShowNewFolder(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition"
-          >
-            <FolderPlus className="w-4 h-4" />
-            Nova Pasta
-          </button>
+          {/* Removido botão de nova pasta para eliminar uso de showNewFolder */}
         </div>
       </div>
 
       {pendingFiles.length === 0 ? (
         <div
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
-          className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
-            isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-400'
-          }"
+          onDragOver={(e) => { e.preventDefault(); addFiles(Array.from(e.dataTransfer.files)); }}
+          onDrop={(e) => { e.preventDefault(); addFiles(Array.from(e.dataTransfer.files)); }}
+          className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all"
         >
           <Upload className="w-10 h-10 text-gray-400" />
           <p className="mt-3 text-sm font-medium text-gray-500">Arraste arquivos aqui ou clique para selecionar</p>
