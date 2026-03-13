@@ -2,7 +2,7 @@ import { Header } from './Header';
 import { CourseBrowser } from './CourseBrowser';
 import { Footer } from './Footer';
 
-export default function Dashboard() {
+export function Dashboard() {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
       <Header />
