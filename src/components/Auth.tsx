@@ -50,7 +50,7 @@ export function Auth() {
           <img 
             src="/acervo-login.png" 
             alt="Acervo Acadêmico" 
-            className="h-32 mx-auto mb-4 object-contain" 
+            className="h-40 mx-auto mb-4 object-contain" 
           />
           <p className="text-gray-600 font-medium text-lg">
             Faça seu login para começar a colaborar com nosso acervo :)
