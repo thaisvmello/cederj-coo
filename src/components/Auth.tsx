@@ -48,9 +48,9 @@ export function Auth() {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <img 
-            src="/57002beae21c30a2d583825b8ea17010.png" 
+            src="/acervo-login.png" 
             alt="Acervo Acadêmico" 
-            className="h-20 mx-auto mb-4 object-contain" 
+            className="h-32 mx-auto mb-4 object-contain" 
           />
           <p className="text-gray-600 font-medium text-lg">
             Acervo Acadêmico
