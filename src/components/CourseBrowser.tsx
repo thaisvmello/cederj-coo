@@ -50,7 +50,7 @@ export function Header() {
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 hover:text-white transition-colors py-1"
           >
-            <Calculator className="w-3.5 h-3.5 text-blue-400" />
+            <Calculator className="w-3.5 h-3.5 text-blue-600" />
             Calculadora de Notas
           </a>
         </div>
