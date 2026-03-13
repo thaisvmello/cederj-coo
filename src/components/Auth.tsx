@@ -53,7 +53,7 @@ export function Auth() {
             className="h-32 mx-auto mb-4 object-contain" 
           />
           <p className="text-gray-600 font-medium text-lg">
-            Faça seu login
+            Faça seu login para começar a colaborar com nosso acervo :)
           </p>
           <p className="text-gray-500 font-medium">
             Ciências Contábeis
