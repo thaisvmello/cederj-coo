@@ -17,7 +17,7 @@ export function Header() {
             />
             <div className="border-l border-white/20 pl-4">
               <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
-                Diretório Online de Arquivos
+                Acervo Acadêmico
               </h1>
             </div>
           </div>
