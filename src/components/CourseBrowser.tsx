@@ -88,7 +88,7 @@ export function CourseBrowser() {
             </div>
             <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Acervo de Provas e Materiais</h2>
           </div>
-          <p className="text-sm text-gray-500 font-medium">CEDERJ - Ciências Contábeis</p>
+          <p className="text-sm text-gray-500 font-medium"></p>
           
           {/* Stats Counter */}
           <div className="flex items-center gap-4 text-sm text-gray-600">
