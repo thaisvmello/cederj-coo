@@ -7,11 +7,15 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Lidar com preflight do CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    console.log("[get-r2-upload-url] Requisição recebida");
+
+    // 1. Validar Autenticação
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Não autorizado' }), { 
@@ -20,82 +24,49 @@ serve(async (req) => {
       });
     }
 
-    const contentType = req.headers.get('content-type') || '';
-    
-    // Configurações R2
+    // 2. Extrair dados do corpo
+    const { fileName, fileType, folderId } = await req.json();
+    if (!fileName || !folderId) {
+      throw new Error("Dados insuficientes: fileName e folderId são obrigatórios.");
+    }
+
+    // 3. Carregar Configurações (Secrets)
     const endpoint = Deno.env.get("R2_ENDPOINT");
     const accessKeyId = Deno.env.get("R2_ACCESS_KEY_ID");
     const secretAccessKey = Deno.env.get("R2_SECRET_ACCESS_KEY");
     const bucketName = Deno.env.get("R2_BUCKET_NAME");
     const publicDomain = Deno.env.get("R2_PUBLIC_DOMAIN");
 
-    const s3Client = new S3Client({
-      endPoint: endpoint!.replace(/^https?:\/\//, ''),
-      accessKey: accessKeyId!,
-      secretKey: secretAccessKey!,
-      region: "auto",
-      useSSL: true,
-      pathStyle: true,
-    });
-
-    // Se for multipart/form-data, fazer upload direto via proxy
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await req.formData();
-      const file = formData.get('file') as File;
-      const folderId = formData.get('folderId') as string;
-      
-      if (!file || !folderId) {
-        return new Response(JSON.stringify({ error: 'Arquivo ou folderId não fornecido' }), { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        });
-      }
-
-      const timestamp = Date.now();
-      const extension = file.name.split('.').pop();
-      const key = `materials/${folderId}/${timestamp}.${extension}`;
-
-      // Upload direto para R2 via servidor
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-
-      await s3Client.putObject({
-        bucketName: bucketName!,
-        objectName: key,
-        body: uint8Array,
-        contentType: file.type || 'application/octet-stream',
-      });
-
-      const publicUrl = `${publicDomain!.replace(/\/$/, '')}/${key}`;
-
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          publicUrl,
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type,
-        }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+    if (!endpoint || !accessKeyId || !secretAccessKey || !bucketName || !publicDomain) {
+      console.error("[get-r2-upload-url] Erro: Variáveis de ambiente ausentes");
+      throw new Error("Configuração do R2 incompleta no servidor.");
     }
 
-    // Caso contrário, gerar URL pré-assinada (comportamento original)
-    const { fileName, folderId } = await req.json();
-    
-    const timestamp = Date.now();
-    const extension = fileName.split('.').pop();
-    const key = `materials/${folderId}/${timestamp}.${extension}`;
+    // 4. Configurar Cliente S3 (Otimizado para R2 no Deno)
+    const s3Client = new S3Client({
+      endPoint: endpoint.replace(/^https?:\/\//, ''), // Remove protocolo se existir
+      accessKey: accessKeyId,
+      secretKey: secretAccessKey,
+      region: "auto",
+      useSSL: true,
+      pathStyle: true, // Essencial para R2
+    });
 
+    // 5. Gerar Caminho do Arquivo
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const extension = fileName.split('.').pop();
+    const key = `materials/${folderId}/${timestamp}-${randomStr}.${extension}`;
+
+    // 6. Gerar URL Assinada (PUT)
+    console.log(`[get-r2-upload-url] Gerando URL para: ${key}`);
     const uploadUrl = await s3Client.getPresignedUrl("PUT", key, {
-      bucketName: bucketName!,
+      bucketName: bucketName,
       expirySeconds: 3600,
     });
 
-    const publicUrl = `${publicDomain!.replace(/\/$/, '')}/${key}`;
+    // 7. Construir URL Pública
+    const publicUrl = `${publicDomain.replace(/\/$/, '')}/${key}`;
 
     return new Response(
       JSON.stringify({ uploadUrl, publicUrl }),
@@ -106,7 +77,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Edge Function error:', error);
+    console.error(`[get-r2-upload-url] Erro: ${error.message}`);
     return new Response(
       JSON.stringify({ error: error.message }), 
       { 

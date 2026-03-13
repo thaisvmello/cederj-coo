@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, X, Loader } from 'lucide-react';
+import { Upload, X, Loader, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -42,20 +42,53 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      // Upload via Edge Function proxy (evita problemas de CORS)
-      const formData = new FormData();
-      formData.append('file', pendingFile.file);
-      formData.append('folderId', folderId);
+      // 1. Obter a sessão e a chave anon
+      const { data: { session } } = await supabase.auth.getSession();
+      const anonKey = (supabase as any).supabaseKey; // Pega a chave anon do cliente
+      
+      if (!session) throw new Error('Sessão expirada. Por favor, faça login novamente.');
 
-      const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
-        body: formData,
+      // 2. Chamar a Edge Function
+      const functionUrl = `https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url`;
+      
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': anonKey, // Obrigatório para o gateway do Supabase
+        },
+        body: JSON.stringify({
+          fileName: pendingFile.file.name,
+          fileType: pendingFile.file.type,
+          folderId
+        })
       });
 
-      if (funcError || !data?.publicUrl) {
-        throw new Error(funcError?.message || 'Erro ao fazer upload do arquivo');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Erro na função (${response.status})`);
       }
 
-      // Registrar o arquivo no banco de dados do Supabase
+      const data = await response.json();
+
+      // 3. Upload direto para o R2 via PUT
+      const uploadRes = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        body: pendingFile.file,
+        headers: { 
+          'Content-Type': pendingFile.file.type 
+        }
+      }).catch(err => {
+        if (err.name === 'TypeError') throw new Error('Erro de Rede/CORS no R2: Verifique as configurações de CORS no painel da Cloudflare.');
+        throw err;
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error(`Falha no R2 (${uploadRes.status}): Verifique as permissões do bucket.`);
+      }
+
+      // 4. Salvar metadados no Supabase
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
         name: pendingFile.name,
@@ -71,8 +104,8 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       toast.success(`${pendingFile.name} enviado com sucesso!`);
       onUploadSuccess();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Erro no upload';
-      console.error('Upload error:', error);
+      const msg = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error('[FileUpload] Erro:', msg);
       toast.error(msg);
       setPendingFiles((prev) =>
         prev.map((f) => (f.id === pendingFile.id ? { ...f, uploading: false, error: msg } : f))
@@ -90,7 +123,10 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-gray-900">Upload para {disciplineName}</h3>
+        <div>
+          <h3 className="font-bold text-gray-900">Upload Direto (R2)</h3>
+          <p className="text-xs text-gray-500">Destino: {disciplineName}</p>
+        </div>
       </div>
 
       {pendingFiles.length === 0 ? (
@@ -104,7 +140,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 font-semibold text-sm">Clique ou arraste arquivos</p>
+          <p className="text-gray-600 font-semibold">Arraste arquivos ou clique para selecionar</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -117,20 +153,24 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         <div className="space-y-3">
           <div className="max-h-60 overflow-y-auto space-y-2">
             {pendingFiles.map((file) => (
-              <div key={file.id} className="p-3 rounded-lg border bg-gray-50 flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-900 truncate">{file.name}</p>
-                  {file.error && <p className="text-[10px] text-red-500 mt-1">{file.error}</p>}
+              <div key={file.id} className={`p-3 rounded-lg border ${file.error ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-900 truncate flex-1 mr-4">{file.name}</span>
+                  <div className="flex items-center gap-2">
+                    {file.uploading ? (
+                      <Loader className="w-4 h-4 text-blue-500 animate-spin" />
+                    ) : (
+                      <button onClick={() => setPendingFiles(prev => prev.filter(f => f.id !== file.id))} className="text-gray-400 hover:text-red-500">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {file.uploading ? (
-                  <Loader className="w-4 h-4 text-blue-500 animate-spin" />
-                ) : (
-                  <button 
-                    onClick={() => setPendingFiles(p => p.filter(f => f.id !== file.id))}
-                    className="p-1 hover:bg-gray-200 rounded"
-                  >
-                    <X className="w-4 h-4 text-gray-400" />
-                  </button>
+                {file.error && (
+                  <div className="mt-2 flex items-start gap-1.5 text-[10px] text-red-600 font-medium">
+                    <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                    <span>{file.error}</span>
+                  </div>
                 )}
               </div>
             ))}
