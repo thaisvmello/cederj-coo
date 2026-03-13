@@ -19,11 +19,18 @@ export function FolderRequestModal({ courseId, courseName, onClose, onSuccess }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !user) return;
+    if (!name.trim()) {
+      toast.error('Por favor, informe o nome da pasta');
+      return;
+    }
+    if (!user) {
+      toast.error('Você precisa estar logado para solicitar uma pasta');
+      return;
+    }
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('folder_requests').insert({
+      console.log('Enviando solicitação:', {
         course_id: courseId,
         requested_by: user.id,
         folder_name: name.trim(),
@@ -31,14 +38,36 @@ export function FolderRequestModal({ courseId, courseName, onClose, onSuccess }:
         status: 'pending'
       });
 
-      if (error) throw error;
+      const { data, error } = await supabase.from('folder_requests').insert({
+        course_id: courseId,
+        requested_by: user.id,
+        folder_name: name.trim(),
+        reason: reason.trim() || null,
+        status: 'pending'
+      }).select();
 
+      if (error) {
+        console.error('Erro do Supabase:', error);
+        throw error;
+      }
+
+      console.log('Solicitação criada:', data);
       toast.success('Solicitação enviada! Aguarde a aprovação do administrador.');
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao solicitar pasta:', error);
-      toast.error('Erro ao enviar solicitação');
+      
+      // Mensagens de erro mais específicas
+      if (error?.code === '42P01') {
+        toast.error('Tabela de solicitações não encontrada. Contate o administrador.');
+      } else if (error?.code === '23503') {
+        toast.error('Disciplina não encontrada. Tente novamente.');
+      } else if (error?.code === '42501' || error?.message?.includes('policy')) {
+        toast.error('Sem permissão para criar solicitação. Verifique se está logado.');
+      } else {
+        toast.error(`Erro ao enviar solicitação: ${error?.message || 'Tente novamente'}`);
+      }
     } finally {
       setLoading(false);
     }

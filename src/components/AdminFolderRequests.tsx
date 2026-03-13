@@ -34,22 +34,33 @@ export function AdminFolderRequests() {
 
   const loadRequests = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('folder_requests')
-      .select(`
-        *,
-        course:courses(name),
-        requester:profiles(first_name, last_name)
-      `)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('folder_requests')
+        .select(`
+          *,
+          course:courses(name),
+          requester:profiles(first_name, last_name)
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true });
 
-    if (error) {
+      if (error) {
+        console.error('Erro ao carregar solicitações:', error);
+        // Se a tabela não existir, não mostrar erro para o admin
+        if (error.code !== '42P01') {
+          toast.error('Erro ao carregar solicitações');
+        }
+        setRequests([]);
+      } else {
+        setRequests(data || []);
+      }
+    } catch (error) {
       console.error('Erro ao carregar solicitações:', error);
-    } else {
-      setRequests(data || []);
+      setRequests([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleApprove = async (request: FolderRequest) => {
@@ -113,12 +124,7 @@ export function AdminFolderRequests() {
   }
 
   if (requests.length === 0) {
-    return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-        <Check className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-        <p className="text-sm text-gray-500">Nenhuma solicitação pendente</p>
-      </div>
-    );
+    return null; // Não mostrar nada se não houver solicitações
   }
 
   return (
@@ -143,11 +149,11 @@ export function AdminFolderRequests() {
                   <span className="font-bold text-gray-900">{request.folder_name}</span>
                 </div>
                 <p className="text-xs text-gray-500 mb-1">
-                  Disciplina: <span className="font-medium">{request.course?.name}</span>
+                  Disciplina: <span className="font-medium">{request.course?.name || 'N/A'}</span>
                 </p>
                 <p className="text-xs text-gray-500 mb-1">
                   Solicitado por: <span className="font-medium">
-                    {request.requester?.first_name} {request.requester?.last_name}
+                    {request.requester?.first_name || 'Usuário'} {request.requester?.last_name || ''}
                   </span>
                 </p>
                 {request.reason && (
