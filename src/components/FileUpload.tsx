@@ -42,33 +42,20 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      // 1. Obter URL de upload via Edge Function
+      // Upload via Edge Function proxy (evita problemas de CORS)
+      const formData = new FormData();
+      formData.append('file', pendingFile.file);
+      formData.append('folderId', folderId);
+
       const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
-        body: {
-          fileName: pendingFile.file.name,
-          fileType: pendingFile.file.type,
-          folderId
-        }
+        body: formData,
       });
 
-      if (funcError || !data?.uploadUrl) {
-        throw new Error(funcError?.message || 'Erro ao obter URL de upload');
+      if (funcError || !data?.publicUrl) {
+        throw new Error(funcError?.message || 'Erro ao fazer upload do arquivo');
       }
 
-      // 2. Upload direto para o R2 usando a URL assinada
-      const uploadRes = await fetch(data.uploadUrl, {
-        method: 'PUT',
-        body: pendingFile.file,
-        headers: { 
-          'Content-Type': pendingFile.file.type 
-        }
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error('Falha no envio do arquivo para o storage');
-      }
-
-      // 3. Registrar o arquivo no banco de dados do Supabase
+      // Registrar o arquivo no banco de dados do Supabase
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
         name: pendingFile.name,

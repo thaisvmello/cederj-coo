@@ -7,7 +7,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Lidar com CORS Preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -21,7 +20,7 @@ serve(async (req) => {
       });
     }
 
-    const { fileName, folderId } = await req.json();
+    const contentType = req.headers.get('content-type') || '';
     
     // Configurações R2
     const endpoint = Deno.env.get("R2_ENDPOINT");
@@ -39,6 +38,54 @@ serve(async (req) => {
       pathStyle: true,
     });
 
+    // Se for multipart/form-data, fazer upload direto via proxy
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      const file = formData.get('file') as File;
+      const folderId = formData.get('folderId') as string;
+      
+      if (!file || !folderId) {
+        return new Response(JSON.stringify({ error: 'Arquivo ou folderId não fornecido' }), { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+
+      const timestamp = Date.now();
+      const extension = file.name.split('.').pop();
+      const key = `materials/${folderId}/${timestamp}.${extension}`;
+
+      // Upload direto para R2 via servidor
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      await s3Client.putObject({
+        bucketName: bucketName!,
+        objectName: key,
+        body: uint8Array,
+        contentType: file.type || 'application/octet-stream',
+      });
+
+      const publicUrl = `${publicDomain!.replace(/\/$/, '')}/${key}`;
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          publicUrl,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Caso contrário, gerar URL pré-assinada (comportamento original)
+    const { fileName, folderId } = await req.json();
+    
     const timestamp = Date.now();
     const extension = fileName.split('.').pop();
     const key = `materials/${folderId}/${timestamp}.${extension}`;
@@ -59,6 +106,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    console.error('Edge Function error:', error);
     return new Response(
       JSON.stringify({ error: error.message }), 
       { 
