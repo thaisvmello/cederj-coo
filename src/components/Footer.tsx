@@ -16,7 +16,7 @@ export function Footer() {
           <p className="text-[11px] text-gray-400 max-w-2xl mx-auto leading-relaxed font-medium">
             Plataforma colaborativa para estudantes de Ciências Contábeis. 
             <br />
-            Criado com carinho por uma contadora, jornalista e (wannabe) programadora ❤️ 
+            Criado com carinho por uma futura contadora, jornalista e (wannabe) programadora ❤️ 
           </p>
         </div>
 
