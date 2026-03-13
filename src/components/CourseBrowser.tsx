@@ -1,3 +1,9 @@
-import { CourseTreeView } from './CourseTreeView';
-import FolderView from './FolderView'; // Corrigindo import para default
-import { FolderSidePanel } from './FolderSidePanel';
+"use client";
+
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+
+export default function CourseBrowser() {
+  return null;
+}

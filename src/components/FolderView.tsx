@@ -1,4 +1,9 @@
-import FileUpload from './FileUpload'; // Mantendo apenas o import necessário
-import { NewFolderModal } from './NewFolderModal';
+"use client";
 
-export default FolderView; // Adicionando export default para o componente FolderView
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+
+export default function FolderView() {
+  return null;
+}
