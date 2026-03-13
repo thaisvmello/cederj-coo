@@ -5,9 +5,11 @@ import { LogOut, Calculator, Shield, Home } from 'lucide-react';
 interface HeaderProps {
   showHomeButton?: boolean;
   onGoHome?: () => void;
+  onNavigateToCalculator?: () => void;
+  currentPage?: string;
 }
 
-export function Header({ showHomeButton = false, onGoHome }: HeaderProps) {
+export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculator, currentPage }: HeaderProps) {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
 
@@ -68,15 +70,13 @@ export function Header({ showHomeButton = false, onGoHome }: HeaderProps) {
       {/* Secondary Nav */}
       <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
         <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
-          <a 
-            href="https://script.google.com/macros/s/AKfycbwyoOeDtL-nGdXmFstf7nHNJtC0j0STrxGwuRvnKV34K7tVvi6PEhqIe6uhSnXLe-Q1/exec" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-white transition-colors py-1"
+          <button 
+            onClick={onNavigateToCalculator}
+            className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${currentPage === 'calculator' ? 'text-white' : ''}`}
           >
             <Calculator className="w-3.5 h-3.5 text-blue-400" />
             Calculadora de Notas
-          </a>
+          </button>
         </div>
       </div>
     </header>
