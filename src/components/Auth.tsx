@@ -50,7 +50,7 @@ export function Auth() {
           <img 
             src="/acervo-login.png" 
             alt="Acervo Acadêmico" 
-            className="h-40 mx-auto mb-4 object-contain" 
+            className="h-45 mx-45 mb-4 object-contain" 
           />
           <div className="space-y-1">
             <h2 className="text-gray-800 font-bold text-xl">
