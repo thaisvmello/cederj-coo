@@ -45,7 +45,7 @@ export function CourseTreeView({
       const { data: favoriteFoldersData } = await supabase
         .from('folders')
         .select('*')
-        .in('id', favoriteFolderIds.map(f => f.folder_id));
+        .in('id', favoriteFolderIds.map((f: { folder_id: string }) => f.folder_id));
       
       setFavoriteFolders(favoriteFoldersData || []);
     };

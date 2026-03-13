@@ -32,15 +32,15 @@ export function CourseBrowser() {
 
     if (user) {
       const { data: favData } = await supabase.from('course_favorites').select('course_id').eq('user_id', user.id);
-      setFavorites(favData?.map(f => f.course_id) || []);
+      setFavorites(favData?.map((f: { course_id: string }) => f.course_id) || []);
     }
 
     const { data: filesData } = await supabase.from('files').select('folder_id');
     const { data: foldersData } = await supabase.from('folders').select('id, course_id');
     if (filesData && foldersData) {
       const counts: {[key: string]: number} = {};
-      foldersData.forEach(folder => {
-        const count = filesData.filter(f => f.folder_id === folder.id).length;
+      foldersData.forEach((folder: { id: string, course_id: string }) => {
+        const count = filesData.filter((f: { folder_id: string }) => f.folder_id === folder.id).length;
         counts[folder.course_id] = (counts[folder.course_id] || 0) + count;
       });
       setFileCounts(counts);
@@ -80,7 +80,7 @@ export function CourseBrowser() {
             <div className="p-2 bg-blue-50 rounded-lg">
               <BookOpen className="w-6 h-6 text-blue-600" />
             </div>
-            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Acervo de Materiais</h2>
+            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo de Materiais e Provas</h2>
           </div>
           <p className="text-sm text-gray-500 font-medium"> Ciências Contábeis</p>
         </div>

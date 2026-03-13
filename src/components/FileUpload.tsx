@@ -42,41 +42,33 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     );
 
     try {
-      // Obter sessão para o token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Sessão expirada. Entre novamente.');
-
-      // 1. Obter URL de upload via Fetch manual (padrão que funcionava)
-      const response = await fetch('https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // 1. Obter URL de upload via Edge Function
+      const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
+        body: {
           fileName: pendingFile.file.name,
           fileType: pendingFile.file.type,
           folderId
-        })
+        }
       });
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Erro no servidor de upload');
+      if (funcError || !data?.uploadUrl) {
+        throw new Error(funcError?.message || 'Erro ao obter URL de upload');
       }
 
-      const data = await response.json();
-
-      // 2. Upload para R2
+      // 2. Upload direto para o R2 usando a URL assinada
       const uploadRes = await fetch(data.uploadUrl, {
         method: 'PUT',
         body: pendingFile.file,
-        headers: { 'Content-Type': pendingFile.file.type }
+        headers: { 
+          'Content-Type': pendingFile.file.type 
+        }
       });
 
-      if (!uploadRes.ok) throw new Error('Falha no upload para o storage');
+      if (!uploadRes.ok) {
+        throw new Error('Falha no envio do arquivo para o storage');
+      }
 
-      // 3. Registrar no Banco
+      // 3. Registrar o arquivo no banco de dados do Supabase
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
         name: pendingFile.name,
@@ -89,10 +81,11 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       if (dbError) throw dbError;
 
       setPendingFiles((prev) => prev.filter((f) => f.id !== pendingFile.id));
-      toast.success(`${pendingFile.name} enviado!`);
+      toast.success(`${pendingFile.name} enviado com sucesso!`);
       onUploadSuccess();
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Erro no upload';
+      console.error('Upload error:', error);
       toast.error(msg);
       setPendingFiles((prev) =>
         prev.map((f) => (f.id === pendingFile.id ? { ...f, uploading: false, error: msg } : f))
@@ -138,10 +131,20 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           <div className="max-h-60 overflow-y-auto space-y-2">
             {pendingFiles.map((file) => (
               <div key={file.id} className="p-3 rounded-lg border bg-gray-50 flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-900 truncate flex-1">{file.name}</span>
-                {file.uploading ? <Loader className="w-4 h-4 text-blue-500 animate-spin" /> : 
-                  <button onClick={() => setPendingFiles(p => p.filter(f => f.id !== file.id))}><X className="w-4 h-4 text-gray-400" /></button>
-                }
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-900 truncate">{file.name}</p>
+                  {file.error && <p className="text-[10px] text-red-500 mt-1">{file.error}</p>}
+                </div>
+                {file.uploading ? (
+                  <Loader className="w-4 h-4 text-blue-500 animate-spin" />
+                ) : (
+                  <button 
+                    onClick={() => setPendingFiles(p => p.filter(f => f.id !== file.id))}
+                    className="p-1 hover:bg-gray-200 rounded"
+                  >
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
