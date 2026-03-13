@@ -50,13 +50,16 @@ export function Auth() {
           <img 
             src="/acervo-login.png" 
             alt="Acervo Acadêmico" 
-            className="h-45 mx-auto mb-4 object-contain" 
+            className="h-40 mx-auto mb-4 object-contain" 
           />
-          <p className="text-gray-600 font-medium text-lg">
-            Faça seu login para começar a colaborar com nosso acervo :)
-          </p>
-          <p className="text-gray-500 font-medium">
-          </p>
+          <div className="space-y-1">
+            <h2 className="text-gray-800 font-bold text-xl">
+              Acervo Acadêmico
+            </h2>
+            <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">
+              Ciências Contábeis
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
