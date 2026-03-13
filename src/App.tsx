@@ -1,6 +1,6 @@
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Auth } from './components/Auth';
-import { Dashboard } from './components/Dashboard';
+import Dashboard from './components/Dashboard';
 import { Toaster } from 'react-hot-toast';
 
 function AppContent() {
