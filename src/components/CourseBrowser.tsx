@@ -80,7 +80,7 @@ export function CourseBrowser() {
             <div className="p-2 bg-blue-50 rounded-lg">
               <BookOpen className="w-6 h-6 text-blue-600" />
             </div>
-            <h2 className="text-1xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo de Materiais e Provas</h2>
+            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo de Materiais e Provas</h2>
           </div>
           <p className="text-sm text-gray-500 font-medium"> Ciências Contábeis</p>
         </div>
