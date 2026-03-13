@@ -82,7 +82,7 @@ export function CourseBrowser() {
             </div>
             <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo</h2>
           </div>
-          <p className="text-sm text-gray-500 font-medium"> Materiais de estudo, provas e livros</p>
+          <p className="text-1x text-gray-500 font-medium"> Materiais de estudo, provas e livros</p>
         </div>
       </div>
 
