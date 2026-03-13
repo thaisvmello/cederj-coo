@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, FolderPlus, Loader } from 'lucide-react';
+import { X, FolderPlus, Loader, Send } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 interface NewCourseModalProps {
@@ -9,6 +10,7 @@ interface NewCourseModalProps {
 }
 
 export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [period, setPeriod] = useState('');
@@ -44,38 +46,70 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      toast.error('Por favor, informe o nome da disciplina');
+      return;
+    }
+    if (!user) {
+      toast.error('Você precisa estar logado para solicitar uma disciplina');
+      return;
+    }
 
     setLoading(true);
     try {
-      const { data: existing } = await supabase
-        .from('courses')
+      // Verificar se já existe uma solicitação pendente com mesmo nome
+      const { data: existingRequest } = await supabase
+        .from('course_requests')
         .select('id')
-        .or(`name.ilike.${name.trim()},code.ilike.${code.trim()}`)
+        .eq('name', name.trim())
+        .eq('status', 'pending')
         .maybeSingle();
 
-      if (existing) {
-        toast.error('Uma disciplina com este nome ou código já existe!');
+      if (existingRequest) {
+        toast.error('Já existe uma solicitação pendente para esta disciplina!');
         setLoading(false);
         return;
       }
 
-      const { error } = await supabase.from('courses').insert({
+      // Verificar se a disciplina já existe
+      const { data: existingCourse } = await supabase
+        .from('courses')
+        .select('id')
+        .ilike('name', name.trim())
+        .maybeSingle();
+
+      if (existingCourse) {
+        toast.error('Esta disciplina já existe no acervo!');
+        setLoading(false);
+        return;
+      }
+
+      // Criar solicitação
+      const { error } = await supabase.from('course_requests').insert({
+        requested_by: user.id,
         name: name.trim(),
         code: code.trim() || null,
         period: period.trim() || null,
         subject_type: subjectType,
-        is_mandatory: subjectType.toLowerCase().includes('obrigatória')
+        is_mandatory: subjectType.toLowerCase().includes('obrigatória'),
+        status: 'pending'
       });
 
       if (error) throw error;
 
-      toast.success('Disciplina criada com sucesso!');
+      toast.success('Solicitação enviada! Aguarde a aprovação do administrador.');
       onSuccess();
       onClose();
-    } catch (error) {
-      console.error('Error creating course:', error);
-      toast.error('Erro ao criar disciplina');
+    } catch (error: any) {
+      console.error('Error creating course request:', error);
+      
+      if (error?.code === '42P01') {
+        toast.error('Sistema de solicitações não configurado. Contate o administrador.');
+      } else if (error?.code === '42501' || error?.message?.includes('policy')) {
+        toast.error('Sem permissão para criar solicitação. Verifique se está logado.');
+      } else {
+        toast.error(`Erro ao enviar solicitação: ${error?.message || 'Tente novamente'}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -86,10 +120,13 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <FolderPlus className="w-5 h-5 text-blue-600" />
+            <div className="p-2 bg-amber-50 rounded-lg">
+              <FolderPlus className="w-5 h-5 text-amber-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900">Nova Disciplina</h2>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Solicitar Nova Disciplina</h2>
+              <p className="text-xs text-gray-500">Requer aprovação do administrador</p>
+            </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
             <X className="w-6 h-6" />
@@ -97,6 +134,13 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <p className="text-xs text-amber-800">
+              <strong>Atenção:</strong> A criação de novas disciplinas requer aprovação do administrador. 
+              Sua solicitação será analisada em breve.
+            </p>
+          </div>
+
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1.5">
               Nome da disciplina *
@@ -107,7 +151,7 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Contabilidade Básica I"
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
             />
           </div>
 
@@ -120,7 +164,7 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="Ex: EAD17034"
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
             />
           </div>
 
@@ -133,7 +177,7 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
                 <select
                   value={subjectType}
                   onChange={(e) => setSubjectType(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition appearance-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition appearance-none"
                 >
                   {existingTypes.map(type => (
                     <option key={type} value={type}>{type}</option>
@@ -148,7 +192,7 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
                 <input
                   type="text"
                   placeholder="Digite o novo tipo"
-                  className="mt-2 w-full px-4 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="mt-2 w-full px-4 py-2 bg-white border border-amber-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                   onBlur={(e) => {
                     if (e.target.value.trim()) {
                       const newType = e.target.value.trim();
@@ -170,7 +214,7 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
                 placeholder="Ex: 1"
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
               />
             </div>
           </div>
@@ -186,9 +230,10 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-6 py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? 'Criando...' : 'Criar'}
+              {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {loading ? 'Enviando...' : 'Enviar Solicitação'}
             </button>
           </div>
         </form>

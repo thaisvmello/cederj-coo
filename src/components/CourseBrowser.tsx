@@ -107,9 +107,9 @@ export function CourseBrowser() {
           </button>
         </div>
 
-        <button onClick={() => setShowNewModal(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-[#295977] text-white rounded-xl font-bold text-sm hover:bg-[#1e445d] transition shadow-sm">
+        <button onClick={() => setShowNewModal(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition shadow-sm">
           <Plus className="w-5 h-5" />
-          Nova Disciplina
+          Solicitar Disciplina
         </button>
       </div>
 
