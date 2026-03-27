@@ -1,0 +1,134 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { X, Pencil, Loader, Save } from 'lucide-react';
+import type { Course } from '../lib/types';
+import toast from 'react-hot-toast';
+
+interface EditCourseModalProps {
+  course: Course;
+  onClose: () => void;
+  onSuccess: (updatedCourse: Course) => void;
+}
+
+export function EditCourseModal({ course, onClose, onSuccess }: EditCourseModalProps) {
+  const [name, setName] = useState(course.name);
+  const [code, setCode] = useState(course.code || '');
+  const [period, setPeriod] = useState(course.period || '');
+  const [subjectType, setSubjectType] = useState(course.subject_type || 'Obrigatória');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .update({
+          name: name.trim(),
+          code: code.trim() || null,
+          period: period.trim() || null,
+          subject_type: subjectType,
+          is_mandatory: subjectType.toLowerCase().includes('obrigatória')
+        })
+        .eq('id', course.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('Disciplina atualizada com sucesso!');
+      onSuccess(data);
+      onClose();
+    } catch (error) {
+      console.error('Error updating course:', error);
+      toast.error('Erro ao atualizar disciplina');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-50 rounded-lg">
+              <Pencil className="w-5 h-5 text-purple-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Editar Disciplina</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1.5">Nome da disciplina</label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">Código</label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">Período</label>
+              <input
+                type="text"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1.5">Tipo</label>
+            <select
+              value={subjectType}
+              onChange={(e) => setSubjectType(e.target.value)}
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition"
+            >
+              <option value="Obrigatória">Obrigatória</option>
+              <option value="Optativa">Optativa</option>
+              <option value="Eletiva">Eletiva</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Salvar Alterações
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
