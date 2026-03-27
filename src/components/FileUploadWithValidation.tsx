@@ -29,20 +29,18 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+  const processFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const newFiles: PendingFile[] = Array.from(files).map(file => ({
       id: Math.random().toString(36).substring(2, 9),
-      name: formatFileName(disciplineName, file.name), // Apply automatic formatting
+      name: formatFileName(disciplineName, file.name),
       file,
       uploading: false,
       uploaded: false,
       isDuplicate: false,
     }));
 
-    // Verificar duplicatas
     checkDuplicates(
       folderId,
       newFiles.map(f => ({ name: f.name, size: f.file.size }))
@@ -53,6 +51,10 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
       }));
       setPendingFiles(prev => [...prev, ...filesWithDuplicateCheck]);
     });
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    processFiles(e.target.files);
   };
 
   const removeFile = (id: string) => {
@@ -108,7 +110,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
 
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
-        name: pendingFile.name, // Using the formatted name (possibly edited by user)
+        name: pendingFile.name,
         file_path: data.publicUrl,
         file_size: pendingFile.file.size,
         file_type: pendingFile.file.type,
@@ -176,7 +178,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    handleFileSelect(e.dataTransfer.files);
+    processFiles(e.dataTransfer.files);
   };
 
   const allUploaded = pendingFiles.length > 0 && pendingFiles.every(f => f.uploaded || f.isDuplicate);
@@ -247,7 +249,6 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <FileText className={`w-4 h-4 shrink-0 ${file.error ? 'text-red-400' : file.uploaded ? 'text-green-500' : file.isDuplicate ? 'text-amber-500' : 'text-blue-500'}`} />
                   <div className="min-w-0">
-                    {/* Editable name for pending files */}
                     {!file.uploaded && !file.uploading ? (
                       <input
                         type="text"
