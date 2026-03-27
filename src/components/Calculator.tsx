@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calculator as CalcIcon, RefreshCcw, GraduationCap, Info } from 'lucide-react';
+import { Calculator as CalcIcon, RefreshCw, GraduateCap, Info } from 'lucide-react';
 
 export function Calculator() {
   const [ad1, setAd1] = useState('');
@@ -39,11 +39,9 @@ export function Calculator() {
     // N1 = AD1 * 0.2 + AP1 * 0.8
     const n1 = ad1Num * 0.2 + ap1Num * 0.8;
     
-    // N2 = AD2 * 0.2 + AP2 * 0.8
-    const n2 = ad2Num * 0.2 + ap2Num * 0.8;
+    // N2 = AD2 * 0.2 + AP2 * 0.8    const n2 = ad2Num * 0.2 + ap2Num * 0.8;
     
-    // N = (N1 + N2) / 2
-    const n = (n1 + n2) / 2;
+    // N = (N1 + N2) / 2    const n = (n1 + n2) / 2;
     
     // NF = N >= 6 ? N : (Math.max(N1, N2) + AP3) / 2
     const nf = n >= 6 ? n : (Math.max(n1, n2) + ap3Num) / 2;
@@ -116,7 +114,7 @@ export function Calculator() {
           {/* Primeira Unidade */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-blue-600" />
+              <GraduateCap className="w-5 h-5 text-blue-600" />
               Primeiro Ciclo (AD1 + AP1)
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -163,7 +161,7 @@ export function Calculator() {
           {/* Segunda Unidade */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-emerald-600" />
+              <GraduateCap className="w-5 h-5 text-emerald-600" />
               Segundo Ciclo (AD2 + AP2)
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -210,7 +208,7 @@ export function Calculator() {
           {/* AP3 - Prova Final */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-amber-600" />
+              <GraduateCap className="w-5 h-5 text-amber-600" />
               Prova Final (AP3)
             </h3>
             <div>
@@ -236,7 +234,7 @@ export function Calculator() {
             onClick={reset}
             className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition flex items-center justify-center gap-2"
           >
-            <RefreshCcw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4" />
             Limpar Tudo
           </button>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader, AlertCircle, FileText } from 'lucide-react';
+import { Loader, AlertCircle, FileText, Upload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { formatFileName } from '../lib/utils';
@@ -206,8 +206,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           <div className="max-h-60 overflow-y-auto space-y-2">
             {pendingFiles.map((file) => ( 
               <div 
-                key={file.id} 
-                className={`p-3 rounded-lg border ${
+                key={file.id}                 className={`p-3 rounded-lg border ${
                   file.error 
                     ? 'bg-red-50 border-red-200'                     : file.uploaded
                     ? 'bg-green-50 border-green-200'
@@ -226,14 +225,12 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
                           setPendingFiles(prev =>
                             prev.map(f => 
                               f.id === file.id 
-                                ? { ...f, name: e.target.value } 
-                                : f
+                                ? { ...f, name: e.target.value }                                 : f
                             )
                           );
                         }}
                         className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                        autoFocus
-                      />
+                        autoFocus                      />
                     ) : (
                       <span className="text-sm font-medium text-gray-900 truncate">{file.name}</span>
                     )}
@@ -250,7 +247,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
                   </div>
                 )}
               </div>
-            ))}
+            )}
           </div>
         )}
 

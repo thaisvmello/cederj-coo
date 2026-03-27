@@ -29,7 +29,8 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileSelect = async (files: FileList | null) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const newFiles: PendingFile[] = Array.from(files).map(file => ({
@@ -194,8 +195,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
       </div>
 
       {/* Drop Zone */}
-      <div
-        onDragOver={handleDragOver}
+      <div        onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
@@ -237,8 +237,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
             {pendingFiles.map((file) => ( 
               <div 
                 key={file.id}                 className={`p-3 rounded-lg border flex items-center justify-between ${
-                  file.error 
-                    ? 'bg-red-50 border-red-200' 
+                  file.error                     ? 'bg-red-50 border-red-200' 
                     : file.uploaded
                     ? 'bg-green-50 border-green-200'
                     : file.isDuplicate
