@@ -20,10 +20,17 @@ export function FileActionModal({ fileId, fileName, actionType, onClose, onSucce
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast.error('Você precisa estar logado para realizar esta ação');
+      return;
+    }
+
     if (!reason.trim()) {
       toast.error('Por favor, informe o motivo');
       return;
     }
+
     if (actionType === 'rename' && !newName.trim()) {
       toast.error('Por favor, informe o novo nome');
       return;
@@ -33,21 +40,28 @@ export function FileActionModal({ fileId, fileName, actionType, onClose, onSucce
     try {
       const { error } = await supabase.from('file_actions').insert({
         file_id: fileId,
-        requested_by: user?.id,
+        requested_by: user.id,
         action_type: actionType,
         new_name: actionType === 'rename' ? newName.trim() : null,
         reason: reason.trim(),
         status: 'pending'
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro Supabase:', error);
+        // Se o erro for 42P01, a tabela não existe
+        if (error.code === '42P01') {
+          throw new Error('A tabela de solicitações ainda não foi criada no banco de dados.');
+        }
+        throw error;
+      }
 
       toast.success('Solicitação enviada para análise do administrador!');
       onSuccess();
       onClose();
     } catch (error: any) {
       console.error('Erro ao solicitar ação:', error);
-      toast.error('Erro ao enviar solicitação');
+      toast.error(error.message || 'Erro ao enviar solicitação. Tente novamente.');
     } finally {
       setLoading(false);
     }
