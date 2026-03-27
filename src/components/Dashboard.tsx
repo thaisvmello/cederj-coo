@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Header } from './Header';
 import { CourseBrowser } from './CourseBrowser';
-import { AdminFolderRequests } from './AdminFolderRequests';
-import { AdminCourseRequests } from './AdminCourseRequests';
 import { Calculator } from './Calculator';
 import { Footer } from './Footer';
 
@@ -35,14 +33,10 @@ export function Dashboard() {
         {currentPage === 'calculator' ? (
           <Calculator />
         ) : (
-          <>
-            <AdminFolderRequests />
-            <AdminCourseRequests />
-            <CourseBrowser 
-              onNavigateToSubPage={setIsInSubPage}
-              goHomeTrigger={goHomeTrigger}
-            />
-          </>
+          <CourseBrowser 
+            onNavigateToSubPage={setIsInSubPage}
+            goHomeTrigger={goHomeTrigger}
+          />
         )}
       </main>
 

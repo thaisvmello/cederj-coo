@@ -1,6 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home } from 'lucide-react';
+import { LogOut, Calculator, Shield, Home, Settings } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 
 interface HeaderProps {
   showHomeButton?: boolean;
@@ -12,6 +13,8 @@ interface HeaderProps {
 export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculator, currentPage }: HeaderProps) {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
+  const location = useLocation();
+  const isAdminPage = location.pathname === '/admin';
 
   return (
     <header className="w-full z-40">
@@ -45,8 +48,21 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
               <p className="text-sm font-bold text-white">{user?.email}</p>
             </div>
             
-            {/* Botão de Início - aparece apenas em subpáginas */}
-            {showHomeButton && onGoHome && (
+            {isAdmin && (
+              <Link 
+                to={isAdminPage ? "/" : "/admin"}
+                className={`p-2.5 rounded-full transition-all border border-transparent ${
+                  isAdminPage 
+                    ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                    : 'text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/10'
+                }`}
+                title={isAdminPage ? "Voltar ao Início" : "Painel do Administrador"}
+              >
+                {isAdminPage ? <Home className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+              </Link>
+            )}
+
+            {showHomeButton && onGoHome && !isAdminPage && (
               <button 
                 onClick={onGoHome}
                 className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
@@ -68,17 +84,19 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
       </div>
 
       {/* Secondary Nav */}
-      <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
-        <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
-          <button 
-            onClick={onNavigateToCalculator}
-            className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${currentPage === 'calculator' ? 'text-white' : ''}`}
-          >
-            <Calculator className="w-3.5 h-3.5 text-blue-400" />
-            Calculadora de Notas
-          </button>
+      {!isAdminPage && (
+        <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
+          <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
+            <button 
+              onClick={onNavigateToCalculator}
+              className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${currentPage === 'calculator' ? 'text-white' : ''}`}
+            >
+              <Calculator className="w-3.5 h-3.5 text-blue-400" />
+              Calculadora de Notas
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </header>
   );
 }

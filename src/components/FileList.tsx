@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Download, FileText, Eye, Loader, Trash2, Pencil, X, Check, Archive } from 'lucide-react';
+import { Download, FileText, Eye, Loader, Trash2, Pencil, X, Check, Archive, AlertCircle } from 'lucide-react';
 import type { File as FileType } from '../lib/types';
 import { PDFViewer } from './PDFViewer';
+import { FileActionModal } from './FileActionModal';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
@@ -24,6 +25,14 @@ export function FileList({ folderId }: FileListProps) {
   const [editingName, setEditingName] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [zipping, setZipping] = useState(false);
+  
+  // File Action Request State
+  const [actionModal, setActionModal] = useState<{
+    fileId: string;
+    fileName: string;
+    type: 'rename' | 'delete';
+  } | null>(null);
+
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
 
@@ -368,7 +377,7 @@ export function FileList({ folderId }: FileListProps) {
                       </button>
                       
                       {/* Admin Controls */}
-                      {isAdmin && (
+                      {isAdmin ? (
                         <>
                           <button
                             onClick={() => startRename(file)}
@@ -389,6 +398,23 @@ export function FileList({ folderId }: FileListProps) {
                             Excluir
                           </button>
                         </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'rename' })}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-lg transition text-xs font-medium"
+                            title="Solicitar renomeação"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' })}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-lg transition text-xs font-medium"
+                            title="Solicitar exclusão"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -404,6 +430,16 @@ export function FileList({ folderId }: FileListProps) {
           setShowViewer(false);
           setSelectedFile(null);
         }} />
+      )}
+
+      {actionModal && (
+        <FileActionModal
+          fileId={actionModal.fileId}
+          fileName={actionModal.fileName}
+          actionType={actionModal.type}
+          onClose={() => setActionModal(null)}
+          onSuccess={() => {}}
+        />
       )}
     </>
   );
