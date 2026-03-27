@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { Search, Plus, BookOpen, Star, LayoutGrid, List, ChevronLeft, FileText, Folder } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Plus, BookOpen, Star, LayoutGrid, List, ChevronLeft } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { CourseCard } from './CourseCard';
 import { CourseTreeView } from './CourseTreeView';
@@ -9,21 +9,43 @@ import { FolderSidePanel } from './FolderSidePanel';
 import { useAuth } from '../contexts/AuthContext';
 import { NewCourseModal } from './NewCourseModal';
 
-export function CourseBrowser() {
+interface CourseBrowserProps {
+  onNavigateToSubPage?: (isInSubPage: boolean) => void;
+  goHomeTrigger?: number;
+}
+
+export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrowserProps) {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [fileCounts, setFileCounts] = useState<{[key: string]: number}>({});
+  const [totalFiles, setTotalFiles] = useState(0);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<{course: Course, folder: FolderType} | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'tree'>('grid');
+  const prevGoHomeTriggerRef = useRef(goHomeTrigger);
 
   useEffect(() => {
     loadData();
   }, [user]);
+
+  // Notificar o Dashboard quando entrar/sair de subpágina
+  useEffect(() => {
+    const isInSubPage = selectedCourse !== null || selectedFolder !== null;
+    onNavigateToSubPage?.(isInSubPage);
+  }, [selectedCourse, selectedFolder, onNavigateToSubPage]);
+
+  // Voltar para a página inicial quando o botão Home for clicado
+  useEffect(() => {
+    if (goHomeTrigger !== undefined && goHomeTrigger !== prevGoHomeTriggerRef.current) {
+      prevGoHomeTriggerRef.current = goHomeTrigger;
+      setSelectedCourse(null);
+      setSelectedFolder(null);
+    }
+  }, [goHomeTrigger]);
 
   const loadData = async () => {
     setLoading(true);
@@ -37,6 +59,9 @@ export function CourseBrowser() {
 
     const { data: filesData } = await supabase.from('files').select('folder_id');
     const { data: foldersData } = await supabase.from('folders').select('id, course_id');
+    
+    setTotalFiles(filesData?.length || 0);
+    
     if (filesData && foldersData) {
       const counts: {[key: string]: number} = {};
       foldersData.forEach((folder: { id: string, course_id: string }) => {
@@ -80,7 +105,7 @@ export function CourseBrowser() {
   return (
     <div className="space-y-8 relative">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center gap-3">
             <button onClick={handleBackToCourses} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-500">
               <ChevronLeft className="w-5 h-5" />
@@ -88,9 +113,23 @@ export function CourseBrowser() {
             <div className="p-2 bg-blue-50 rounded-lg">
               <BookOpen className="w-6 h-6 text-blue-600" />
             </div>
-            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo de Materiais e Provas</h2>
+            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo de Provas e Materiais</h2>
           </div>
-          <p className="text-sm text-gray-500 font-medium"> Ciências Contábeis</p>
+          <p className="text-sm text-gray-500 font-medium"></p>
+                    {/* Stats Counter */}
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-1.5">
+              <Folder className="w-4 h-4 text-blue-500" />
+              <span className="font-semibold">{courses.length}</span>
+              <span>disciplinas</span>
+            </div>
+            <span className="text-gray-300">·</span>
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-emerald-500" />
+              <span className="font-semibold">{totalFiles}</span>
+              <span>arquivos no acervo</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -115,9 +154,9 @@ export function CourseBrowser() {
           </button>
         </div>
 
-        <button onClick={() => setShowNewModal(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-[#295977] text-white rounded-xl font-bold text-sm hover:bg-[#1e445d] transition shadow-sm">
+        <button onClick={() => setShowNewModal(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition shadow-sm">
           <Plus className="w-5 h-5" />
-          Nova Disciplina
+          Solicitar Disciplina
         </button>
       </div>
 
@@ -130,8 +169,7 @@ export function CourseBrowser() {
           {favoriteCourses.length > 0 && (
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                <Star className="w-4 h-4 text-amber-400 fill-current" /> Disciplinas em Curso
-              </div>
+                <Star className="w-4 h-4 text-amber-400 fill-current" /> Disciplinas em Curso              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {favoriteCourses.map((course) => (
                   <CourseCard key={course.id} course={course} fileCount={fileCounts[course.id] || 0} isFavorite={true} onClick={() => setSelectedCourse(course)} onToggleFavorite={(e) => handleToggleFavorite(e, course.id)} />
@@ -167,8 +205,7 @@ export function CourseBrowser() {
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={() => setSelectedFolder(null)} />
           <FolderSidePanel 
             folder={selectedFolder.folder} 
-            course={selectedFolder.course} 
-            onClose={() => setSelectedFolder(null)} 
+            course={selectedFolder.course}             onClose={() => setSelectedFolder(null)} 
           />
         </>
       )}

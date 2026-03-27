@@ -1,49 +1,62 @@
-"use client";
-
-/**
- * Abbreviates a discipline name to a short prefix (max 8 chars).
- * Removes stop words, converts Roman numerals to Arabic, and takes the first 3 letters of relevant words.
- */
 export function abbreviateDiscipline(name: string): string {
-  const stopWords = ['de', 'da', 'do', 'das', 'dos', 'a', 'o', 'as', 'os', 'e', 'em', 'para', 'com', 'por', 'à', 'i', 'ii', 'iii', 'iv', 'v'];
-  const romanToArabic: Record<string, string> = {
-    'I': '1', 'II': '2', 'III': '3', 'IV': '4', 'V': '5', 'VI': '6', 'VII': '7', 'VIII': '8', 'IX': '9', 'X': '10'
-  };
-
-  // Remove accents and convert to uppercase
-  const cleanName = name
+  // Remove acentos e caracteres especiais, mantém apenas letras, números e espaços
+  let clean = name
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s]/g, '')
     .toUpperCase();
-  
-  const words = cleanName.split(/[\s-]+/).filter(w => w.length > 0);
-  
-  const abbreviated = words
-    .filter(word => !stopWords.includes(word.toLowerCase()))
-    .map(word => {
-      // Check for roman numerals
-      if (romanToArabic[word]) return romanToArabic[word];
-      // Take first 3 letters of the word
-      return word.substring(0, 3);
-    })
-    .join('');
 
-  // Return first 8 characters
-  return abbreviated.substring(0, 8);
+  // Remove stop words comuns
+  const stopWords = ['DA', 'DE', 'DO', 'DAS', 'DOS', 'E', 'EM', 'NO', 'NOS', 'NA', 'NAS', 'PARA', 'POR', 'COM', 'SEM', 'SOBRE'];
+  const words = clean.split(' ')
+    .filter(word => !stopWords.includes(word) && word.length > 0);
+
+  if (words.length === 0) return 'ARQUIVO';
+
+  let abbreviation = '';
+  const maxChars = 12;
+
+  // Lógica inteligente baseada no número de palavras
+  if (words.length === 1) {
+    // Se for só uma palavra, pega até 12 letras
+    abbreviation = words[0].substring(0, maxChars);
+  } else if (words.length === 2) {
+    // Se forem duas palavras (ex: Contabilidade Gerencial), pega 6 de cada
+    // Resultaria em: CONTABGERENC
+    abbreviation = words[0].substring(0, 6) + words[1].substring(0, 6);
+  } else if (words.length === 3) {
+    // Se forem três palavras, pega 4 de cada
+    abbreviation = words[0].substring(0, 4) + words[1].substring(0, 4) + words[2].substring(0, 4);
+  } else {
+    // 4 ou mais palavras, pega as 3 primeiras letras de cada até bater o limite
+    for (const word of words) {
+      if (abbreviation.length >= maxChars) break;
+      abbreviation += word.substring(0, 3);
+    }
+  }
+
+  // Garante que não passe de 12 e remove espaços extras
+  return abbreviation.substring(0, maxChars).trim();
 }
 
-/**
- * Formats a filename by prefixing it with the abbreviated discipline name.
- */
 export function formatFileName(disciplineName: string, originalFileName: string): string {
+  // Pega a extensão do arquivo
+  const extIndex = originalFileName.lastIndexOf('.');
+  const extension = extIndex > 0 ? originalFileName.substring(extIndex) : '';
+  const nameWithoutExt = extIndex > 0 ? originalFileName.substring(0, extIndex) : originalFileName;
+  
+  // Gera a abreviação inteligente
   const abbreviation = abbreviateDiscipline(disciplineName);
   
-  // Avoid double prefixing if the file already starts with the abbreviation
-  if (originalFileName.toUpperCase().startsWith(abbreviation + '_')) {
+  // Formato: ABREVIACAO_NOMEDOARQUIVO.EXTENSAO
+  if (!abbreviation) {
     return originalFileName;
   }
   
-  // Clean original filename: replace spaces with underscores or dashes if preferred, 
-  // but here we just prefix to keep it simple as requested.
-  return `${abbreviation}_${originalFileName}`;
+  // Limpa o nome original de caracteres que podem quebrar a URL
+  const cleanOriginalName = nameWithoutExt
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9_.-]/g, '');
+
+  return `${abbreviation}_${cleanOriginalName}${extension}`;
 }

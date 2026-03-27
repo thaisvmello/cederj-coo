@@ -45,4 +45,18 @@ export interface FolderComment {
   first_name?: string;
   last_name?: string;
   avatar_url?: string | null;
+  folder_name?: string; // Added for admin view
+}
+
+export interface FileAction {
+  id: string;
+  file_id: string;
+  requested_by: string;
+  action_type: 'rename' | 'delete';
+  new_name?: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  file_name?: string;
+  requester_name?: string;
 }
