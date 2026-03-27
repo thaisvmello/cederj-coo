@@ -27,13 +27,13 @@ export function AdminFileActions() {
         .order('created_at', { ascending: true });
 
       if (requestsError) {
-        if (requestsError.code === '42P01') {
-          console.warn('Tabela file_actions não encontrada');
-        } else {
-          throw requestsError;
+        // Trata erro de tabela inexistente ou cache de esquema
+        if (requestsError.code === '42P01' || requestsError.code === 'PGRST205') {
+          console.warn('[Admin] Tabela file_actions não encontrada ou cache pendente');
+          setRequests([]);
+          return;
         }
-        setRequests([]);
-        return;
+        throw requestsError;
       }
 
       if (!requestsData || requestsData.length === 0) {
