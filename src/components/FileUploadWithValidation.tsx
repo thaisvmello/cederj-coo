@@ -29,8 +29,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+  const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const newFiles: PendingFile[] = Array.from(files).map(file => ({
