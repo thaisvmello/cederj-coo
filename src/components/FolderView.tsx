@@ -127,9 +127,9 @@ export function FolderView({ course, onBack }: FolderViewProps) {
       </div>
 
       {showUpload && selectedFolder && (
-        <FileUpload
-          folderId={selectedFolder.id}
-          disciplineName={course.name}
+        <FileUpload 
+          folderId={selectedFolder.id} 
+          disciplineName={selectedFolder.name}
           onUploadSuccess={() => {
             setShowUpload(false);
             loadFolders();
