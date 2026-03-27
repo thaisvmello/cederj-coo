@@ -67,6 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        
+        // Verificar se estamos voltando de um link de recuperação via URL hash
+        if (window.location.hash.includes('type=recovery')) {
+          setIsRecoveryMode(true);
+        }
+
         if (session?.user) {
           const syncedUser = await syncUserProfile(session.access_token);
           if (syncedUser) {
@@ -88,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth Event:', event);
+      
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecoveryMode(true);
       }
@@ -100,8 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userData = await fetchProfile(session.user.id, session.user.email || '');
           setUser(userData);
         }
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        setIsRecoveryMode(false);
       }
     });
 
@@ -165,9 +174,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updatePassword = async (password: string) => {
+    // Garantir que temos uma sessão antes de tentar atualizar
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('Sessão de recuperação expirada. Por favor, solicite um novo link.');
+    }
+
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
+    
     setIsRecoveryMode(false);
+    // Limpar o hash da URL para evitar re-entrar no modo de recuperação
+    window.history.replaceState(null, '', window.location.pathname);
   };
 
   return (
