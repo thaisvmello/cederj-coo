@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Upload, X, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { formatFileName } from '../lib/utils';
 import toast from 'react-hot-toast';
 
 interface FileUploadProps {
@@ -27,7 +28,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   const addFiles = (files: File[]) => {
     const newFiles = files.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
+      name: formatFileName(disciplineName, file.name),
       file,
       uploading: false,
     }));
@@ -130,15 +131,22 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         <div className="space-y-3">
           <div className="max-h-60 overflow-y-auto space-y-2">
             {pendingFiles.map((file) => (
-              <div key={file.id} className="p-3 rounded-lg border bg-gray-50 flex items-center justify-between">
+              <div key={file.id} className="p-3 rounded-lg border bg-gray-50 flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-900 truncate">{file.name}</p>
+                  <input
+                    type="text"
+                    value={file.name}
+                    onChange={(e) => setPendingFiles(prev => prev.map(f => f.id === file.id ? { ...f, name: e.target.value } : f))}
+                    className="w-full bg-transparent text-xs font-medium text-gray-900 border-none focus:ring-0 p-0"
+                    placeholder="Nome do arquivo"
+                    disabled={file.uploading}
+                  />
                   {file.error && <p className="text-[10px] text-red-500 mt-1">{file.error}</p>}
                 </div>
                 {file.uploading ? (
                   <Loader className="w-4 h-4 text-blue-500 animate-spin" />
                 ) : (
-                  <button 
+                  <button
                     onClick={() => setPendingFiles(p => p.filter(f => f.id !== file.id))}
                     className="p-1 hover:bg-gray-200 rounded"
                   >
