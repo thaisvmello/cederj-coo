@@ -4,12 +4,13 @@ import { AdminFolderRequests } from '../components/AdminFolderRequests';
 import { AdminCourseRequests } from '../components/AdminCourseRequests';
 import { AdminFileActions } from '../components/AdminFileActions';
 import { AdminCommentsManager } from '../components/AdminCommentsManager';
+import { AdminBulkRename } from '../components/AdminBulkRename';
 import { Footer } from '../components/Footer';
-import { Shield, LayoutDashboard, FolderPlus, BookOpen, MessageSquare, FileText } from 'lucide-react';
+import { Shield, LayoutDashboard, FolderPlus, BookOpen, MessageSquare, FileText, Settings } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { Navigate } from 'react-router-dom';
 
-type AdminTab = 'overview' | 'folders' | 'courses' | 'files' | 'comments';
+type AdminTab = 'overview' | 'folders' | 'courses' | 'files' | 'comments' | 'maintenance';
 
 export function AdminPanel() {
   const { isAdmin } = useAdmin();
@@ -23,6 +24,7 @@ export function AdminPanel() {
     { id: 'courses', label: 'Disciplinas', icon: BookOpen },
     { id: 'files', label: 'Arquivos', icon: FileText },
     { id: 'comments', label: 'Comentários', icon: MessageSquare },
+    { id: 'maintenance', label: 'Manutenção', icon: Settings },
   ];
 
   return (
@@ -75,6 +77,7 @@ export function AdminPanel() {
             {activeTab === 'courses' && <AdminCourseRequests />}
             {activeTab === 'files' && <AdminFileActions />}
             {activeTab === 'comments' && <AdminCommentsManager />}
+            {activeTab === 'maintenance' && <AdminBulkRename />}
           </div>
         </div>
       </main>
