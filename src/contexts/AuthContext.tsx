@@ -5,11 +5,13 @@ import type { User } from '../lib/types';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isRecoveryMode: boolean;
   signUp: (email: string, password: string, first_name: string, last_name: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +41,7 @@ const syncUserProfile = async (token: string) => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
   const fetchProfile = async (userId: string, email: string) => {
     try {
@@ -84,7 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryMode(true);
+      }
+
       if (session?.user) {
         const syncedUser = await syncUserProfile(session.access_token);
         if (syncedUser) {
@@ -157,8 +164,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+    setIsRecoveryMode(false);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signInWithGoogle, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      isRecoveryMode,
+      signUp, 
+      signIn, 
+      signInWithGoogle, 
+      signOut, 
+      resetPassword,
+      updatePassword
+    }}>
       {children}
     </AuthContext.Provider>
   );
