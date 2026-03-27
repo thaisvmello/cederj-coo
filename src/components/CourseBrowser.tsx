@@ -39,7 +39,8 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
     onNavigateToSubPage?.(isInSubPage);
   }, [selectedCourse, selectedFolder, onNavigateToSubPage]);
 
-  // Voltar para a página inicial quando o botão Home for clicado  useEffect(() => {
+  // Voltar para a página inicial quando o botão Home for clicado
+  useEffect(() => {
     if (goHomeTrigger !== undefined && goHomeTrigger !== prevGoHomeTriggerRef.current) {
       prevGoHomeTriggerRef.current = goHomeTrigger;
       setSelectedCourse(null);
@@ -59,8 +60,7 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
 
     const { data: filesData } = await supabase.from('files').select('folder_id');
     const { data: foldersData } = await supabase.from('folders').select('id, course_id');
-    
-    setTotalFiles(filesData?.length || 0);
+        setTotalFiles(filesData?.length || 0);
     setTotalFolders(foldersData?.length || 0);
     
     if (filesData && foldersData) {
@@ -74,8 +74,7 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
     setLoading(false);
   };
 
-  const filteredCourses = courses.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredCourses = courses.filter(c =>     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (c.code && c.code.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
@@ -117,8 +116,7 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
             <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo de Provas e Materiais</h2>
           </div>
           <p className="text-sm text-gray-500 font-medium"></p>
-          
-          {/* Stats Counter */}
+                    {/* Stats Counter */}
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-1.5">
               <Folder className="w-4 h-4 text-blue-500" />
