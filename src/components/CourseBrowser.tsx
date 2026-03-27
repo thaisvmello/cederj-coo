@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Plus, BookOpen, Star, LayoutGrid, List } from 'lucide-react';
+import { Search, Plus, BookOpen, Star, LayoutGrid, List, ChevronLeft } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { CourseCard } from './CourseCard';
 import { CourseTreeView } from './CourseTreeView';
@@ -68,8 +68,13 @@ export function CourseBrowser() {
     loadData();
   };
 
-  if (viewMode === 'grid' && selectedCourse) {
-    return <FolderView course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
+  const handleBackToCourses = () => {
+    setSelectedCourse(null);
+    setSelectedFolder(null);
+  };
+
+  if (selectedCourse) {
+    return <FolderView course={selectedCourse} onBack={handleBackToCourses} />;
   }
 
   return (
@@ -77,6 +82,9 @@ export function CourseBrowser() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
+            <button onClick={handleBackToCourses} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-500">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
             <div className="p-2 bg-blue-50 rounded-lg">
               <BookOpen className="w-6 h-6 text-blue-600" />
             </div>
@@ -133,7 +141,7 @@ export function CourseBrowser() {
           )}
           <section className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-              <BookOpen className="w-4 h-4 text-gray-400" /> Todas as Disciplinas
+              <BookOpen className="w-4 h-4 text-gray-400" /> Todas as Disciplinas ({courses.length})
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {otherCourses.map((course) => (
