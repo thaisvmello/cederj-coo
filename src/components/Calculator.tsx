@@ -39,9 +39,11 @@ export function Calculator() {
     // N1 = AD1 * 0.2 + AP1 * 0.8
     const n1 = ad1Num * 0.2 + ap1Num * 0.8;
     
-    // N2 = AD2 * 0.2 + AP2 * 0.8    const n2 = ad2Num * 0.2 + ap2Num * 0.8;
+    // N2 = AD2 * 0.2 + AP2 * 0.8
+    const n2 = ad2Num * 0.2 + ap2Num * 0.8;
     
-    // N = (N1 + N2) / 2    const n = (n1 + n2) / 2;
+    // N = (N1 + N2) / 2
+    const n = (n1 + n2) / 2;
     
     // NF = N >= 6 ? N : (Math.max(N1, N2) + AP3) / 2
     const nf = n >= 6 ? n : (Math.max(n1, n2) + ap3Num) / 2;

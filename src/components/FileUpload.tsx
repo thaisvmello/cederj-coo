@@ -47,7 +47,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
           'Authorization': `Bearer ${session.access_token}`,
           'apikey': anonKey,
         },
-        body: JSON.stringify({
+        body: JSON.JSON.stringify({
           fileName: pendingFile.file.name,
           fileType: pendingFile.file.type,
           folderId
@@ -247,7 +247,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
                   </div>
                 )}
               </div>
-            )}
+            ))}
           </div>
         )}
 

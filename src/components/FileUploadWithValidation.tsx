@@ -29,8 +29,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+  const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const newFiles: PendingFile[] = Array.from(files).map(file => ({
@@ -43,17 +42,16 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
     }));
 
     // Verificar duplicatas
-    const duplicates = await checkDuplicates(
+    checkDuplicates(
       folderId,
       newFiles.map(f => ({ name: f.name, size: f.file.size }))
-    );
-
-    const filesWithDuplicateCheck = newFiles.map(f => ({
-      ...f,
-      isDuplicate: duplicates.includes(f.name),
-    }));
-
-    setPendingFiles(prev => [...prev, ...filesWithDuplicateCheck]);
+    ).then(duplicates => {
+      const filesWithDuplicateCheck = newFiles.map(f => ({
+        ...f,
+        isDuplicate: duplicates.includes(f.name),
+      }));
+      setPendingFiles(prev => [...prev, ...filesWithDuplicateCheck]);
+    });
   };
 
   const removeFile = (id: string) => {
@@ -267,12 +265,12 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
                       />
                     ) : (
                       <span className="text-sm font-medium text-gray-900 truncate block">{file.name}</span>
-                      {file.isDuplicate && (
-                        <span className="text-[10px] text-amber-600 font-medium">Arquivo duplicado</span>
-                      )}
-                      {file.error && (
-                        <span className="text-[10px] text-red-600 font-medium">{file.error}</span>
-                      )}
+                    )}
+                    {file.isDuplicate && (
+                      <span className="text-[10px] text-amber-600 font-medium">Arquivo duplicado</span>
+                    )}
+                    {file.error && (
+                      <span className="text-[10px] text-red-600 font-medium">{file.error}</span>
                     )}
                   </div>
                 </div>
