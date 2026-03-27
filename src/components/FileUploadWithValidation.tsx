@@ -8,6 +8,7 @@ import { formatFileName } from '../lib/utils';
 
 interface FileUploadWithValidationProps {
   folderId: string;
+  folderName: string;
   disciplineName: string;
   onUploadSuccess: () => void;
 }
@@ -22,7 +23,7 @@ interface PendingFile {
   error?: string;
 }
 
-export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuccess }: FileUploadWithValidationProps) {
+export function FileUploadWithValidation({ folderId, folderName, disciplineName, onUploadSuccess }: FileUploadWithValidationProps) {
   const { user } = useAuth();
   const { checkDuplicates } = useFileValidation();
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
@@ -32,14 +33,45 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
   const processFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    const newFiles: PendingFile[] = Array.from(files).map(file => ({
-      id: Math.random().toString(36).substring(2, 9),
-      name: formatFileName(disciplineName, file.name),
-      file,
-      uploading: false,
-      uploaded: false,
-      isDuplicate: false,
-    }));
+    const isADAPFolder = folderName.toUpperCase().startsWith('AD') || folderName.toUpperCase().startsWith('AP');
+    const isMaterialsFolder = folderName.toUpperCase() === 'MATERIAIS';
+
+    const newFiles: PendingFile[] = [];
+    const invalidFiles: string[] = [];
+
+    Array.from(files).forEach(file => {
+      const fileNameUpper = file.name.toUpperCase();
+      const hasADAP = fileNameUpper.includes('AD') || fileNameUpper.includes('AP');
+
+      // Validação para pastas de Provas (AD/AP)
+      if (isADAPFolder && !hasADAP) {
+        toast.error(
+          `O arquivo "${file.name}" não parece ser uma prova (AD ou AP). Materiais de estudo devem ser colocados na pasta 'MATERIAIS'. Se a pasta não existir, solicite sua criação.`,
+          { duration: 6000 }
+        );
+        return;
+      }
+
+      // Validação para pasta de Materiais
+      if (isMaterialsFolder && hasADAP) {
+        toast.error(
+          `A pasta 'MATERIAIS' é para resumos e livros. Provas (AD ou AP) devem ser enviadas para suas respectivas pastas. Se a pasta não existir, solicite sua criação.`,
+          { duration: 6000 }
+        );
+        return;
+      }
+
+      newFiles.push({
+        id: Math.random().toString(36).substring(2, 9),
+        name: formatFileName(disciplineName, file.name),
+        file,
+        uploading: false,
+        uploaded: false,
+        isDuplicate: false,
+      });
+    });
+
+    if (newFiles.length === 0) return;
 
     checkDuplicates(
       folderId,
@@ -191,7 +223,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-bold text-gray-900">Enviar Arquivos</h3>
-          <p className="text-xs text-gray-500">Destino: {disciplineName}</p>
+          <p className="text-xs text-gray-500">Destino: {disciplineName} ({folderName})</p>
         </div>
       </div>
 

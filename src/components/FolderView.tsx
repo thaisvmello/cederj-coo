@@ -165,6 +165,7 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
       {showUpload && selectedFolder && (
         <FileUploadWithValidation 
           folderId={selectedFolder.id} 
+          folderName={selectedFolder.name}
           disciplineName={course.name}
           onUploadSuccess={() => {
             setShowUpload(false);
