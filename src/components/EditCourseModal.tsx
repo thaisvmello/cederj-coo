@@ -34,16 +34,20 @@ export function EditCourseModal({ course, onClose, onSuccess }: EditCourseModalP
         })
         .eq('id', course.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      
+      if (!data) {
+        throw new Error('Não foi possível atualizar a disciplina. Verifique suas permissões.');
+      }
 
       toast.success('Disciplina atualizada com sucesso!');
       onSuccess(data);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating course:', error);
-      toast.error('Erro ao atualizar disciplina');
+      toast.error(error.message || 'Erro ao atualizar disciplina');
     } finally {
       setLoading(false);
     }
