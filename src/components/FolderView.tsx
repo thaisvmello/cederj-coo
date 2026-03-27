@@ -83,8 +83,7 @@ export function FolderView({ course, onBack }: FolderViewProps) {
             className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm font-semibold text-amber-700 hover:bg-amber-100 transition"
           >
             <FolderPlus className="w-4 h-4" />
-            Solicitar Pasta
-          </button>
+            Solicitar Pasta          </button>
           <button 
             onClick={() => setShowUpload(!showUpload)}
             className="flex items-center gap-2 px-4 py-2 bg-[#0f172a] text-white rounded-lg text-sm font-semibold hover:bg-[#1e293b] transition"
@@ -109,14 +108,10 @@ export function FolderView({ course, onBack }: FolderViewProps) {
                 selectedFolder?.id === folder.id
                   ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
                   : 'bg-white border-gray-200 hover:border-gray-300'
-              }`}
+              }`}  
             >
-              <Folder className={`w-8 h-8 mb-3 ${
-                selectedFolder?.id === folder.id ? 'text-blue-500' : 'text-gray-400'
-              }`} />
-              <span className={`text-xs font-bold text-center line-clamp-2 ${
-                selectedFolder?.id === folder.id ? 'text-gray-900' : 'text-gray-600'
-              }`}>
+              <Folder className={`w-8 h-8 mb-3 ${selectedFolder?.id === folder.id ? 'text-blue-500' : 'text-gray-400'}`} />
+              <span className={`text-xs font-bold text-center line-clamp-2 ${selectedFolder?.id === folder.id ? 'text-gray-900' : 'text-gray-600'}`}>
                 {folder.name}
               </span>
             </button>
@@ -138,7 +133,7 @@ export function FolderView({ course, onBack }: FolderViewProps) {
       {showUpload && selectedFolder && (
         <FileUploadWithValidation 
           folderId={selectedFolder.id} 
-          disciplineName={selectedFolder.name}
+          disciplineName={course.name} // Changed from selectedFolder.name to course.name
           onUploadSuccess={() => {
             setShowUpload(false);
             loadFolders();

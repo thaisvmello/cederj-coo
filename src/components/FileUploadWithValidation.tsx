@@ -4,6 +4,7 @@ import { Loader, AlertCircle, FileText, Upload, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFileValidation } from '../hooks/useFileValidation';
 import toast from 'react-hot-toast';
+import { formatFileName } from '../lib/utils';
 
 interface FileUploadWithValidationProps {
   folderId: string;
@@ -33,7 +34,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
 
     const newFiles: PendingFile[] = Array.from(files).map(file => ({
       id: Math.random().toString(36).substring(2, 9),
-      name: file.name,
+      name: formatFileName(disciplineName, file.name), // Apply automatic formatting
       file,
       uploading: false,
       uploaded: false,
@@ -83,8 +84,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
         body: JSON.stringify({
           fileName: pendingFile.file.name,
           fileType: pendingFile.file.type,
-          folderId
-        })
+          folderId        })
       });
 
       if (!response.ok) {
@@ -108,7 +108,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
 
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
-        name: pendingFile.name,
+        name: pendingFile.name, // Using the formatted name (possibly edited by user)
         file_path: data.publicUrl,
         file_size: pendingFile.file.size,
         file_type: pendingFile.file.type,
@@ -202,7 +202,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
           isDragging 
             ? 'border-blue-500 bg-blue-50' 
             : 'border-gray-200 hover:border-gray-300'
-        }`}
+        }`}  
       >
         <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragging ? 'text-blue-500' : 'text-gray-300'}`} />
         <p className="text-sm font-medium text-gray-700 mb-1">
@@ -214,8 +214,7 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
           </span>
           <input
             type="file"
-            multiple
-            onChange={(e) => handleFileSelect(e.target.files)}
+            multiple            onChange={handleFileSelect}
             className="hidden"
           />
         </label>
@@ -231,14 +230,13 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
         </div>
       )}
 
-      {/* Lista de arquivos */}
+      {/* Lista de arquivos com edição de nome */}
       {pendingFiles.length > 0 && (
         <div className="space-y-3">
           <div className="max-h-60 overflow-y-auto space-y-2">
-            {pendingFiles.map((file) => (
+            {pendingFiles.map((file) => ( 
               <div 
-                key={file.id} 
-                className={`p-3 rounded-lg border flex items-center justify-between ${
+                key={file.id}                 className={`p-3 rounded-lg border flex items-center justify-between ${
                   file.error 
                     ? 'bg-red-50 border-red-200' 
                     : file.uploaded
@@ -246,22 +244,36 @@ export function FileUploadWithValidation({ folderId, disciplineName, onUploadSuc
                     : file.isDuplicate
                     ? 'bg-amber-50 border-amber-200'
                     : 'bg-gray-50 border-gray-100'
-                }`}
+                }`}  
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <FileText className={`w-4 h-4 shrink-0 ${
-                    file.error ? 'text-red-400' 
-                    : file.uploaded ? 'text-green-500' 
-                    : file.isDuplicate ? 'text-amber-500'
-                    : 'text-blue-500'
-                  }`} />
+                  <FileText className={`w-4 h-4 shrink-0 ${file.error ? 'text-red-400' : file.uploaded ? 'text-green-500' : file.isDuplicate ? 'text-amber-500' : 'text-blue-500'}`} />
                   <div className="min-w-0">
-                    <span className="text-sm font-medium text-gray-900 truncate block">{file.name}</span>
-                    {file.isDuplicate && (
-                      <span className="text-[10px] text-amber-600 font-medium">Arquivo duplicado</span>
-                    )}
-                    {file.error && (
-                      <span className="text-[10px] text-red-600 font-medium">{file.error}</span>
+                    {/* Editable name for pending files */}
+                    {!file.uploaded && !file.uploading ? (
+                      <input
+                        type="text"
+                        value={file.name}
+                        onChange={(e) => {
+                          setPendingFiles(prev =>
+                            prev.map(f => 
+                              f.id === file.id 
+                                ? { ...f, name: e.target.value } 
+                                : f
+                            )
+                          );
+                        }}
+                        className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="text-sm font-medium text-gray-900 truncate block">{file.name}</span>
+                      {file.isDuplicate && (
+                        <span className="text-[10px] text-amber-600 font-medium">Arquivo duplicado</span>
+                      )}
+                      {file.error && (
+                        <span className="text-[10px] text-red-600 font-medium">{file.error}</span>
+                      )}
                     )}
                   </div>
                 </div>

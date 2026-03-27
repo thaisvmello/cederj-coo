@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Loader, AlertCircle, FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { formatFileName } from '../lib/utils';
 
 interface FileUploadProps {
   folderId: string;
@@ -63,8 +64,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       const uploadRes = await fetch(data.uploadUrl, {
         method: 'PUT',
         body: pendingFile.file,
-        headers: { 
-          'Content-Type': pendingFile.file.type 
+        headers: {           'Content-Type': pendingFile.file.type 
         }
       });
 
@@ -74,7 +74,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
 
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
-        name: pendingFile.name,
+        name: pendingFile.name, // Using the formatted name (possibly edited by user)
         file_path: data.publicUrl,
         file_size: pendingFile.file.size,
         file_type: pendingFile.file.type,
@@ -129,6 +129,37 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     }
   };
 
+  const addFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const newFiles: PendingFile[] = Array.from(files).map(file => ({
+      id: Math.random().toString(36).substring(2, 9),
+      name: formatFileName(disciplineName, file.name), // Apply automatic formatting
+      file,
+      uploading: false,
+      uploaded: false,
+    }));
+
+    setPendingFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    addFiles(e.target.files);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    addFiles(e.dataTransfer.files);
+  };
+
   const allUploaded = pendingFiles.length > 0 && pendingFiles.every(f => f.uploaded);
   const hasErrors = pendingFiles.some(f => f.error);
 
@@ -142,42 +173,88 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       </div>
 
       <div className="space-y-3">
-        <div className="max-h-60 overflow-y-auto space-y-2">
-          {pendingFiles.map((file) => (
-            <div 
-              key={file.id} 
-              className={`p-3 rounded-lg border ${
-                file.error 
-                  ? 'bg-red-50 border-red-200' 
-                  : file.uploaded
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-gray-50 border-gray-100'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <FileText className={`w-4 h-4 shrink-0 ${
-                    file.error ? 'text-red-400' : file.uploaded ? 'text-green-500' : 'text-blue-500'
-                  }`} />
-                  <span className="text-sm font-medium text-gray-900 truncate">{file.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {file.uploading && <Loader className="w-4 h-4 text-blue-500 animate-spin" />}
-                  {file.uploaded && <span className="text-xs text-green-600 font-medium">✓ Enviado</span>}
-                </div>
-              </div>
-              {file.error && (
-                <div className="mt-2 flex items-start gap-1.5 text-[10px] text-red-600 font-medium">
-                  <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-                  <span>{file.error}</span>
-                </div>
-              )}
-            </div>
-          ))}
+        {/* Drop Zone */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+            isUploading 
+              ? 'border-gray-200' 
+              : 'border-gray-200 hover:border-gray-300'
+          }`}  
+        >
+          <Upload className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+          <p className="text-sm font-medium text-gray-700 mb-1">
+            Arraste arquivos aqui ou
+          </p>
+          <label className="inline-block">
+            <span className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold cursor-pointer hover:bg-blue-700 transition">
+              Selecione do computador
+            </span>
+            <input
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+          </label>
         </div>
 
-        {!allUploaded && (
-          <button
+        {/* Lista de arquivos com edição de nome */}
+        {pendingFiles.length > 0 && (
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {pendingFiles.map((file) => ( 
+              <div 
+                key={file.id} 
+                className={`p-3 rounded-lg border ${
+                  file.error 
+                    ? 'bg-red-50 border-red-200'                     : file.uploaded
+                    ? 'bg-green-50 border-green-200'
+                    : 'bg-gray-50 border-gray-100'
+                }`}  
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <FileText className={`w-4 h-4 shrink-0 ${file.error ? 'text-red-400' : file.uploaded ? 'text-green-500' : 'text-blue-500'}`} />
+                    {/* Editable name for pending files */}
+                    {!file.uploaded && !file.uploading ? (
+                      <input
+                        type="text"
+                        value={file.name}
+                        onChange={(e) => {
+                          setPendingFiles(prev =>
+                            prev.map(f => 
+                              f.id === file.id 
+                                ? { ...f, name: e.target.value } 
+                                : f
+                            )
+                          );
+                        }}
+                        className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="text-sm font-medium text-gray-900 truncate">{file.name}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {file.uploading && <Loader className="w-4 h-4 text-blue-500 animate-spin" />}
+                    {file.uploaded && <span className="text-xs text-green-600 font-medium">✓ Enviado</span>}
+                  </div>
+                </div>
+                {file.error && (
+                  <div className="mt-2 flex items-start gap-1.5 text-[10px] text-red-600 font-medium">
+                    <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                    <span>{file.error}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!allUploaded && (           <button
             onClick={uploadAll}
             disabled={isUploading || pendingFiles.length === 0}
             className="w-full py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition disabled:opacity-50 flex items-center justify-center gap-2"
