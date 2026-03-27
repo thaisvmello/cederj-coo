@@ -1,6 +1,6 @@
+import { Search, Plus, BookOpen, Star, LayoutGrid, List, ChevronLeft, FileText, Folder } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Plus, BookOpen, Star, LayoutGrid, List, FileText, Folder } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { CourseCard } from './CourseCard';
 import { CourseTreeView } from './CourseTreeView';
@@ -20,7 +20,6 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
   const [favorites, setFavorites] = useState<string[]>([]);
   const [fileCounts, setFileCounts] = useState<{[key: string]: number}>({});
   const [totalFiles, setTotalFiles] = useState(0);
-  const [totalFolders, setTotalFolders] = useState(0);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<{course: Course, folder: FolderType} | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,7 +61,6 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
     const { data: foldersData } = await supabase.from('folders').select('id, course_id');
     
     setTotalFiles(filesData?.length || 0);
-    setTotalFolders(foldersData?.length || 0);
     
     if (filesData && foldersData) {
       const counts: {[key: string]: number} = {};
@@ -95,8 +93,13 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
     loadData();
   };
 
-  if (viewMode === 'grid' && selectedCourse) {
-    return <FolderView course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
+  const handleBackToCourses = () => {
+    setSelectedCourse(null);
+    setSelectedFolder(null);
+  };
+
+  if (selectedCourse) {
+    return <FolderView course={selectedCourse} onBack={handleBackToCourses} />;
   }
 
   return (
@@ -104,14 +107,16 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-3">
           <div className="flex items-center gap-3">
+            <button onClick={handleBackToCourses} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-500">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
             <div className="p-2 bg-blue-50 rounded-lg">
               <BookOpen className="w-6 h-6 text-blue-600" />
             </div>
             <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo de Provas e Materiais</h2>
           </div>
           <p className="text-sm text-gray-500 font-medium"></p>
-          
-          {/* Stats Counter */}
+                    {/* Stats Counter */}
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-1.5">
               <Folder className="w-4 h-4 text-blue-500" />
@@ -164,8 +169,7 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
           {favoriteCourses.length > 0 && (
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                <Star className="w-4 h-4 text-amber-400 fill-current" /> Disciplinas em Curso
-              </div>
+                <Star className="w-4 h-4 text-amber-400 fill-current" /> Disciplinas em Curso              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {favoriteCourses.map((course) => (
                   <CourseCard key={course.id} course={course} fileCount={fileCounts[course.id] || 0} isFavorite={true} onClick={() => setSelectedCourse(course)} onToggleFavorite={(e) => handleToggleFavorite(e, course.id)} />
@@ -175,7 +179,7 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
           )}
           <section className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-              <BookOpen className="w-4 h-4 text-gray-400" /> Todas as Disciplinas
+              <BookOpen className="w-4 h-4 text-gray-400" /> Todas as Disciplinas ({courses.length})
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {otherCourses.map((course) => (
@@ -201,8 +205,7 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={() => setSelectedFolder(null)} />
           <FolderSidePanel 
             folder={selectedFolder.folder} 
-            course={selectedFolder.course} 
-            onClose={() => setSelectedFolder(null)} 
+            course={selectedFolder.course}             onClose={() => setSelectedFolder(null)} 
           />
         </>
       )}

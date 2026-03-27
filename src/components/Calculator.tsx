@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calculator as CalcIcon, RotateCcw, GraduationCap, Info } from 'lucide-react';
+import { Calculator as CalcIcon, RefreshCcw, GraduationCap, Info } from 'lucide-react';
 
 export function Calculator() {
   const [ad1, setAd1] = useState('');
@@ -236,7 +236,7 @@ export function Calculator() {
             onClick={reset}
             className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition flex items-center justify-center gap-2"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RefreshCcw className="w-4 h-4" />
             Limpar Tudo
           </button>
         </div>
