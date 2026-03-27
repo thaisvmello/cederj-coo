@@ -1,12 +1,10 @@
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Auth } from './components/Auth';
 import { Dashboard } from './components/Dashboard';
-import { AdminPanel } from './pages/AdminPanel';
 import { Toaster } from 'react-hot-toast';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 function AppContent() {
-  const { user, loading, isRecoveryMode } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -16,27 +14,15 @@ function AppContent() {
     );
   }
 
-  return (
-    <Routes>
-      {/* Se estiver em modo de recuperação, mostra o componente Auth (que exibirá o formulário de nova senha) */}
-      <Route 
-        path="/" 
-        element={isRecoveryMode ? <Auth /> : (user ? <Dashboard /> : <Auth />)} 
-      />
-      <Route path="/admin" element={user ? <AdminPanel /> : <Navigate to="/" />} />
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
-  );
+  return user ? <Dashboard /> : <Auth />;
 }
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Toaster position="top-right" />
-        <AppContent />
-      </AuthProvider>
-    </BrowserRouter>
+    <AuthProvider>
+      <Toaster position="top-right" />
+      <AppContent />
+    </AuthProvider>
   );
 }
 

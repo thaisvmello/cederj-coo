@@ -1,27 +1,15 @@
 import { useAuth } from '../contexts/AuthContext';
-import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home, Settings } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { LogOut, Calculator } from 'lucide-react';
 
-interface HeaderProps {
-  showHomeButton?: boolean;
-  onGoHome?: () => void;
-  onNavigateToCalculator?: () => void;
-  currentPage?: string;
-}
-
-export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculator, currentPage }: HeaderProps) {
+export function Header() {
   const { user, signOut } = useAuth();
-  const { isAdmin } = useAdmin();
-  const location = useLocation();
-  const isAdminPage = location.pathname === '/admin';
 
   return (
     <header className="w-full z-40">
       {/* Main Header */}
       <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" onClick={onGoHome} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+          <div className="flex items-center gap-4">
             <img 
               src="/57002beae21c30a2d583825b8ea17010.png" 
               alt="Logo Acervo Acadêmico" 
@@ -32,46 +20,13 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
                 Acervo Acadêmico
               </h1>
             </div>
-          </Link>
+          </div>
 
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <div className="flex items-center gap-2 justify-end mb-0.5">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Usuário</p>
-                {isAdmin && (
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-medium">
-                    <Shield className="w-3 h-3" />
-                    Admin
-                  </span>
-                )}
-              </div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-0.5">Usuário</p>
               <p className="text-sm font-bold text-white">{user?.email}</p>
             </div>
-            
-            {isAdmin && (
-              <Link 
-                to={isAdminPage ? "/" : "/admin"}
-                className={`p-2.5 rounded-full transition-all border border-transparent ${
-                  isAdminPage 
-                    ? 'bg-purple-600 text-white hover:bg-purple-700' 
-                    : 'text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/10'
-                }`}
-                title={isAdminPage ? "Voltar ao Início" : "Painel do Administrador"}
-              >
-                {isAdminPage ? <Home className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
-              </Link>
-            )}
-
-            {showHomeButton && onGoHome && !isAdminPage && (
-              <button 
-                onClick={onGoHome}
-                className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
-                title="Voltar ao Início"
-              >
-                <Home className="w-5 h-5" />
-              </button>
-            )}
-            
             <button 
               onClick={signOut}
               className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
@@ -84,19 +39,19 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
       </div>
 
       {/* Secondary Nav */}
-      {!isAdminPage && (
-        <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
-          <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
-            <button 
-              onClick={onNavigateToCalculator}
-              className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${currentPage === 'calculator' ? 'text-white' : ''}`}
-            >
-              <Calculator className="w-3.5 h-3.5 text-blue-400" />
-              Calculadora de Notas
-            </button>
-          </div>
+      <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
+        <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
+          <a 
+            href="https://script.google.com/macros/s/AKfycbwyoOeDtL-nGdXmFstf7nHNJtC0j0STrxGwuRvnKV34K7tVvi6PEhqIe6uhSnXLe-Q1/exec" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 hover:text-white transition-colors py-1"
+          >
+            <Calculator className="w-3.5 h-3.5 text-blue-400" />
+            Calculadora de Notas
+          </a>
         </div>
-      )}
+      </div>
     </header>
   );
 }

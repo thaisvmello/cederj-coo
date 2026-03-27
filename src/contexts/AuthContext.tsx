@@ -5,13 +5,10 @@ import type { User } from '../lib/types';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  isRecoveryMode: boolean;
   signUp: (email: string, password: string, first_name: string, last_name: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,7 +38,6 @@ const syncUserProfile = async (token: string) => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
   const fetchProfile = async (userId: string, email: string) => {
     try {
@@ -67,12 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
-        // Verificar se estamos voltando de um link de recuperação via URL hash
-        if (window.location.hash.includes('type=recovery')) {
-          setIsRecoveryMode(true);
-        }
-
         if (session?.user) {
           const syncedUser = await syncUserProfile(session.access_token);
           if (syncedUser) {
@@ -93,13 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth Event:', event);
-      
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsRecoveryMode(true);
-      }
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
       if (session?.user) {
         const syncedUser = await syncUserProfile(session.access_token);
         if (syncedUser) {
@@ -108,9 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userData = await fetchProfile(session.user.id, session.user.email || '');
           setUser(userData);
         }
-      } else if (event === 'SIGNED_OUT') {
+      } else {
         setUser(null);
-        setIsRecoveryMode(false);
       }
     });
 
@@ -166,40 +149,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
-  const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
-    });
-    if (error) throw error;
-  };
-
-  const updatePassword = async (password: string) => {
-    // Garantir que temos uma sessão antes de tentar atualizar
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw new Error('Sessão de recuperação expirada. Por favor, solicite um novo link.');
-    }
-
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) throw error;
-    
-    setIsRecoveryMode(false);
-    // Limpar o hash da URL para evitar re-entrar no modo de recuperação
-    window.history.replaceState(null, '', window.location.pathname);
-  };
-
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      isRecoveryMode,
-      signUp, 
-      signIn, 
-      signInWithGoogle, 
-      signOut, 
-      resetPassword,
-      updatePassword
-    }}>
+    <AuthContext.Provider value={{ user, loading, signUp, signIn, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
