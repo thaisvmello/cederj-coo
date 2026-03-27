@@ -21,7 +21,7 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
       {/* Main Header */}
       <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <Link to="/" onClick={onGoHome} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
             <img 
               src="/57002beae21c30a2d583825b8ea17010.png" 
               alt="Logo Acervo Acadêmico" 
@@ -32,7 +32,7 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
                 Acervo Acadêmico
               </h1>
             </div>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
