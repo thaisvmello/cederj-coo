@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, X, Loader } from 'lucide-react';
+import { Upload, X, Loader, Edit2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { formatFileName } from '../lib/utils';
 import toast from 'react-hot-toast';
 
 interface FileUploadProps {
@@ -27,11 +28,15 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
   const addFiles = (files: File[]) => {
     const newFiles = files.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
+      name: formatFileName(disciplineName, file.name),
       file,
       uploading: false,
     }));
     setPendingFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const updateFileName = (id: string, newName: string) => {
+    setPendingFiles(prev => prev.map(f => f.id === id ? { ...f, name: newName } : f));
   };
 
   const uploadFile = async (pendingFile: PendingFile) => {
@@ -45,7 +50,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
       // 1. Obter URL de upload via Edge Function
       const { data, error: funcError } = await supabase.functions.invoke('get-r2-upload-url', {
         body: {
-          fileName: pendingFile.file.name,
+          fileName: pendingFile.name,
           fileType: pendingFile.file.type,
           folderId
         }
@@ -118,6 +123,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         >
           <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
           <p className="text-gray-600 font-semibold text-sm">Clique ou arraste arquivos</p>
+          <p className="text-[10px] text-gray-400 mt-2 uppercase font-bold tracking-widest">Os arquivos serão renomeados automaticamente</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -128,30 +134,48 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="max-h-60 overflow-y-auto space-y-2">
+          <div className="max-h-80 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             {pendingFiles.map((file) => (
-              <div key={file.id} className="p-3 rounded-lg border bg-gray-50 flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-900 truncate">{file.name}</p>
-                  {file.error && <p className="text-[10px] text-red-500 mt-1">{file.error}</p>}
+              <div key={file.id} className="p-4 rounded-xl border bg-gray-50 space-y-2">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Edit2 className="w-3 h-3 text-gray-400" />
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nome do arquivo no acervo</span>
+                    </div>
+                    <input 
+                      type="text"
+                      value={file.name}
+                      onChange={(e) => updateFileName(file.id, e.target.value)}
+                      disabled={file.uploading}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:ring-2 focus:ring-blue-500 outline-none transition disabled:opacity-50"
+                    />
+                    {file.error && <p className="text-[10px] text-red-500 mt-1 font-medium">{file.error}</p>}
+                  </div>
+                  <div className="shrink-0">
+                    {file.uploading ? (
+                      <Loader className="w-5 h-5 text-blue-500 animate-spin" />
+                    ) : (
+                      <button 
+                        onClick={() => setPendingFiles(p => p.filter(f => f.id !== file.id))}
+                        className="p-2 hover:bg-gray-200 rounded-full transition"
+                      >
+                        <X className="w-4 h-4 text-gray-400" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {file.uploading ? (
-                  <Loader className="w-4 h-4 text-blue-500 animate-spin" />
-                ) : (
-                  <button 
-                    onClick={() => setPendingFiles(p => p.filter(f => f.id !== file.id))}
-                    className="p-1 hover:bg-gray-200 rounded"
-                  >
-                    <X className="w-4 h-4 text-gray-400" />
-                  </button>
-                )}
+                <div className="flex items-center justify-between text-[10px] text-gray-400 font-medium">
+                  <span className="truncate max-w-[200px]">Original: {file.file.name}</span>
+                  <span>{(file.file.size / 1024).toFixed(1)} KB</span>
+                </div>
               </div>
             ))}
           </div>
           <button
             onClick={uploadAll}
             disabled={pendingFiles.some(f => f.uploading)}
-            className="w-full py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition disabled:opacity-50"
+            className="w-full py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm hover:bg-[#1e293b] transition disabled:opacity-50 shadow-lg shadow-blue-900/10"
           >
             {pendingFiles.some(f => f.uploading) ? 'Enviando...' : `Iniciar Upload (${pendingFiles.length})`}
           </button>
