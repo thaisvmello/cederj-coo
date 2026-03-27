@@ -44,6 +44,14 @@ export function FolderView({ course, onBack }: FolderViewProps) {
     setLoading(false);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -119,8 +127,8 @@ export function FolderView({ course, onBack }: FolderViewProps) {
       </div>
 
       {showUpload && selectedFolder && (
-        <FileUpload 
-          folderId={selectedFolder.id} 
+        <FileUpload
+          folderId={selectedFolder.id}
           disciplineName={course.name}
           onUploadSuccess={() => {
             setShowUpload(false);
