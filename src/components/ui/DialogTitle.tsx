@@ -1,13 +1,5 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 
-interface DialogTitleProps {
-  children: React.ReactNode;
+export default function DialogTitle({ children }: { children: ReactNode }) {
+  return <h2 className="text-xl font-bold mb-2">{children}</h2>;
 }
-
-export const DialogTitle: React.FC<DialogTitleProps> = ({ children }) => {
-  return (
-    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-      {children}
-    </h3>
-  );
-};

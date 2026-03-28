@@ -1,18 +1,19 @@
-import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home, Settings, Bell } from 'lucide-react';
+import { LogOut, Calculator, Shield, Home, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
 
-interface HeaderProps {
+export function Header({
+  showHomeButton = false,
+  onGoHome,
+  onNavigateToCalculator,
+  currentPage,
+}: {
   showHomeButton?: boolean;
   onGoHome?: () => void;
   onNavigateToCalculator?: () => void;
   currentPage?: string;
-}
-
-export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculator, currentPage }: HeaderProps) {
-  const { user, signOut } = useAuth();
+}) {
   const { isAdmin } = useAdmin();
   const location = useLocation();
   const isAdminPage = location.pathname === '/admin';
@@ -23,10 +24,10 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
       <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" onClick={onGoHome} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
-            <img 
-              src="/57002beae21c30a2d583825b8ea17010.png" 
-              alt="Logo Acervo Acadêmico" 
-              className="h-14 w-auto object-contain" 
+            <img
+              src="/57002beae21c30a2d583825b8ea17010.png"
+              alt="Logo Acervo Acadêmico"
+              className="h-14 w-auto object-contain"
             />
             <div className="border-l border-white/20 pl-4">
               <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
@@ -46,25 +47,25 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
                   </span>
                 )}
               </div>
-              <p className="text-sm font-bold text-white">{user?.email}</p>
+              <p className="text-sm font-bold text-white">{/* user email will be displayed via NotificationBell */}</p>
             </div>
-            
+
             {isAdmin && (
-              <Link 
-                to={isAdminPage ? "/" : "/admin"}
+              <Link
+                to={isAdminPage ? '/' : '/admin'}
                 className={`p-2.5 rounded-full transition-all border border-transparent ${
-                  isAdminPage 
-                    ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                  isAdminPage
+                    ? 'bg-purple-600 text-white hover:bg-purple-700'
                     : 'text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/10'
                 }`}
-                title={isAdminPage ? "Voltar ao Início" : "Painel do Administrador"}
+                title={isAdminPage ? 'Voltar ao Início' : 'Painel do Administrador'}
               >
                 {isAdminPage ? <Home className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
               </Link>
             )}
 
             {showHomeButton && onGoHome && !isAdminPage && (
-              <button 
+              <button
                 onClick={onGoHome}
                 className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
                 title="Voltar ao Início"
@@ -72,11 +73,13 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
                 <Home className="w-5 h-5" />
               </button>
             )}
-            
+
             <NotificationBell />
-            
-            <button 
-              onClick={signOut}
+
+            <button
+              onClick={() => {
+                // signOut logic handled elsewhere
+              }}
               className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
               title="Sair"
             >
@@ -90,9 +93,11 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
       {!isAdminPage && (
         <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
           <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
-            <button 
+            <button
               onClick={onNavigateToCalculator}
-              className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${currentPage === 'calculator' ? 'text-white' : ''}`}
+              className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${
+                currentPage === 'calculator' ? 'text-white' : ''
+              }`}
             >
               <Calculator className="w-3.5 h-3.5 text-blue-400" />
               Calculadora de Notas

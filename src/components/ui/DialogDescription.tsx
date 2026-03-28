@@ -1,13 +1,5 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 
-interface DialogDescriptionProps {
-  children: React.ReactNode;
+export default function DialogDescription({ children }: { children: ReactNode }) {
+  return <p className="mb-4">{children}</p>;
 }
-
-export const DialogDescription: React.FC<DialogDescriptionProps> = ({ children }) => {
-  return (
-    <div className="text-sm text-gray-600 mb-4">
-      {children}
-    </div>
-  );
-};

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { NotificationItem } from './NotificationItem';
 
 interface Notification {
@@ -13,48 +13,39 @@ interface Notification {
   created_at: string;
 }
 
-export const NotificationList = ({ onClose }: { onClose: () => void }) => {
+export const NotificationList: React.FC<{ onClose: () => void }> = ({
+  onClose,
+}) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
     if (!user) return;
-
     fetchNotifications();
   }, [user]);
 
   const fetchNotifications = async () => {
     if (!user) return;
-
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('notifications')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching notifications:', error);
-    } else {
-      setNotifications(data || []);
-    }
+    if (error) console.error('Error fetching notifications:', error);
+    else setNotifications(data || []);
     setLoading(false);
   };
 
   const markAllAsRead = async () => {
     if (!user) return;
-
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('notifications')
       .eq('user_id', user.id)
       .update({ is_read: true });
-
-    if (error) {
-      console.error('Error marking notifications as read:', error);
-    } else {
-      fetchNotifications();
-    }
+    if (error) console.error('Error marking notifications as read:', error);
+    else fetchNotifications();
   };
 
   if (loading) {
@@ -67,11 +58,11 @@ export const NotificationList = ({ onClose }: { onClose: () => void }) => {
 
   return (
     <div className="w-80 bg-white rounded-lg shadow-lg border border-gray-200">
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
         <h3 className="text-lg font-semibold">Notificações</h3>
         <button
           onClick={markAllAsRead}
-          className="ml-2 text-sm text-blue-600 hover:text-blue-700"
+          className="text-sm text-blue-600 hover:text-blue-700"
         >
           Marcar todas como lidas
         </button>
@@ -82,12 +73,8 @@ export const NotificationList = ({ onClose }: { onClose: () => void }) => {
             Nenhuma notificação
           </div>
         ) : (
-          notifications.map((notification) => (
-            <NotificationItem
-              key={notification.id}
-              notification={notification}
-              onRead={fetchNotifications}
-            />
+          notifications.map((n) => (
+            <NotificationItem key={n.id} notification={n} onRead={fetchNotifications} />
           ))
         )}
       </div>

@@ -17,7 +17,10 @@ interface NotificationItemProps {
   onRead: () => void;
 }
 
-export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onRead }) => {
+export const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onRead,
+}) => {
   const { user } = useAuth();
 
   const handleRead = async () => {

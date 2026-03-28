@@ -1,13 +1,5 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 
-interface DialogFooterProps {
-  children: React.ReactNode;
+export default function DialogFooter({ children }: { children: ReactNode }) {
+  return <div className="flex justify-end space-x-2 mt-4">{children}</div>;
 }
-
-export const DialogFooter: React.FC<DialogFooterProps> = ({ children }) => {
-  return (
-    <div className="flex justify-end gap-2 pt-4">
-      {children}
-    </div>
-  );
-};

@@ -26,7 +26,9 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
 
-export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -38,88 +40,62 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setLoading(false);
       return;
     }
-
     fetchNotifications();
   }, [user]);
 
   const fetchNotifications = async () => {
     if (!user) return;
-
     setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching notifications:', error);
-      } else {
-        setNotifications(data || []);
-        const unread = data?.filter((n: Notification) => !n.is_read).length || 0;
-        setUnreadCount(unread);
-      }
-    } finally {
-      setLoading(false);
+    const { data, error } = await (supabase as any)
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    if (error) console.error('Error fetching notifications:', error);
+    else {
+      setNotifications(data || []);
+      const unread = data?.filter((n: Notification) => !n.is_read).length || 0;
+      setUnreadCount(unread);
     }
+    setLoading(false);
   };
 
   const markAllAsRead = async () => {
     if (!user) return;
-
     setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .eq('user_id', user.id)
-        .update({ is_read: true });
-
-      if (error) {
-        console.error('Error marking notifications as read:', error);
-      } else {
-        await fetchNotifications();
-      }
-    } finally {
-      setLoading(false);
-    }
+    const { error } = await (supabase as any)
+      .from('notifications')
+      .eq('user_id', user.id)
+      .update({ is_read: true });
+    if (error) console.error('Error marking notifications as read:', error);
+    else await fetchNotifications();
+    setLoading(false);
   };
 
   const markAsRead = async (notificationId: string) => {
     if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId);
-
-      if (error) {
-        console.error('Error marking notification as read:', error);
-      } else {
-        await fetchNotifications();
-      }
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
+    const { error } = await (supabase as any)
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+    if (error) console.error('Error marking notification as read:', error);
+    else await fetchNotifications();
   };
 
   const subscribeToNotifications = () => {
     if (!user || channel) return;
-
-    const newChannel = supabase
+    const newChannel = (supabase as any)
       .channel(`notifications:${user.id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications' },
-        (payload) => {
-          if (payload.new.user_id === user.id) {
+        (payload: any) => {
+          if (payload?.new?.user_id === user.id) {
             fetchNotifications();
           }
         }
       )
       .subscribe();
-
     setChannel(newChannel);
   };
 
@@ -131,10 +107,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   useEffect(() => {
-    if (user) {
-      subscribeToNotifications();
-    }
-
+    if (user) subscribeToNotifications();
     return () => {
       unsubscribeFromNotifications();
     };

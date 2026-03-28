@@ -1,15 +1,6 @@
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter, Button, Input, Textarea, Label, FormControl, FormHelperText, Table, TableHead, TableBody, TableRow, TableCell, Badge } from '@/components/ui';
-import { Bell, X, CheckCircle, AlertTriangle } from 'lucide-react';
-
-interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  created_at: string;
-  is_read: boolean;
-}
+import { supabase } from '../lib/supabase';
+import { AlertTriangle } from 'lucide-react';
 
 export const AdminAnnouncements = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -21,17 +12,13 @@ export const AdminAnnouncements = () => {
   const fetchAnnouncements = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('notifications')
         .select('*')
         .eq('type', 'announcement')
         .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching announcements:', error);
-      } else {
-        setAnnouncements(data || []);
-      }
+      if (error) console.error('Error fetching announcements:', error);
+      else setAnnouncements(data || []);
     } finally {
       setLoading(false);
     }
@@ -42,58 +29,26 @@ export const AdminAnnouncements = () => {
       alert('Por favor, preencha todos os campos.');
       return;
     }
-
     setLoading(true);
     try {
-      const { data: users, error } = await supabase
-        .from('auth.users')
-        .select('id');
-
+      const { data: users, error } = await (supabase as any).from('auth.users').select('id');
       if (error) throw error;
-
-      const notifications = users.map((user: any) => ({
-        user_id: user.id,
+      const notifications = (users || []).map((u: any) => ({
+        user_id: u.id,
         title,
         content,
-        type: 'announcement' as const,
-        is_read: false
+        type: 'announcement',
+        is_read: false,
       }));
-
-      const { error: insertError } = await supabase
-        .from('notifications')
-        .insert(notifications);
-
+      const { error: insertError } = await (supabase as any).from('notifications').insert(notifications);
       if (insertError) throw insertError;
-
       setTitle('');
       setContent('');
       setShowCreate(false);
       fetchAnnouncements();
-      
-      // Send real-time notification to all users
-      const channel = supabase.channel('global_announcement');
-      channel.publish('announcement', { title, content });
-    } catch (error) {
-      console.error('Error sending announcement:', error);
+    } catch (e) {
+      console.error('Error sending announcement:', e);
       alert('Erro ao enviar anúncio. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const markAllAsRead = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .eq('type', 'announcement')
-        .update({ is_read: true });
-
-      if (error) {
-        console.error('Error marking announcements as read:', error);
-      } else {
-        fetchAnnouncements();
-      }
     } finally {
       setLoading(false);
     }
@@ -103,126 +58,101 @@ export const AdminAnnouncements = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Anúncios</h2>
-        <Button
+        <button
           onClick={() => setShowCreate(true)}
           disabled={loading}
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
         >
           Novo Anúncio
-        </Button>
+        </button>
       </div>
 
-      <Dialog open={showCreate} onClose={() => setShowCreate(false)}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogTitle>Novo Anúncio</DialogTitle>
-          <DialogDescription>
-            <FormControl className="mb-4">
-              <Label htmlFor="title" className="text-sm font-medium text-gray-700 mb-1">
-                Título
-              </Label>
-              <Input
-                id="title"
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">Novo Anúncio</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Título</label>
+              <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                className="w-full p-2 border rounded"
                 placeholder="Título do anúncio..."
-                required
               />
-            </FormControl>
-            
-            <FormControl className="mb-4">
-              <Label htmlFor="content" className="text-sm font-medium text-gray-700 mb-1">
-                Conteúdo
-              </Label>
-              <Textarea
-                id="content"
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Conteúdo</label>
+              <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
+                className="w-full p-2 border rounded"
+                rows={4}
                 placeholder="Conteúdo do anúncio..."
-                required
-                className="min-h-[100px]"
               />
-            </FormControl>
-          </DialogDescription>
-          
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreate(false)}
-              className="mr-2"
-              disabled={loading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={sendAnnouncement}
-              disabled={!title.trim() || !content.trim() || loading}
-              loading={loading}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              Enviar Anúncio
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell className="font-medium">Título</TableCell>
-              <TableCell className="font-medium">Conteúdo</TableCell>
-              <TableCell className="font-medium">Data</TableCell>
-              <TableCell className="font-medium">Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {announcements.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-gray-500">
-                  Nenhuma anúncio enviado
-                </TableCell>
-              </TableRow>
-            ) : (
-              announcements.map((announcement) => (
-                <TableRow key={announcement.id}>
-                  <TableCell className="font-medium">{announcement.title}</TableCell>
-                  <TableCell className="text-sm text-gray-600 line-clamp-2">
-                    {announcement.content}
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-500">
-                    {new Date(announcement.created_at).toLocaleString('pt-BR', {
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={announcement.is_read ? 'default' : 'secondary'}>
-                      {announcement.is_read ? 'Lido' : 'Não lido'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {announcements.length > 0 && (
-        <div className="flex justify-between">
-          <Button
-            onClick={markAllAsRead}
-            disabled={loading}
-            className="text-sm"
-          >
-            Marcar todos como lidos
-          </Button>
-          <span className="text-sm text-gray-500">
-            {announcements.length} anúncios
-          </span>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setShowCreate(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={sendAnnouncement}
+                disabled={!title.trim() || !content.trim() || loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Enviar Anúncio
+              </button>
+            </div>
+          </div>
         </div>
       )}
+
+      <table className="w-full border-collapse">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="p-2 text-left">Título</th>
+            <th className="p-2 text-left">Conteúdo</th>
+            <th className="p-2 text-left">Data</th>
+            <th className="p-2 text-left">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {announcements.length === 0 ? (
+            <tr>
+              <td colSpan={4} className="p-4 text-center text-gray-500">
+                Nenhum anúncio enviado
+              </td>
+            </tr>
+          ) : (
+            announcements.map((a) => (
+              <tr key={a.id} className="border-t">
+                <td className="p-2 font-medium">{a.title}</td>
+                <td className="p-2">{a.content}</td>
+                <td className="p-2 text-sm text-gray-500">
+                  {new Date(a.created_at).toLocaleString('pt-BR', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </td>
+                <td className="p-2">
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      a.is_read ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {a.is_read ? 'Lido' : 'Não lido'}
+                  </span>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };

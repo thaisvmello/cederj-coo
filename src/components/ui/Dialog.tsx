@@ -1,16 +1,19 @@
-import React from 'react';
-import { Dialog as HeadlessDialog } from '@headlessui/react';
+import React, { ReactNode } from 'react';
 
 interface DialogProps {
   open: boolean;
   onClose: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export const Dialog: React.FC<DialogProps> = ({ open, onClose, children }) => {
+export default function Dialog({ open, onClose, children }: DialogProps) {
+  if (!open) return null;
   return (
-    <HeadlessDialog open={open} onClose={onClose}>
-      {children}
-    </HeadlessDialog>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-4 max-w-lg w-full">{children}</div>
+      <button onClick={onClose} className="absolute top-2 right-2 text-gray-500">
+        ✕
+      </button>
+    </div>
   );
-};
+}

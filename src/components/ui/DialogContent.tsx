@@ -1,14 +1,5 @@
-import React from 'react';
-import { DialogContent as HeadlessDialogContent } from '@headlessui/react';
+import React, { ReactNode } from 'react';
 
-interface DialogContentProps {
-  children: React.ReactNode;
+export default function DialogContent({ children }: { children: ReactNode }) {
+  return <div className="p-4">{children}</div>;
 }
-
-export const DialogContent: React.FC<DialogContentProps> = ({ children }) => {
-  return (
-    <HeadlessDialogContent className="p-6">
-      {children}
-    </HeadlessDialogContent>
-  );
-};
