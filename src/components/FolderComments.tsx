@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Send, MessageSquare, Trash2, Loader } from 'lucide-react';
+import { Send, MessageSquare, Trash2, Loader, Reply, CornerDownRight, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
 import type { FolderComment } from '../lib/types';
@@ -18,6 +18,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
   const { isAdmin } = useAdmin();
   const [comments, setComments] = useState<FolderComment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [replyTo, setReplyTo] = useState<FolderComment | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,16 +43,11 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
         return;
       }
 
-      const userIds = Array.from(new Set(commentsData.map((c: { user_id: string }) => c.user_id)));
-
-      const { data: profilesData, error: profilesError } = await supabase
+      const userIds = Array.from(new Set(commentsData.map((c: any) => c.user_id)));
+      const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, avatar_url')
         .in('id', userIds);
-
-      if (profilesError) {
-        console.warn('Erro ao buscar perfis, usando fallback:', profilesError);
-      }
 
       const formattedComments = commentsData.map((comment: any) => {
         const profile = profilesData?.find((p: any) => p.id === comment.user_id);
@@ -81,13 +77,15 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       const { error } = await supabase.from('folder_comments').insert({
         folder_id: folderId,
         user_id: user.id,
-        content: newComment.trim()
+        content: newComment.trim(),
+        parent_id: replyTo?.id || null
       });
 
       if (error) throw error;
       setNewComment('');
+      setReplyTo(null);
       await loadComments();
-      toast.success('Comentário enviado!');
+      toast.success(replyTo ? 'Resposta enviada!' : 'Comentário enviado!');
     } catch (error) {
       console.error('Erro ao enviar comentário:', error);
       toast.error('Erro ao enviar comentário');
@@ -98,11 +96,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('folder_comments')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('folder_comments').delete().eq('id', id);
       if (error) throw error;
       setComments(prev => prev.filter(c => c.id !== id));
       toast.success('Comentário removido');
@@ -112,78 +106,110 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
     }
   };
 
-  // Admin pode deletar qualquer comentário, usuário normal só os seus
-  const canDelete = (comment: FolderComment) => {
-    return isAdmin || user?.id === comment.user_id;
-  };
+  // Organiza os comentários em estrutura de árvore
+  const commentTree = useMemo(() => {
+    const roots = comments.filter(c => !c.parent_id);
+    const replies = comments.filter(c => c.parent_id);
+    
+    return roots.map(root => ({
+      ...root,
+      replies: replies.filter(r => r.parent_id === root.id)
+    }));
+  }, [comments]);
+
+  const CommentItem = ({ comment, isReply = false }: { comment: any, isReply?: boolean }) => (
+    <div className={`flex gap-3 group ${isReply ? 'ml-8 mt-3' : 'mt-6 first:mt-0'}`}>
+      <AvatarFallback 
+        avatarUrl={comment.avatar_url} 
+        name={`${comment.first_name} ${comment.last_name}`}
+        size="sm"
+      />
+      <div className="flex-1 space-y-1">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-gray-900">
+              {comment.first_name} {comment.last_name}
+            </span>
+            {isReply && <CornerDownRight className="w-3 h-3 text-gray-300" />}
+          </div>
+          <span className="text-[10px] text-gray-400">
+            {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
+        <div className="relative">
+          <p className={`text-xs text-gray-600 leading-relaxed p-2 rounded-lg rounded-tl-none ${isReply ? 'bg-blue-50/50 border border-blue-100/50' : 'bg-gray-50'}`}>
+            {comment.content}
+          </p>
+          
+          <div className="flex items-center gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {!isReply && (
+              <button 
+                onClick={() => setReplyTo(comment)}
+                className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+              >
+                <Reply className="w-3 h-3" /> Responder
+              </button>
+            )}
+            {(isAdmin || user?.id === comment.user_id) && (
+              <button 
+                onClick={() => handleDelete(comment.id)}
+                className="text-[10px] font-bold text-red-400 hover:text-red-600 flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" /> Excluir
+              </button>
+            )}
+          </div>
+        </div>
+        
+        {comment.replies?.map((reply: any) => (
+          <CommentItem key={reply.id} comment={reply} isReply={true} />
+        ))}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 flex flex-col h-full max-h-[500px]">
+    <div className="bg-white rounded-xl border border-gray-100 flex flex-col h-full max-h-[600px]">
       <div className="p-4 border-b border-gray-50 flex items-center gap-2">
         <MessageSquare className="w-4 h-4 text-blue-500" />
-        <h3 className="text-sm font-bold text-gray-900">Comentários e Dicas</h3>
-        {isAdmin && (
-          <span className="ml-auto text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
-            Admin
-          </span>
-        )}
+        <h3 className="text-sm font-bold text-gray-900">Discussão e Dicas</h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
             <Loader className="w-6 h-6 text-blue-600 animate-spin" />
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Carregando discussão...</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Carregando...</p>
           </div>
-        ) : comments.length === 0 ? (
+        ) : commentTree.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-xs text-gray-400">Nenhum comentário ainda. Seja o primeiro!</p>
           </div>
         ) : (
-          comments.map((comment) => (
-            <div key={comment.id} className="flex gap-3 group">
-              <AvatarFallback 
-                avatarUrl={comment.avatar_url} 
-                name={`${comment.first_name} ${comment.last_name}`}
-                size="sm"
-              />
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-gray-900">
-                    {comment.first_name} {comment.last_name}
-                  </span>
-                  <span className="text-[10px] text-gray-400">
-                    {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-                <div className="relative">
-                  <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 p-2 rounded-lg rounded-tl-none">
-                    {comment.content}
-                  </p>
-                  {canDelete(comment) && (
-                    <button 
-                      onClick={() => handleDelete(comment.id)}
-                      className="absolute -right-2 -top-2 p-1 bg-white border border-gray-100 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
-                      title={isAdmin && user?.id !== comment.user_id ? "Admin: Remover comentário" : "Remover comentário"}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+          commentTree.map((comment) => (
+            <CommentItem key={comment.id} comment={comment} />
           ))
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-50">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-50 bg-gray-50/30">
+        {replyTo && (
+          <div className="flex items-center justify-between bg-blue-50 px-3 py-1.5 rounded-t-lg border-x border-t border-blue-100 mb-0">
+            <span className="text-[10px] text-blue-700 font-bold flex items-center gap-1">
+              <Reply className="w-3 h-3" /> Respondendo a {replyTo.first_name}
+            </span>
+            <button onClick={() => setReplyTo(null)} className="text-blue-400 hover:text-blue-600">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
         <div className="relative">
           <input
             type="text"
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Escreva uma dica ou dúvida..."
-            className="w-full pl-4 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition"
+            placeholder={replyTo ? "Escreva sua resposta..." : "Escreva uma dica ou dúvida..."}
+            className={`w-full pl-4 pr-12 py-2.5 bg-white border border-gray-200 text-xs focus:ring-2 focus:ring-blue-500 outline-none transition ${replyTo ? 'rounded-b-xl border-t-0' : 'rounded-xl'}`}
           />
           <button
             type="submit"

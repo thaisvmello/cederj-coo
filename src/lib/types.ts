@@ -40,12 +40,13 @@ export interface FolderComment {
   id: string;
   folder_id: string;
   user_id: string;
+  parent_id: string | null; // Adicionado para respostas
   content: string;
   created_at: string;
   first_name?: string;
   last_name?: string;
   avatar_url?: string | null;
-  folder_name?: string; // Added for admin view
+  folder_name?: string;
 }
 
 export interface FileAction {
