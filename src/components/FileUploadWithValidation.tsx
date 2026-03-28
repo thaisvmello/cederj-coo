@@ -39,13 +39,18 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
 
     const newFiles: PendingFile[] = [];
 
+    // Regex para detectar AD ou AP como palavra isolada ou prefixo (ex: AD1, AP_2023, AD 2)
+    // \b garante que seja o início de uma palavra
+    // (AD|AP) busca as siglas
+    // ([0-9]|_|\s|$) garante que seja seguido por número, underline, espaço ou fim da string
+    const adapRegex = /\b(AD|AP)([0-9]|_|\s|$)/i;
+
     Array.from(files).forEach(file => {
-      const fileNameUpper = file.name.toUpperCase();
-      const hasADAP = fileNameUpper.includes('AD') || fileNameUpper.includes('AP');
+      const hasADAP = adapRegex.test(file.name);
 
       if (isADAPFolder && !hasADAP) {
         toast.error(
-          `O arquivo "${file.name}" não parece ser uma prova (AD ou AP). Materiais de estudo devem ser colocados na pasta 'MATERIAIS'. Se a pasta não existir, solicite sua criação.`,
+          `O arquivo "${file.name}" não parece ser uma prova (AD ou AP). Materiais de estudo devem ser colocados na pasta 'MATERIAIS'.`,
           { duration: 6000 }
         );
         return;
@@ -53,7 +58,7 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
 
       if (isMaterialsFolder && hasADAP) {
         toast.error(
-          `A pasta 'MATERIAIS' é para resumos e livros. Provas (AD ou AP) devem ser enviadas para suas respectivas pastas. Se a pasta não existir, solicite sua criação.`,
+          `A pasta 'MATERIAIS' é para resumos e livros. Provas (AD ou AP) devem ser enviadas para suas respectivas pastas.`,
           { duration: 6000 }
         );
         return;
