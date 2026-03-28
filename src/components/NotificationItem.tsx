@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { X, AlertTriangle, BellRing, Bell } from 'lucide-react';
-import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
+import { AlertTriangle, Bell } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Notification {
   id: string;
@@ -23,17 +22,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
 
   const handleRead = async () => {
     if (!user || notification.is_read) return;
-
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('notifications')
       .update({ is_read: true })
       .eq('id', notification.id);
-
-    if (error) {
-      console.error('Error marking notification as read:', error);
-    } else {
-      onRead();
-    }
+    if (error) console.error('Error marking notification as read:', error);
+    else onRead();
   };
 
   const getIcon = (type: string) => {
@@ -41,7 +35,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       case 'folder_request_rejection':
         return <AlertTriangle size={16} className="text-red-500" />;
       case 'new_content':
-        return <BellRing size={16} className="text-blue-500" />;
+        return <Bell size={16} className="text-blue-500" />;
       case 'announcement':
         return <Bell size={16} className="text-purple-500" />;
       default:
@@ -54,9 +48,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       className="p-3 hover:bg-gray-50 cursor-pointer transition-colors"
       onClick={() => {
         handleRead();
-        if (notification.link) {
-          window.open(notification.link, '_blank');
-        }
+        if (notification.link) window.open(notification.link, '_blank');
       }}
     >
       <div className="flex items-start space-x-3">
@@ -69,7 +61,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
               day: 'numeric',
               month: 'short',
               hour: '2-digit',
-              minute: '2-digit'
+              minute: '2-digit',
             })}
           </p>
         </div>
