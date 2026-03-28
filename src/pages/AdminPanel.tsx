@@ -6,11 +6,13 @@ import { AdminFileActions } from '../components/AdminFileActions';
 import { AdminCommentsManager } from '../components/AdminCommentsManager';
 import { AdminBulkRename } from '../components/AdminBulkRename';
 import { Footer } from '../components/Footer';
-import { Shield, LayoutDashboard, FolderPlus, BookOpen, MessageSquare, FileText, Settings } from 'lucide-react';
+import { Shield, LayoutDashboard, FolderPlus, BookOpen, MessageSquare, FileText, Settings, Bell } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { Navigate } from 'react-router-dom';
 
-type AdminTab = 'overview' | 'folders' | 'courses' | 'files' | 'comments' | 'maintenance';
+import { AdminAnnouncements } from '../components/AdminAnnouncements';
+
+type AdminTab = 'overview' | 'folders' | 'courses' | 'files' | 'comments' | 'maintenance' | 'announcements';
 
 export function AdminPanel() {
   const { isAdmin } = useAdmin();
@@ -25,6 +27,7 @@ export function AdminPanel() {
     { id: 'files', label: 'Arquivos', icon: FileText },
     { id: 'comments', label: 'Comentários', icon: MessageSquare },
     { id: 'maintenance', label: 'Manutenção', icon: Settings },
+    { id: 'announcements', label: 'Anúncios', icon: Bell },
   ];
 
   return (
@@ -78,6 +81,7 @@ export function AdminPanel() {
             {activeTab === 'files' && <AdminFileActions />}
             {activeTab === 'comments' && <AdminCommentsManager />}
             {activeTab === 'maintenance' && <AdminBulkRename />}
+            {activeTab === 'announcements' && <AdminAnnouncements />}
           </div>
         </div>
       </main>

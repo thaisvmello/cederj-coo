@@ -1,7 +1,8 @@
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home, Settings } from 'lucide-react';
+import { LogOut, Calculator, Shield, Home, Settings, Bell } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { NotificationBell } from './NotificationBell';
 
 interface HeaderProps {
   showHomeButton?: boolean;
@@ -71,6 +72,8 @@ export function Header({ showHomeButton = false, onGoHome, onNavigateToCalculato
                 <Home className="w-5 h-5" />
               </button>
             )}
+            
+            <NotificationBell />
             
             <button 
               onClick={signOut}

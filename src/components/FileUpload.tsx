@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader, AlertCircle, FileText, Upload } from 'lucide-react';
+import { Loader, AlertCircle, FileText, Upload, BellRing } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { formatFileName } from '../lib/utils';
@@ -122,10 +122,51 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
     if (errorCount === 0) {
       toast.success(`${successCount} arquivo(s) enviado(s) com sucesso!`);
       onUploadSuccess();
+      
+      // Notify followers about new content
+      if (successCount > 0 && folderId) {
+        notifyFollowers(folderId, disciplineName, successCount);
+      }
     } else if (successCount > 0) {
       toast.success(`${successCount} arquivo(s) enviado(s), ${errorCount} com erro`);
     } else {
       toast.error('Erro ao enviar arquivos');
+    }
+  };
+
+  const notifyFollowers = async (folderId: string, folderName: string, fileCount: number) => {
+    try {
+      // Get folder followers
+      const { data: followersData } = await supabase
+        .from('folder_followers')
+        .select('user_id')
+        .eq('folder_id', folderId);
+
+      if (!followersData || followersData.length === 0) return;
+
+      // Get unique user IDs
+      const userIds = [...new Set(followersData.map(f => f.user_id))];
+
+      // Create notifications for each follower
+      const notifications = userIds.map(userId => ({
+        user_id: userId,
+        title: 'Novo conteúdo disponível',
+        content: `Foram adicionados ${fileCount} novos arquivo(s) na pasta "${folderName}".`,
+        type: 'new_content' as const,
+        link: `/folder/${folderId}`,
+        is_read: false
+      }));
+
+      // Insert notifications in bulk
+      await supabase.from('notifications').insert(notifications);
+
+      // Send real-time notification to all followers
+      const channel = supabase.channel('folder_updates');
+      channel.publish('new_content', { folderId, fileCount, folderName });
+
+      console.log(`[FileUpload] Notified ${userIds.length} followers about new content`);
+    } catch (error) {
+      console.error('[FileUpload] Error notifying followers:', error);
     }
   };
 
@@ -262,7 +303,7 @@ export function FileUpload({ folderId, disciplineName, onUploadSuccess }: FileUp
                 Enviando...
               </>
             ) : (
-              `Iniciar Upload (${pendingFiles.filter(f => !f.uploaded).length})`
+              `Iniciar Upload (${pendingFiles.filter(f => !file.uploaded).length})`
             )}
           </button>
         )}

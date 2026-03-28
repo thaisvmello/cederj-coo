@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Check, X, Clock, FolderPlus, Loader, AlertCircle, RefreshCw } from 'lucide-react';
+import { Check, X, Clock, FolderPlus, Loader, AlertCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { RejectRequestModal } from './RejectRequestModal';
 
 interface FolderRequest {
   id: string;
@@ -15,6 +16,7 @@ interface FolderRequest {
   created_at: string;
   course_name?: string;
   requester_name?: string;
+  requester_email?: string;
 }
 
 export function AdminFolderRequests() {
@@ -23,6 +25,8 @@ export function AdminFolderRequests() {
   const [requests, setRequests] = useState<FolderRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [requestToReject, setRequestToReject] = useState<FolderRequest | null>(null);
 
   useEffect(() => {
     if (isAdmin) {
@@ -74,17 +78,25 @@ export function AdminFolderRequests() {
         .select('id, first_name, last_name')
         .in('id', userIds);
 
+      // Buscar emails dos solicitantes
+      const { data: usersData } = await supabase
+        .from('auth.users')
+        .select('id, email')
+        .in('id', userIds);
+
       // Combinar os dados
       const formattedRequests: FolderRequest[] = requestsData.map(request => {
         const course = coursesData?.find(c => c.id === request.course_id);
         const profile = profilesData?.find(p => p.id === request.requested_by);
+        const user = usersData?.find(u => u.id === request.requested_by);
         
         return {
           ...request,
           course_name: course?.name || 'Disciplina não encontrada',
           requester_name: profile 
             ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Usuário'
-            : 'Usuário desconhecido'
+            : 'Usuário desconhecido',
+          requester_email: user?.email || 'email@unknown.com'
         };
       });
 
@@ -141,7 +153,7 @@ export function AdminFolderRequests() {
     }
   };
 
-  const handleReject = async (requestId: string) => {
+  const handleReject = async (requestId: string, message: string, link?: string) => {
     setProcessingId(requestId);
     try {
       console.log('[Admin] Rejeitando solicitação:', requestId);
@@ -157,7 +169,20 @@ export function AdminFolderRequests() {
 
       if (error) throw error;
 
-      toast.success('Solicitação rejeitada');
+      // Enviar notificação ao solicitante
+      const requestData = requests.find(r => r.id === requestId);
+      if (requestData) {
+        await supabase.from('notifications').insert({
+          user_id: requestData.requested_by,
+          title: 'Solicitação de pasta rejeitada',
+          content: message,
+          type: 'folder_request_rejection',
+          link,
+          is_read: false
+        });
+      }
+
+      toast.success('Solicitação rejeitada e notificação enviada');
       loadRequests();
     } catch (error) {
       console.error('[Admin] Erro ao rejeitar:', error);
@@ -253,7 +278,10 @@ export function AdminFolderRequests() {
                     )}
                   </button>
                   <button
-                    onClick={() => handleReject(request.id)}
+                    onClick={() => {
+                      setRequestToReject(request);
+                      setShowRejectModal(true);
+                    }}
                     disabled={processingId === request.id}
                     className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition disabled:opacity-50"
                     title="Rejeitar solicitação"
@@ -266,6 +294,17 @@ export function AdminFolderRequests() {
           ))}
         </div>
       )}
+
+      <RejectRequestModal
+        isOpen={showRejectModal}
+        onRequestId={requestToReject?.id || ''}
+        onRequesterName={requestToReject?.requester_name || ''}
+        onRequesterEmail={requestToReject?.requester_email || ''}
+        onRequesterId={requestToReject?.requested_by || ''}
+        onRequestTitle={requestToReject?.folder_name || ''}
+        onClose={() => setShowRejectModal(false)}
+        onReject={handleReject}
+      />
     </div>
   );
 }

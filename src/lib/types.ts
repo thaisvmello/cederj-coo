@@ -61,3 +61,62 @@ export interface FileAction {
   file_name?: string;
   requester_name?: string;
 }
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  type: 'folder_request' | 'new_content' | 'announcement' | 'file_action' | 'folder_request_rejection';
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string | null;
+}
+
+export interface AuthSession {
+  user: AuthUser;
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+}
+
+export interface AuthState {
+  session: AuthSession | null;
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}
+
+export interface AuthError {
+  code: string;
+  message: string;
+}
+
+export interface AuthProviderProps {
+  children: React.ReactNode;
+}
+
+export interface AuthContextType {
+  authState: AuthState;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  updateProfile: (data: Partial<AuthUser>) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  confirmPasswordReset: (code: string, password: string) => Promise<void>;
+  setError: (error: AuthError | null) => void;
+  clearError: () => void;
+}
+
+export interface AuthProviderState {
+  authState: AuthState;
+  error: AuthError | null;
+}
