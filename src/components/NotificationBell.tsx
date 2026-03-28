@@ -51,8 +51,8 @@ export const NotificationBell = () => {
     if (!user) return;
     const { error } = await supabase
       .from('notifications')
-      .eq('user_id', user.id)
-      .update({ is_read: true });
+      .update({ is_read: true })
+      .eq('user_id', user.id);
     if (error) console.error('Error marking notifications as read:', error);
     else fetchNotifications();
   };

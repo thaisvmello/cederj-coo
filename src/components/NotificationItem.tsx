@@ -1,7 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import toast from 'react-hot-toast';
 
 export const NotificationItem: React.FC<{
   notification: {
