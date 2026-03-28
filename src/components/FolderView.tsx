@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronLeft, Folder, Upload, ChevronRight, FolderPlus, Pencil } from 'lucide-react';
+import { ChevronLeft, Folder, ChevronRight, FolderPlus, Pencil } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { FileList } from './FileList';
 import { FileUploadWithValidation } from './FileUploadWithValidation';
 import { FolderRequestModal } from './FolderRequestModal';
 import { FolderComments } from './FolderComments';
-import { FolderWarningBanner } from './FolderWarningBanner';
 import { useAdmin } from '../hooks/useAdmin';
 import { EditCourseModal } from './EditCourseModal';
 import { EditFolderModal } from './EditFolderModal';
@@ -103,17 +102,8 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
             <FolderPlus className="w-4 h-4" />
             Solicitar Pasta
           </button>
-          <button 
-            onClick={() => setShowUpload(!showUpload)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#0f172a] text-white rounded-lg text-sm font-semibold hover:bg-[#1e293b] transition"
-          >
-            <Upload className="w-4 h-4" />
-            Enviar Arquivo
-          </button>
         </div>
       </div>
-
-      <FolderWarningBanner />
 
       <div className="space-y-4">
         <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pastas de Materiais</h3>
@@ -177,7 +167,11 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
       {selectedFolder && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <FileList folderId={selectedFolder.id} />
+            <FileList 
+              folderId={selectedFolder.id} 
+              onToggleUpload={() => setShowUpload(!showUpload)}
+              isUploadOpen={showUpload}
+            />
           </div>
           <div className="space-y-4">
             <FolderComments folderId={selectedFolder.id} />

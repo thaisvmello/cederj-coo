@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Loader, AlertCircle, FileText, Upload, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFileValidation } from '../hooks/useFileValidation';
+import { FolderWarningBanner } from './FolderWarningBanner';
 import toast from 'react-hot-toast';
 import { formatFileName } from '../lib/utils';
 
@@ -217,39 +218,45 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
   const validFiles = pendingFiles.filter(f => !f.isDuplicate && !f.uploaded);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-bold text-gray-900">Enviar Arquivos</h3>
-          <p className="text-xs text-gray-500">Destino: {disciplineName} ({folderName})</p>
-        </div>
-      </div>
+    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 space-y-4">
+          <div>
+            <h3 className="font-bold text-gray-900">Enviar Arquivos</h3>
+            <p className="text-xs text-gray-500">Destino: {disciplineName} ({folderName})</p>
+          </div>
 
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
-          isDragging 
-            ? 'border-blue-500 bg-blue-50' 
-            : 'border-gray-200 hover:border-gray-300'
-        }`}  
-      >
-        <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragging ? 'text-blue-500' : 'text-gray-300'}`} />
-        <p className="text-sm font-medium text-gray-700 mb-1">
-          Arraste arquivos aqui ou
-        </p>
-        <label className="inline-block">
-          <span className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold cursor-pointer hover:bg-blue-700 transition">
-            Selecione do computador
-          </span>
-          <input
-            type="file"
-            multiple
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-        </label>
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+              isDragging 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-gray-200 hover:border-gray-300'
+            }`}  
+          >
+            <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragging ? 'text-blue-500' : 'text-gray-300'}`} />
+            <p className="text-sm font-medium text-gray-700 mb-1">
+              Arraste arquivos aqui ou
+            </p>
+            <label className="inline-block">
+              <span className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold cursor-pointer hover:bg-blue-700 transition">
+                Selecione do computador
+              </span>
+              <input
+                type="file"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="lg:w-1/3">
+          <FolderWarningBanner />
+        </div>
       </div>
 
       {hasDuplicates && (

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Download, FileText, Eye, Loader, Trash2, Pencil, X, Check, Archive } from 'lucide-react';
+import { Download, FileText, Eye, Loader, Trash2, Pencil, X, Check, Archive, Upload } from 'lucide-react';
 import type { File as FileType } from '../lib/types';
 import { PDFViewer } from './PDFViewer';
 import { FileActionModal } from './FileActionModal';
@@ -13,9 +13,11 @@ import JSZip from 'jszip';
 
 interface FileListProps {
   folderId: string;
+  onToggleUpload?: () => void;
+  isUploadOpen?: boolean;
 }
 
-export function FileList({ folderId }: FileListProps) {
+export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListProps) {
   const [files, setFiles] = useState<FileType[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
@@ -236,189 +238,165 @@ export function FileList({ folderId }: FileListProps) {
     );
   }
 
-  if (files.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow p-8 text-center">
-        <p className="text-gray-500">Nenhum arquivo nesta pasta</p>
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <input
-          type="checkbox"
-          checked={selectedFileIds.length === files.length && files.length > 0}
-          onChange={handleSelectAll}
-          className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-        />
-        <label className="text-sm text-gray-700">
-          {selectedFileIds.length === files.length && files.length > 0 ? 'Selecionar tudo' : 'Selecionar todos'}
-        </label>
-        <span className="text-sm text-gray-400">{`(${selectedFileIds.length}/${files.length})`}</span>
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={selectedFileIds.length === files.length && files.length > 0}
+            onChange={handleSelectAll}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+          />
+          <label className="text-sm text-gray-700">
+            Selecionar todos <span className="text-gray-400">{`(${selectedFileIds.length}/${files.length})`}</span>
+          </label>
+        </div>
         
-        {selectedFileIds.length > 0 && (
-          <button
-            onClick={handleBatchDownload}
-            disabled={loading}
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            Baixar Selecionados
-          </button>
-        )}
-        
-        <button
-          onClick={handleDownloadAllAsZip}
-          disabled={zipping || files.length === 0}
-          className="ml-auto px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-50 flex items-center gap-2"
-        >
-          {zipping ? (
-            <>
-              <Loader className="w-4 h-4 animate-spin" />
-              Compactando...
-            </>
-          ) : (
-            <>
-              <Archive className="w-4 h-4" />
-              Baixar Tudo (ZIP)
-            </>
+        <div className="flex-1" />
+
+        <div className="flex items-center gap-2">
+          {selectedFileIds.length > 0 && (
+            <button
+              onClick={handleBatchDownload}
+              disabled={loading}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              Baixar Selecionados
+            </button>
           )}
-        </button>
+          
+          <button 
+            onClick={onToggleUpload}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+              isUploadOpen 
+                ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
+                : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
+            }`}
+          >
+            <Upload className="w-4 h-4" />
+            Enviar Arquivo
+          </button>
+
+          <button
+            onClick={handleDownloadAllAsZip}
+            disabled={zipping || files.length === 0}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-50 flex items-center gap-2"
+          >
+            {zipping ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Compactando...
+              </>
+            ) : (
+              <>
+                <Archive className="w-4 h-4" />
+                Baixar Tudo (ZIP)
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
-                  <input
-                    type="checkbox"
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Arquivo</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Descrição</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Tamanho</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {files.map((file) => (
-                <tr key={file.id} className="hover:bg-gray-50 transition">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={selectedFileIds.includes(file.id)}
-                      onChange={() => toggleSelect(file.id)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {editingFileId === file.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          className="px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleRename(file.id);
-                            if (e.key === 'Escape') cancelRename();
-                          }}
-                        />
-                        <button
-                          onClick={() => handleRename(file.id)}
-                          className="p-1 text-green-600 hover:bg-green-50 rounded"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={cancelRename}
-                          className="p-1 text-gray-400 hover:bg-gray-100 rounded"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-medium text-gray-900 truncate">{file.name}</span>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-600 truncate block max-w-xs">{file.description || '-'}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600">{(file.file_size / 1024).toFixed(2)} KB</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      {file.file_type === 'application/pdf' && (
-                        <button
-                          onClick={() => handleViewFile(file)}
-                          className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition text-xs font-medium"
-                        >
-                          <Eye className="w-4 h-4" /> Ver
-                        </button>
-                      )}
-                      <button
-                        onClick={(e) => handleDownload(e, file)}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition text-xs font-medium"
-                      >
-                        <Download className="w-4 h-4" /> Baixar
-                      </button>
-                      
-                      {isAdmin ? (
-                        <>
-                          <button
-                            onClick={() => startRename(file)}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition text-xs font-medium"
-                          >
-                            <Pencil className="w-4 h-4" /> Renomear
-                          </button>
-                          <button
-                            onClick={() => handleDeleteFile(file.id)}
-                            disabled={deletingId === file.id}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition text-xs font-medium disabled:opacity-50"
-                          >
-                            {deletingId === file.id ? (
-                              <Loader className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
-                            Excluir
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'rename' })}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-lg transition text-xs font-medium"
-                            title="Solicitar renomeação"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' })}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-lg transition text-xs font-medium"
-                            title="Solicitar exclusão"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {files.length === 0 ? (
+          <div className="p-12 text-center">
+            <FileText className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm">Nenhum arquivo nesta pasta</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-3 text-left w-10"></th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Arquivo</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descrição</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tamanho</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {files.map((file) => (
+                  <tr key={file.id} className="hover:bg-gray-50/50 transition group">
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedFileIds.includes(file.id)}
+                        onChange={() => toggleSelect(file.id)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      {editingFileId === file.id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            className="px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleRename(file.id);
+                              if (e.key === 'Escape') cancelRename();
+                            }}
+                          />
+                          <button onClick={() => handleRename(file.id)} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check className="w-4 h-4" /></button>
+                          <button onClick={cancelRename} className="p-1 text-gray-400 hover:bg-gray-100 rounded"><X className="w-4 h-4" /></button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                          <span className="text-sm font-medium text-gray-700 truncate">{file.name}</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs text-gray-500 truncate block max-w-[150px]">{file.description || '-'}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-xs text-gray-400 font-medium">{(file.file_size / 1024).toFixed(2)} KB</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        {file.file_type === 'application/pdf' && (
+                          <button
+                            onClick={() => handleViewFile(file)}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title="Visualizar"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => handleDownload(e, file)}
+                          className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                          title="Baixar"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        
+                        {isAdmin ? (
+                          <>
+                            <button onClick={() => startRename(file)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition" title="Renomear"><Pencil className="w-4 h-4" /></button>
+                            <button onClick={() => handleDeleteFile(file.id)} disabled={deletingId === file.id} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50" title="Excluir">
+                              {deletingId === file.id ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'rename' })} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Solicitar renomeação"><Pencil className="w-4 h-4" /></button>
+                            <button onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' })} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Solicitar exclusão"><Trash2 className="w-4 h-4" /></button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {showViewer && selectedFile && (
