@@ -31,7 +31,7 @@ export const RejectRequestModal: React.FC<RejectRequestModalProps> = ({
     }
     setLoading(true);
     try {
-      await onReject(onRequestId, message, link);
+      await onReject(onRequestId, message, link.trim() || undefined);
       onClose();
     } catch (e) {
       console.error('Error rejecting request:', e);
@@ -71,12 +71,12 @@ export const RejectRequestModal: React.FC<RejectRequestModalProps> = ({
             <strong>Solicitação:</strong> {onRequestTitle}
           </p>
           <p className="text-sm text-gray-600">
-            <strong>Solicitante:</strong> {onRequesterName} ({onRequesterEmail})
+            <strong>Solicitante:</strong> {onRequesterName}
           </p>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Motivo da Recusa
+              Motivo da Recusa *
             </label>
             <textarea
               value={message}
@@ -89,7 +89,7 @@ export const RejectRequestModal: React.FC<RejectRequestModalProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Link (opcional)
+              Link opcional (ex.: pasta existente)
             </label>
             <input
               type="url"

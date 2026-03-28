@@ -67,7 +67,7 @@ export interface Notification {
   user_id: string;
   title: string;
   content: string;
-  type: 'folder_request' | 'new_content' | 'announcement' | 'file_action' | 'folder_request_rejection';
+  type: 'folder_request' | 'new_content' | 'announcement' | 'file_action' | 'folder_request_rejection' | 'message';
   link: string | null;
   is_read: boolean;
   created_at: string;
@@ -119,4 +119,15 @@ export interface AuthContextType {
 export interface AuthProviderState {
   authState: AuthState;
   error: AuthError | null;
+}
+
+/* New type for folder request handling */
+export interface FolderRequest {
+  id: string;
+  course_id: string;
+  requested_by: string;
+  folder_name: string;
+  reason?: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
 }

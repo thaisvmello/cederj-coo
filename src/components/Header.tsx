@@ -2,6 +2,7 @@ import { useAdmin } from '../hooks/useAdmin';
 import { LogOut, Calculator, Shield, Home, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
+import { MessageBell } from './MessageBell';
 
 export function Header({
   showHomeButton = false,
@@ -73,6 +74,9 @@ export function Header({
                 <Home className="w-5 h-5" />
               </button>
             )}
+
+            {/* New MessageBell */}
+            <MessageBell />
 
             <NotificationBell />
 
