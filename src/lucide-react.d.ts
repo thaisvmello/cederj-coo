@@ -49,4 +49,13 @@ declare module 'lucide-react' {
   export const Home: Icon;
   export const GraduationCap: Icon;
   export const Info: Icon;
+  export const ArrowLeft: Icon;
+  export const Settings: Icon;
+  export const Reply: Icon;
+  export const CornerDownRight: Icon;
+  export const Save: Icon;
+  export const FolderEdit: Icon;
+  export const Play: Icon;
+  export const LayoutDashboard: Icon;
+  export const ExternalLink: Icon;
 }

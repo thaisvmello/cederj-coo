@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Download, FileText, Eye, Loader, Trash2, Pencil, X, Check, Archive, AlertCircle } from 'lucide-react';
+import { Download, FileText, Eye, Loader, Trash2, Pencil, X, Check, Archive } from 'lucide-react';
 import type { File as FileType } from '../lib/types';
 import { PDFViewer } from './PDFViewer';
 import { FileActionModal } from './FileActionModal';
@@ -26,7 +26,6 @@ export function FileList({ folderId }: FileListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [zipping, setZipping] = useState(false);
   
-  // File Action Request State
   const [actionModal, setActionModal] = useState<{
     fileId: string;
     fileName: string;
@@ -247,7 +246,6 @@ export function FileList({ folderId }: FileListProps) {
 
   return (
     <>
-      {/* Selection Controls */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <input
           type="checkbox"
@@ -270,7 +268,6 @@ export function FileList({ folderId }: FileListProps) {
           </button>
         )}
         
-        {/* Botão de Download ZIP */}
         <button
           onClick={handleDownloadAllAsZip}
           disabled={zipping || files.length === 0}
@@ -376,7 +373,6 @@ export function FileList({ folderId }: FileListProps) {
                         <Download className="w-4 h-4" /> Baixar
                       </button>
                       
-                      {/* Admin Controls */}
                       {isAdmin ? (
                         <>
                           <button

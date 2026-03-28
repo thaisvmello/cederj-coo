@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Mail, Lock, Eye, EyeOff, Chrome, ArrowLeft, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -56,7 +56,6 @@ export function Auth() {
     }
   };
 
-  // Tela de Atualização de Senha (quando vem do link do e-mail)
   if (isRecoveryMode) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -206,8 +205,6 @@ export function Auth() {
           <div className="space-y-1">
             <h2 className="text-gray-800 font-bold text-l3">Faça seu login para começar a colaborar com nosso acervo :) Bons estudos!
             </h2>
-            <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">
-            </p>
           </div>
         </div>
 

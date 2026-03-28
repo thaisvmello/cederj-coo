@@ -37,13 +37,11 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
     const isMaterialsFolder = folderName.toUpperCase() === 'MATERIAIS';
 
     const newFiles: PendingFile[] = [];
-    const invalidFiles: string[] = [];
 
     Array.from(files).forEach(file => {
       const fileNameUpper = file.name.toUpperCase();
       const hasADAP = fileNameUpper.includes('AD') || fileNameUpper.includes('AP');
 
-      // Validação para pastas de Provas (AD/AP)
       if (isADAPFolder && !hasADAP) {
         toast.error(
           `O arquivo "${file.name}" não parece ser uma prova (AD ou AP). Materiais de estudo devem ser colocados na pasta 'MATERIAIS'. Se a pasta não existir, solicite sua criação.`,
@@ -52,7 +50,6 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
         return;
       }
 
-      // Validação para pasta de Materiais
       if (isMaterialsFolder && hasADAP) {
         toast.error(
           `A pasta 'MATERIAIS' é para resumos e livros. Provas (AD ou AP) devem ser enviadas para suas respectivas pastas. Se a pasta não existir, solicite sua criação.`,
@@ -118,7 +115,8 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
         body: JSON.stringify({
           fileName: pendingFile.file.name,
           fileType: pendingFile.file.type,
-          folderId        })
+          folderId
+        })
       });
 
       if (!response.ok) {
@@ -227,8 +225,8 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
         </div>
       </div>
 
-      {/* Drop Zone */}
-      <div        onDragOver={handleDragOver}
+      <div
+        onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
@@ -247,13 +245,13 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
           </span>
           <input
             type="file"
-            multiple            onChange={handleFileSelect}
+            multiple
+            onChange={handleFileSelect}
             className="hidden"
           />
         </label>
       </div>
 
-      {/* Aviso de duplicatas */}
       {hasDuplicates && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -263,14 +261,15 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
         </div>
       )}
 
-      {/* Lista de arquivos com edição de nome */}
       {pendingFiles.length > 0 && (
         <div className="space-y-3">
           <div className="max-h-60 overflow-y-auto space-y-2">
             {pendingFiles.map((file) => ( 
               <div 
-                key={file.id}                 className={`p-3 rounded-lg border flex items-center justify-between ${
-                  file.error                     ? 'bg-red-50 border-red-200' 
+                key={file.id}
+                className={`p-3 rounded-lg border flex items-center justify-between ${
+                  file.error
+                    ? 'bg-red-50 border-red-200' 
                     : file.uploaded
                     ? 'bg-green-50 border-green-200'
                     : file.isDuplicate

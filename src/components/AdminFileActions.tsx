@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Check, X, Clock, FileText, Loader, AlertCircle, RefreshCw, Trash2, Pencil } from 'lucide-react';
+import { Check, X, Clock, Loader, AlertCircle, RefreshCw, Trash2, Pencil } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../contexts/AuthContext';
 import type { FileAction } from '../lib/types';
@@ -27,7 +27,6 @@ export function AdminFileActions() {
         .order('created_at', { ascending: true });
 
       if (requestsError) {
-        // Trata erro de tabela inexistente ou cache de esquema
         if (requestsError.code === '42P01' || requestsError.code === 'PGRST205') {
           console.warn('[Admin] Tabela file_actions não encontrada ou cache pendente');
           setRequests([]);
