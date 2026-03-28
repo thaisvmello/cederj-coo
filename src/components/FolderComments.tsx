@@ -106,7 +106,6 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
     }
   };
 
-  // Organiza os comentários em estrutura de árvore
   const commentTree = useMemo(() => {
     const roots = comments.filter(c => !c.parent_id);
     const replies = comments.filter(c => c.parent_id);
@@ -118,7 +117,12 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
   }, [comments]);
 
   const CommentItem = ({ comment, isReply = false }: { comment: any, isReply?: boolean }) => (
-    <div className={`flex gap-3 group ${isReply ? 'ml-8 mt-3' : 'mt-6 first:mt-0'}`}>
+    <div className={`flex gap-3 group relative ${isReply ? 'ml-8 mt-3' : 'mt-6 first:mt-0'}`}>
+      {/* Linha de conexão para respostas */}
+      {isReply && (
+        <div className="absolute -left-4 top-0 bottom-0 w-px bg-gray-200" />
+      )}
+      
       <AvatarFallback 
         avatarUrl={comment.avatar_url} 
         name={`${comment.first_name} ${comment.last_name}`}
