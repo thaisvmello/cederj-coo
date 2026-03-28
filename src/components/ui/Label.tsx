@@ -1,5 +1,3 @@
-import React, { ReactNode } from 'react';
-
-export default function Label({ children }: { children: ReactNode }) {
-  return <label className="block mb-1 font-medium">{children}</label>;
-}
+export const Label = ({ children }: { children: React.ReactNode }) => {
+  return <label className="block font-medium mb-1">{children}</label>;
+};

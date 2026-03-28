@@ -1,20 +1,17 @@
-import React, { ButtonHTMLAttributes, ReactNode } from 'react';
-
-export default function Button({
+export const Button = ({
   children,
   onClick,
-  disabled,
-  className = '',
-  ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { children: ReactNode }) {
+  type = 'button',
+  disabled = false,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  type?: 'button' | 'submit' | 'reset';
+  disabled?: boolean;
+}) => {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 ${className}`}
-      {...rest}
-    >
+    <button type={type} onClick={onClick} disabled={disabled} className="px-4 py-2 bg-blue-600 text-white rounded">
       {children}
     </button>
   );
-}
+};

@@ -1,5 +1,3 @@
-import React, { ReactNode } from 'react';
-
-export default function DialogContent({ children }: { children: ReactNode }) {
-  return <div className="p-4">{children}</div>;
-}
+export const DialogContent = ({ children }: { children: React.ReactNode }) => {
+  return <div className="bg-white p-6 rounded">{children}</div>;
+};

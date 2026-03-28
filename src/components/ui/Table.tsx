@@ -1,5 +1,3 @@
-import React, { ReactNode } from 'react';
-
-export default function Table({ children }: { children: ReactNode }) {
-  return <table className="w-full border-collapse">{children}</table>;
-}
+export const Table = ({ children }: { children: React.ReactNode }) => {
+  return <table className="min-w-full border">{children}</table>;
+};

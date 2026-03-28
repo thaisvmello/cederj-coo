@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Loader, AlertCircle, FileText, Upload } from 'lucide-react';
+import { Loader, FileText, Upload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { formatFileName } from '../lib/utils';
@@ -160,9 +160,19 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         <button
           onClick={uploadAll}
           disabled={isUploading}
-          className="w-full py-3 bg-[#0f172a] text-white rounded-xl font-bold hover:bg-[#1e293b] disabled:opacity-50"
+          className="w-full py-3 bg-[#0f172a] text-white rounded-xl font-bold hover:bg-[#1e293b] disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {isUploading ? 'Enviando...' : 'Enviar Arquivos'}
+          {isUploading ? (
+            <>
+              <Loader className="w-4 h-4 animate-spin" />
+              Enviando...
+            </>
+          ) : (
+            <>
+              <Upload className="w-4 h-4" />
+              Enviar Arquivos
+            </>
+          )}
         </button>
       )}
     </div>

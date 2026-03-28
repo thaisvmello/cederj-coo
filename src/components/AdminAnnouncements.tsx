@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 export const AdminAnnouncements = () => {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
@@ -12,7 +12,7 @@ export const AdminAnnouncements = () => {
   const fetchAnnouncements = async () => {
     setLoading(true);
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('type', 'announcement')
@@ -26,12 +26,12 @@ export const AdminAnnouncements = () => {
 
   const sendAnnouncement = async () => {
     if (!title.trim() || !content.trim()) {
-      alert('Por favor, preencha todos os campos.');
+      toast.error('Preencha título e conteúdo.');
       return;
     }
     setLoading(true);
     try {
-      const { data: users, error } = await (supabase as any).from('auth.users').select('id');
+      const { data: users, error } = await supabase.from('auth.users').select('id');
       if (error) throw error;
       const notifications = (users || []).map((u: any) => ({
         user_id: u.id,
@@ -40,7 +40,7 @@ export const AdminAnnouncements = () => {
         type: 'announcement',
         is_read: false,
       }));
-      const { error: insertError } = await (supabase as any).from('notifications').insert(notifications);
+      const { error: insertError } = await supabase.from('notifications').insert(notifications);
       if (insertError) throw insertError;
       setTitle('');
       setContent('');
@@ -48,7 +48,7 @@ export const AdminAnnouncements = () => {
       fetchAnnouncements();
     } catch (e) {
       console.error('Error sending announcement:', e);
-      alert('Erro ao enviar anúncio. Tente novamente.');
+      toast.error('Erro ao enviar anúncio.');
     } finally {
       setLoading(false);
     }
@@ -72,28 +72,26 @@ export const AdminAnnouncements = () => {
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
             <h3 className="text-lg font-bold mb-4">Novo Anúncio</h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Título</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full p-2 border rounded"
-                placeholder="Título do anúncio..."
+                placeholder="Título"
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Conteúdo</label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="w-full p-2 border rounded"
                 rows={4}
-                placeholder="Conteúdo do anúncio..."
+                placeholder="Conteúdo"
               />
             </div>
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setShowCreate(false)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                className="px-4 py-2 bg-gray-100 rounded"
                 disabled={loading}
               >
                 Cancelar
@@ -101,9 +99,9 @@ export const AdminAnnouncements = () => {
               <button
                 onClick={sendAnnouncement}
                 disabled={!title.trim() || !content.trim() || loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded"
               >
-                Enviar Anúncio
+                Enviar
               </button>
             </div>
           </div>

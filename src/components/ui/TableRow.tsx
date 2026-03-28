@@ -1,5 +1,3 @@
-import React, { ReactNode } from 'react';
-
-export default function TableRow({ children }: { children: ReactNode }) {
+export const TableRow = ({ children }: { children: React.ReactNode }) => {
   return <tr>{children}</tr>;
-}
+};

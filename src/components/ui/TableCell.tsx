@@ -1,5 +1,3 @@
-import React, { ReactNode } from 'react';
-
-export default function TableCell({ children }: { children: ReactNode }) {
-  return <td className="p-2 border">{children}</td>;
-}
+export const TableCell = ({ children }: { children: React.ReactNode }) => {
+  return <td className="border px-4 py-2">{children}</td>;
+};

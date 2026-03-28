@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Bell, X, CheckCircle, AlertTriangle } from 'lucide-react';
-import { NotificationList } from './NotificationList';
+import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export const NotificationBell = () => {
@@ -13,7 +12,7 @@ export const NotificationBell = () => {
   useEffect(() => {
     if (!user) return;
 
-    const channel = (supabase as any)
+    const channel = supabase
       .channel(`notifications:${user.id}`)
       .on(
         'postgres_changes',
@@ -35,22 +34,22 @@ export const NotificationBell = () => {
 
   const fetchNotifications = async () => {
     if (!user) return;
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
     if (error) console.error('Error fetching notifications:', error);
     else {
+      setNotifications(data || []);
       const unread = data?.filter((n: any) => !n.is_read).length || 0;
       setUnreadCount(unread);
-      setNotifications(data || []);
     }
   };
 
   const markAllAsRead = async () => {
     if (!user) return;
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('notifications')
       .eq('user_id', user.id)
       .update({ is_read: true });
@@ -63,11 +62,11 @@ export const NotificationBell = () => {
       case 'folder_request_rejection':
         return <AlertTriangle size={16} className="text-red-500" />;
       case 'new_content':
-        return <Bell size={16} className="text-blue-500" />;
+        return <AlertTriangle size={16} className="text-blue-500" />;
       case 'announcement':
-        return <Bell size={16} className="text-purple-500" />;
+        return <AlertTriangle size={16} className="text-purple-500" />;
       default:
-        return <Bell size={16} className="text-gray-500" />;
+        return <AlertTriangle size={16} className="text-gray-500" />;
     }
   };
 
@@ -77,7 +76,20 @@ export const NotificationBell = () => {
         onClick={() => setShowDropdown(!showDropdown)}
         className="relative p-2 text-gray-500 hover:text-gray-700 transition-colors"
       >
-        <Bell size={20} />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-5 h-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+          />
+        </svg>
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -106,10 +118,7 @@ export const NotificationBell = () => {
                   className="p-3 hover:bg-gray-50 cursor-pointer flex items-start space-x-3"
                   onClick={() => {
                     if (!n.is_read) {
-                      (supabase as any)
-                        .from('notifications')
-                        .update({ is_read: true })
-                        .eq('id', n.id);
+                      supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
                     }
                     if (n.link) window.open(n.link, '_blank');
                   }}

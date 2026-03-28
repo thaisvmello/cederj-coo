@@ -1,5 +1,3 @@
-import React, { ReactNode } from 'react';
-
-export default function FormControl({ children }: { children: ReactNode }) {
+export const FormControl = ({ children }: { children: React.ReactNode }) => {
   return <div className="mb-4">{children}</div>;
-}
+};

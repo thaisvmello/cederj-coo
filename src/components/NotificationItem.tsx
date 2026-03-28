@@ -1,31 +1,25 @@
 import { supabase } from '../lib/supabase';
-import { AlertTriangle, Bell } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
-interface Notification {
-  id: string;
-  title: string;
-  content: string;
-  type: string;
-  link?: string;
-  is_read: boolean;
-  created_at: string;
-}
-
-interface NotificationItemProps {
-  notification: Notification;
+export const NotificationItem: React.FC<{
+  notification: {
+    id: string;
+    title: string;
+    content: string;
+    type: string;
+    link?: string;
+    is_read: boolean;
+    created_at: string;
+  };
   onRead: () => void;
-}
-
-export const NotificationItem: React.FC<NotificationItemProps> = ({
-  notification,
-  onRead,
-}) => {
+}> = ({ notification, onRead }) => {
   const { user } = useAuth();
 
   const handleRead = async () => {
     if (!user || notification.is_read) return;
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })
       .eq('id', notification.id);
@@ -38,11 +32,11 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       case 'folder_request_rejection':
         return <AlertTriangle size={16} className="text-red-500" />;
       case 'new_content':
-        return <Bell size={16} className="text-blue-500" />;
+        return <AlertTriangle size={16} className="text-blue-500" />;
       case 'announcement':
-        return <Bell size={16} className="text-purple-500" />;
+        return <AlertTriangle size={16} className="text-purple-500" />;
       default:
-        return <Bell size={16} className="text-gray-500" />;
+        return <AlertTriangle size={16} className="text-gray-500" />;
     }
   };
 

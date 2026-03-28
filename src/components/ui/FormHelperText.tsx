@@ -1,5 +1,3 @@
-import React, { ReactNode } from 'react';
-
-export default function FormHelperText({ children }: { children: ReactNode }) {
-  return <p className="text-sm text-gray-500 mt-1">{children}</p>;
-}
+export const FormHelperText = ({ children }: { children: React.ReactNode }) => {
+  return <p className="text-xs text-gray-500 mt-1">{children}</p>;
+};
