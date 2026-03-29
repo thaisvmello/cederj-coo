@@ -52,9 +52,10 @@ export const MessageBell = () => {
     if (!user) return;
     const { error } = await supabase
       .from('notifications')
+      .update({ is_read: true })
       .eq('user_id', user.id)
-      .in('type', ['announcement', 'message'])
-      .update({ is_read: true });
+      .in('type', ['announcement', 'message']);
+    
     if (error) console.error('Error marking messages as read:', error);
     else fetchMessages();
   };
@@ -105,7 +106,7 @@ export const MessageBell = () => {
                   className="p-3 hover:bg-gray-50 cursor-pointer flex items-start space-x-3"
                   onClick={() => {
                     if (!m.is_read) {
-                      supabase.from('notifications').update({ is_read: true }).eq('id', m.id);
+                      supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
                     }
                     if (m.link) window.open(m.link, '_blank');
                   }}

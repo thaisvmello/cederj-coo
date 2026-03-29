@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 export const AdminAnnouncements = () => {
@@ -8,6 +8,10 @@ export const AdminAnnouncements = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
 
   const fetchAnnouncements = async () => {
     setLoading(true);
@@ -31,16 +35,15 @@ export const AdminAnnouncements = () => {
     }
     setLoading(true);
     try {
-      // Correctly query the auth.users table using the auth schema
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id')
-        .schema('auth');
+      // Use the profiles table to get all user IDs instead of auth.users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id');
 
-      if (usersError) throw usersError;
+      if (profilesError) throw profilesError;
 
-      const notifications = (users || []).map((u: any) => ({
-        user_id: u.id,
+      const notifications = (profiles || []).map((p: any) => ({
+        user_id: p.id,
         title,
         content,
         type: 'announcement',
@@ -50,6 +53,7 @@ export const AdminAnnouncements = () => {
       const { error: insertError } = await supabase.from('notifications').insert(notifications);
       if (insertError) throw insertError;
 
+      toast.success('Anúncio enviado para todos os usuários!');
       setTitle('');
       setContent('');
       setShowCreate(false);
