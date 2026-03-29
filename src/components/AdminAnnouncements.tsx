@@ -125,7 +125,7 @@ export const AdminAnnouncements = () => {
                 rows={4}
                 placeholder="Conteúdo"
               />
-            </div>
+            }div>
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setShowCreate(false)}
