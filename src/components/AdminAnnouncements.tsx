@@ -98,13 +98,11 @@ export const AdminAnnouncements = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Anúncios</h2>
-        <button
-          onClick={() => setShowCreate(true)}
+        <button          onClick={() => setShowCreate(true)}
           disabled={loading}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
         >
-          Novo Anúncio
-        </button>
+          Novo Anúncio        </button>
       </div>
 
       {showCreate && (
