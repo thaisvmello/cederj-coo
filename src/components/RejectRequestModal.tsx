@@ -5,7 +5,6 @@ interface RejectRequestModalProps {
   isOpen: boolean;
   onRequestId: string;
   onRequesterName: string;
-  onRequesterEmail: string;
   onRequestTitle: string;
   onClose: () => void;
   onReject: (requestId: string, message: string, link?: string) => void;
@@ -15,7 +14,6 @@ export const RejectRequestModal: React.FC<RejectRequestModalProps> = ({
   isOpen,
   onRequestId,
   onRequesterName,
-  onRequesterEmail,
   onRequestTitle,
   onClose,
   onReject,

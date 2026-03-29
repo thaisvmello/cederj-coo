@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Check, X, Clock, FolderPlus, Loader, AlertCircle, RefreshCw } from 'lucide-react';
+import { Check, X, Clock, FolderPlus, Loader, RefreshCw } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -48,7 +48,6 @@ export function AdminFolderRequests() {
   const handleApprove = async (req: FolderRequest) => {
     setProcessingId(req.id);
     try {
-      // Create the folder
       const { error: folderError } = await supabase
         .from('folders')
         .insert({
@@ -59,7 +58,6 @@ export function AdminFolderRequests() {
 
       if (folderError) throw folderError;
 
-      // Update request status
       const { error: updateError } = await supabase
         .from('folder_requests')
         .update({ status: 'approved' })
@@ -84,7 +82,6 @@ export function AdminFolderRequests() {
 
   const submitRejection = async (requestId: string, message: string, link?: string) => {
     if (!user) return;
-    // Update request status
     const { error: updateError } = await supabase
       .from('folder_requests')
       .update({ status: 'rejected' })
@@ -92,7 +89,6 @@ export function AdminFolderRequests() {
 
     if (updateError) throw updateError;
 
-    // Send notification to requester
     const { error: notifError } = await supabase.from('notifications').insert({
       user_id: requestToReject?.requested_by,
       title: 'Solicitação de pasta rejeitada',
@@ -178,7 +174,6 @@ export function AdminFolderRequests() {
           isOpen={showRejectModal}
           onRequestId={requestToReject.id}
           onRequesterName={requestToReject.requested_by}
-          onRequesterEmail={''}
           onRequestTitle={requestToReject.folder_name}
           onClose={() => setShowRejectModal(false)}
           onReject={submitRejection}
