@@ -31,8 +31,14 @@ export const AdminAnnouncements = () => {
     }
     setLoading(true);
     try {
-      const { data: users, error } = await supabase.from('auth.users').select('id');
-      if (error) throw error;
+      // Correctly query the auth.users table using the auth schema
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id')
+        .schema('auth');
+
+      if (usersError) throw usersError;
+
       const notifications = (users || []).map((u: any) => ({
         user_id: u.id,
         title,
@@ -40,8 +46,10 @@ export const AdminAnnouncements = () => {
         type: 'announcement',
         is_read: false,
       }));
+
       const { error: insertError } = await supabase.from('notifications').insert(notifications);
       if (insertError) throw insertError;
+
       setTitle('');
       setContent('');
       setShowCreate(false);
