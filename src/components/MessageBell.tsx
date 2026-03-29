@@ -37,7 +37,8 @@ export const MessageBell = () => {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
-      .match({ user_id: user.id, type: ['announcement', 'message'] })
+      .eq('user_id', user.id)
+      .in_('type', ['announcement', 'message'])
       .order('created_at', { ascending: false });
     if (error) console.error('Error fetching messages:', error);
     else {
@@ -51,7 +52,8 @@ export const MessageBell = () => {
     if (!user) return;
     const { error } = await supabase
       .from('notifications')
-      .match({ user_id: user.id, type: ['announcement', 'message'] })
+      .eq('user_id', user.id)
+      .in_('type', ['announcement', 'message'])
       .update({ is_read: true });
     if (error) console.error('Error marking messages as read:', error);
     else fetchMessages();
@@ -87,8 +89,7 @@ export const MessageBell = () => {
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           <div className="p-4 border-b border-gray-200 flex justify-between items-center">
             <h3 className="text-lg font-semibold">Mensagens</h3>
-            <button
-              onClick={markAllAsRead}
+            <button              onClick={markAllAsRead}
               className="text-sm text-blue-600 hover:text-blue-700"
             >
               Marcar todas como lidas
