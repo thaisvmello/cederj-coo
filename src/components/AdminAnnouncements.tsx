@@ -17,8 +17,7 @@ export const AdminAnnouncements = () => {
   const fetchAnnouncements = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('notifications')
+      const { data, error } = await supabase        .from('notifications')
         .select('*')
         .eq('type', 'announcement')
         .order('created_at', { ascending: false });
@@ -76,6 +75,7 @@ export const AdminAnnouncements = () => {
     if (!confirm('Tem certeza que deseja excluir este anúncio?')) return;
     setLoading(true);
     try {
+      console.log('[AdminAnnouncements] Attempting to delete announcement with id:', id);
       const { error } = await supabase.from('notifications').delete().eq('id', id);
       if (error) {
         console.error('Error deleting announcement:', error);
@@ -179,8 +179,7 @@ export const AdminAnnouncements = () => {
                   })}
                 </td>
                 <td className="p-2">
-                  <span
-                    className={`px-2 py-1 rounded text-xs ${
+                  <span                    className={`px-2 py-1 rounded text-xs ${
                       a.is_read ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-800'
                     }`}
                   >
