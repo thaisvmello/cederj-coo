@@ -2,6 +2,7 @@ import { useAdmin } from '../hooks/useAdmin';
 import { LogOut, Calculator, Shield, Home, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
+import { useAuth } from '../contexts/AuthContext';
 
 export function Header({
   showHomeButton = false,
@@ -17,6 +18,7 @@ export function Header({
   const { isAdmin } = useAdmin();
   const location = useLocation();
   const isAdminPage = location.pathname === '/admin';
+  const { user } = useAuth(); // <-- get logged‑in user
 
   return (
     <header className="w-full z-40">
@@ -47,7 +49,8 @@ export function Header({
                   </span>
                 )}
               </div>
-              <p className="text-sm font-bold text-white">{/* email shown via NotificationBell */}</p>
+              {/* Show logged‑in user email */}
+              <p className="text-sm font-bold text-white">{user?.email || ''}</p>
             </div>
 
             {isAdmin && (

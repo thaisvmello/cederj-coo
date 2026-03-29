@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Trash2 } from 'lucide-react'; // new import
+import { Trash2 } from 'lucide-react';
 
 export const AdminAnnouncements = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -22,8 +22,12 @@ export const AdminAnnouncements = () => {
         .select('*')
         .eq('type', 'announcement')
         .order('created_at', { ascending: false });
-      if (error) console.error('Error fetching announcements:', error);
-      else setAnnouncements(data || []);
+      if (error) {
+        console.error('Error fetching announcements:', error);
+        toast.error('Erro ao carregar anúncios.');
+      } else {
+        setAnnouncements(data || []);
+      }
     } finally {
       setLoading(false);
     }
@@ -36,7 +40,7 @@ export const AdminAnnouncements = () => {
     }
     setLoading(true);
     try {
-      // Get all user IDs from profiles (instead of auth.users)
+      // Get all user IDs from profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id');
@@ -58,7 +62,7 @@ export const AdminAnnouncements = () => {
       setTitle('');
       setContent('');
       setShowCreate(false);
-      fetchAnnouncements();
+      await fetchAnnouncements(); // refresh list
     } catch (e) {
       console.error('Error sending announcement:', e);
       toast.error('Erro ao enviar anúncio.');
@@ -67,19 +71,23 @@ export const AdminAnnouncements = () => {
     }
   };
 
-  // ---------- NEW: Delete announcement ----------
+  // ---------- Delete announcement ----------
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este anúncio?')) return;
     setLoading(true);
     try {
       const { error } = await supabase.from('notifications').delete().eq('id', id);
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting announcement:', error);
+        toast.error('Erro ao excluir anúncio. Verifique permissões.');
+        return;
+      }
       toast.success('Anúncio excluído.');
-      // Remove from local state
-      setAnnouncements(prev => prev.filter(a => a.id !== id));
+      // Refresh from DB to guarantee consistency
+      await fetchAnnouncements();
     } catch (e) {
-      console.error('Error deleting announcement:', e);
-      toast.error('Erro ao excluir anúncio.');
+      console.error('Unexpected error deleting announcement:', e);
+      toast.error('Erro inesperado ao excluir anúncio.');
     } finally {
       setLoading(false);
     }
