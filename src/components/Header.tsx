@@ -2,7 +2,6 @@ import { useAdmin } from '../hooks/useAdmin';
 import { LogOut, Calculator, Shield, Home, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
-import { MessageBell } from './MessageBell';
 
 export function Header({
   showHomeButton = false,
@@ -48,7 +47,7 @@ export function Header({
                   </span>
                 )}
               </div>
-              <p className="text-sm font-bold text-white">{/* user email will be displayed via NotificationBell */}</p>
+              <p className="text-sm font-bold text-white">{/* email shown via NotificationBell */}</p>
             </div>
 
             {isAdmin && (
@@ -75,14 +74,12 @@ export function Header({
               </button>
             )}
 
-            {/* New MessageBell */}
-            <MessageBell />
-
+            {/* Only the notification bell (sino) remains */}
             <NotificationBell />
 
             <button
               onClick={() => {
-                // signOut logic handled elsewhere
+                // sign‑out logic handled elsewhere
               }}
               className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
               title="Sair"
