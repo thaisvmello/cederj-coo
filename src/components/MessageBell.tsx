@@ -37,8 +37,7 @@ export const MessageBell = () => {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', user.id)
-      .in('type', ['announcement', 'message'])
+      .match({ user_id: user.id, type: ['announcement', 'message'] })
       .order('created_at', { ascending: false });
     if (error) console.error('Error fetching messages:', error);
     else {
@@ -52,8 +51,7 @@ export const MessageBell = () => {
     if (!user) return;
     const { error } = await supabase
       .from('notifications')
-      .eq('user_id', user.id)
-      .in('type', ['announcement', 'message'])
+      .match({ user_id: user.id, type: ['announcement', 'message'] })
       .update({ is_read: true });
     if (error) console.error('Error marking messages as read:', error);
     else fetchMessages();
