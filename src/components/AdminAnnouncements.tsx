@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { Trash2 } from 'lucide-react'; // new import
 
 export const AdminAnnouncements = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -35,7 +36,7 @@ export const AdminAnnouncements = () => {
     }
     setLoading(true);
     try {
-      // Use the profiles table to get all user IDs instead of auth.users
+      // Get all user IDs from profiles (instead of auth.users)
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id');
@@ -65,6 +66,25 @@ export const AdminAnnouncements = () => {
       setLoading(false);
     }
   };
+
+  // ---------- NEW: Delete announcement ----------
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este anúncio?')) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('notifications').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Anúncio excluído.');
+      // Remove from local state
+      setAnnouncements(prev => prev.filter(a => a.id !== id));
+    } catch (e) {
+      console.error('Error deleting announcement:', e);
+      toast.error('Erro ao excluir anúncio.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  // -------------------------------------------
 
   return (
     <div className="space-y-6">
@@ -127,12 +147,13 @@ export const AdminAnnouncements = () => {
             <th className="p-2 text-left">Conteúdo</th>
             <th className="p-2 text-left">Data</th>
             <th className="p-2 text-left">Status</th>
+            <th className="p-2 text-left">Ações</th>
           </tr>
         </thead>
         <tbody>
           {announcements.length === 0 ? (
             <tr>
-              <td colSpan={4} className="p-4 text-center text-gray-500">
+              <td colSpan={5} className="p-4 text-center text-gray-500">
                 Nenhum anúncio enviado
               </td>
             </tr>
@@ -157,6 +178,17 @@ export const AdminAnnouncements = () => {
                   >
                     {a.is_read ? 'Lido' : 'Não lido'}
                   </span>
+                </td>
+                {/* Delete button */}
+                <td className="p-2">
+                  <button
+                    onClick={() => handleDelete(a.id)}
+                    disabled={loading}
+                    className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition"
+                    title="Excluir anúncio"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </td>
               </tr>
             ))
