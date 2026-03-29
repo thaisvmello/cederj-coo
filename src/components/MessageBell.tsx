@@ -106,7 +106,7 @@ export const MessageBell = () => {
                   className="p-3 hover:bg-gray-50 cursor-pointer flex items-start space-x-3"
                   onClick={() => {
                     if (!m.is_read) {
-                      supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
+                      supabase.from('notifications').update({ is_read: true }).eq('id', m.id);
                     }
                     if (m.link) window.open(m.link, '_blank');
                   }}
