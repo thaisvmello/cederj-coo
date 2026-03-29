@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader, Plus, X, AlertTriangle } from 'lucide-react';
 
 export const AdminAnnouncements = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -17,12 +17,14 @@ export const AdminAnnouncements = () => {
   const fetchAnnouncements = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase        .from('notifications')
+      const { data, error } = await supabase
+        .from('notifications')
         .select('*')
         .eq('type', 'announcement')
         .order('created_at', { ascending: false });
+      
       if (error) {
-        console.error('Error fetching announcements:', error);
+        console.error('[AdminAnnouncements] Error fetching:', error);
         toast.error('Erro ao carregar anúncios.');
       } else {
         setAnnouncements(data || []);
@@ -39,7 +41,6 @@ export const AdminAnnouncements = () => {
     }
     setLoading(true);
     try {
-      // Get all user IDs from profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id');
@@ -61,145 +62,165 @@ export const AdminAnnouncements = () => {
       setTitle('');
       setContent('');
       setShowCreate(false);
-      await fetchAnnouncements(); // refresh list
-    } catch (e) {
-      console.error('Error sending announcement:', e);
-      toast.error('Erro ao enviar anúncio.');
+      await fetchAnnouncements();
+    } catch (e: any) {
+      console.error('[AdminAnnouncements] Error sending:', e);
+      toast.error('Erro ao enviar anúncio: ' + (e.message || 'Erro desconhecido'));
     } finally {
       setLoading(false);
     }
   };
 
-  // ---------- Delete announcement ----------
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este anúncio?')) return;
+    
     setLoading(true);
     try {
-      console.log('[AdminAnnouncements] Attempting to delete announcement with id:', id);
-      const { error } = await supabase.from('notifications').delete().eq('id', id);
+      console.log('[AdminAnnouncements] Attempting to delete id:', id);
+      
+      const { error, status, statusText } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+
       if (error) {
-        console.error('Error deleting announcement:', error);
-        toast.error('Erro ao excluir anúncio. Verifique permissões.');
+        console.error('[AdminAnnouncements] Delete error details:', { error, status, statusText });
+        toast.error(`Erro ao excluir: ${error.message} (Status: ${status})`);
         return;
       }
-      toast.success('Anúncio excluído.');
-      // Refresh from DB to guarantee consistency
+
+      console.log('[AdminAnnouncements] Delete response status:', status);
+      toast.success('Anúncio excluído com sucesso.');
       await fetchAnnouncements();
-    } catch (e) {
-      console.error('Unexpected error deleting announcement:', e);
-      toast.error('Erro inesperado ao excluir anúncio.');
+    } catch (e: any) {
+      console.error('[AdminAnnouncements] Unexpected error during delete:', e);
+      toast.error('Erro inesperado: ' + (e.message || 'Erro desconhecido'));
     } finally {
       setLoading(false);
     }
   };
-  // -------------------------------------------
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Anúncios</h2>
-        <button          onClick={() => setShowCreate(true)}
+        <h2 className="text-2xl font-bold text-gray-900">Anúncios Globais</h2>
+        <button
+          onClick={() => setShowCreate(true)}
           disabled={loading}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold transition disabled:opacity-50"
         >
-          Novo Anúncio        </button>
+          <Plus className="w-4 h-4" />
+          Novo Anúncio
+        </button>
       </div>
 
       {showCreate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">Novo Anúncio</h3>
-            <div className="mb-4">
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full p-2 border rounded"
-                placeholder="Título"
-              />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">Criar Novo Anúncio</h3>
+              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <div className="mb-4">
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="w-full p-2 border rounded"
-                rows={4}
-                placeholder="Conteúdo"
-              />
-            }div>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => setShowCreate(false)}
-                className="px-4 py-2 bg-gray-100 rounded"
-                disabled={loading}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={sendAnnouncement}
-                disabled={!title.trim() || !content.trim() || loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded"
-              >
-                Enviar
-              </button>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Título</label>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  placeholder="Ex: Manutenção no Sistema"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Conteúdo</label>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition resize-none"
+                  rows={4}
+                  placeholder="Descreva o anúncio aqui..."
+                />
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setShowCreate(false)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition"
+                  disabled={loading}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={sendAnnouncement}
+                  disabled={!title.trim() || !content.trim() || loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {loading && <Loader className="w-4 h-4 animate-spin" />}
+                  Enviar para Todos
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      <table className="w-full border-collapse">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="p-2 text-left">Título</th>
-            <th className="p-2 text-left">Conteúdo</th>
-            <th className="p-2 text-left">Data</th>
-            <th className="p-2 text-left">Status</th>
-            <th className="p-2 text-left">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {announcements.length === 0 ? (
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <table className="w-full border-collapse">
+          <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
-              <td colSpan={5} className="p-4 text-center text-gray-500">
-                Nenhum anúncio enviado
-              </td>
+              <th className="p-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Título</th>
+              <th className="p-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Conteúdo</th>
+              <th className="p-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Data</th>
+              <th className="p-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ações</th>
             </tr>
-          ) : (
-            announcements.map((a) => (
-              <tr key={a.id} className="border-t">
-                <td className="p-2 font-medium">{a.title}</td>
-                <td className="p-2">{a.content}</td>
-                <td className="p-2 text-sm text-gray-500">
-                  {new Date(a.created_at).toLocaleString('pt-BR', {
-                    day: 'numeric',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </td>
-                <td className="p-2">
-                  <span                    className={`px-2 py-1 rounded text-xs ${
-                      a.is_read ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {a.is_read ? 'Lido' : 'Não lido'}
-                  </span>
-                </td>
-                {/* Delete button */}
-                <td className="p-2">
-                  <button
-                    onClick={() => handleDelete(a.id)}
-                    disabled={loading}
-                    className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition"
-                    title="Excluir anúncio"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {loading && announcements.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="p-12 text-center">
+                  <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
+                  <p className="text-xs text-gray-400 font-bold uppercase">Carregando...</p>
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : announcements.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="p-12 text-center text-gray-500">
+                  Nenhum anúncio enviado ainda.
+                </td>
+              </tr>
+            ) : (
+              announcements.map((a) => (
+                <tr key={a.id} className="hover:bg-gray-50/50 transition group">
+                  <td className="p-4 font-bold text-gray-900 text-sm">{a.title}</td>
+                  <td className="p-4 text-gray-600 text-sm max-w-xs truncate">{a.content}</td>
+                  <td className="p-4 text-xs text-gray-400">
+                    {new Date(a.created_at).toLocaleString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </td>
+                  <td className="p-4 text-center">
+                    <button
+                      onClick={() => handleDelete(a.id)}
+                      disabled={loading}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                      title="Excluir anúncio"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
