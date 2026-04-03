@@ -311,7 +311,6 @@ export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListPro
                 <tr>
                   <th className="px-6 py-3 text-left w-10"></th>
                   <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Arquivo</th>
-                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descrição</th>
                   <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tamanho</th>
                   <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ações</th>
                 </tr>
@@ -350,9 +349,6 @@ export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListPro
                           <span className="text-sm font-medium text-gray-700 truncate">{file.name}</span>
                         </div>
                       )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs text-gray-500 truncate block max-w-[150px]">{file.description || '-'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-xs text-gray-400 font-medium">{(file.file_size / 1024).toFixed(2)} KB</span>
