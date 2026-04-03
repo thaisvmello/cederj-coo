@@ -109,7 +109,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
   const commentTree = useMemo(() => {
     const roots = comments.filter(c => !c.parent_id);
     const replies = comments.filter(c => c.parent_id);
-    
+
     return roots.map(root => ({
       ...root,
       replies: replies.filter(r => r.parent_id === root.id)
@@ -122,10 +122,10 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       {isReply && (
         <div className="absolute -left-6 top-0 bottom-4 w-0.5 bg-blue-100 rounded-full" />
       )}
-      
+
       <div className="flex gap-3 group">
-        <AvatarFallback 
-          avatarUrl={comment.avatar_url} 
+        <AvatarFallback
+          avatarUrl={comment.avatar_url}
           name={`${comment.first_name} ${comment.last_name}`}
           size="sm"
           className="z-10"
@@ -142,17 +142,17 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
               {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
-          
+
           <div className="relative">
             <p className={`text-xs text-gray-600 leading-relaxed p-3 rounded-2xl rounded-tl-none shadow-sm ${
               isReply ? 'bg-blue-50/40 border border-blue-100/50' : 'bg-gray-50 border border-gray-100'
             }`}>
               {comment.content}
             </p>
-            
+
             <div className="flex items-center gap-4 mt-1.5 px-1">
               {!isReply && (
-                <button 
+                <button
                   onClick={() => setReplyTo(comment)}
                   className="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors"
                 >
@@ -160,7 +160,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
                 </button>
               )}
               {(isAdmin || user?.id === comment.user_id) && (
-                <button 
+                <button
                   onClick={() => handleDelete(comment.id)}
                   className="text-[10px] font-bold text-red-400 hover:text-red-600 flex items-center gap-1 transition-colors"
                 >
@@ -169,7 +169,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
               )}
             </div>
           </div>
-          
+
           {/* Renderização recursiva das respostas */}
           {comment.replies && comment.replies.length > 0 && (
             <div className="space-y-1">
@@ -224,9 +224,9 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
               <span className="text-[10px] font-bold flex items-center gap-1.5">
                 <Reply className="w-3 h-3" /> Respondendo a {replyTo.first_name}
               </span>
-              <button 
+              <button
                 type="button"
-                onClick={() => setReplyTo(null)} 
+                onClick={() => setReplyTo(null)}
                 className="hover:bg-white/20 rounded-full p-0.5 transition"
               >
                 <X className="w-3 h-3" />

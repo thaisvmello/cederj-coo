@@ -59,9 +59,9 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
 
     const { data: filesData } = await supabase.from('files').select('folder_id');
     const { data: foldersData } = await supabase.from('folders').select('id, course_id');
-    
+
     setTotalFiles(filesData?.length || 0);
-    
+
     if (filesData && foldersData) {
       const counts: {[key: string]: number} = {};
       foldersData.forEach((folder: { id: string, course_id: string }) => {
@@ -73,7 +73,7 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
     setLoading(false);
   };
 
-  const filteredCourses = courses.filter(c => 
+  const filteredCourses = courses.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (c.code && c.code.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -144,7 +144,7 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
             className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition shadow-sm"
           />
         </div>
-        
+
         <div className="flex items-center gap-2 bg-white p-1 border border-gray-200 rounded-xl shadow-sm">
           <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
             <LayoutGrid className="w-5 h-5" />
@@ -169,7 +169,8 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
           {favoriteCourses.length > 0 && (
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                <Star className="w-4 h-4 text-amber-400 fill-current" /> Disciplinas em Curso              </div>
+                <Star className="w-4 h-4 text-amber-400 fill-current" /> Disciplinas em Curso
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {favoriteCourses.map((course) => (
                   <CourseCard key={course.id} course={course} fileCount={fileCounts[course.id] || 0} isFavorite={true} onClick={() => setSelectedCourse(course)} onToggleFavorite={(e) => handleToggleFavorite(e, course.id)} />
@@ -190,7 +191,7 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
         </div>
       ) : (
         <div className="space-y-6">
-          <CourseTreeView 
+          <CourseTreeView
             courses={filteredCourses}
             favorites={favorites}
             fileCounts={fileCounts}
@@ -201,13 +202,11 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
       )}
 
       {selectedFolder && (
-        <>
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={() => setSelectedFolder(null)} />
-          <FolderSidePanel 
-            folder={selectedFolder.folder} 
-            course={selectedFolder.course}             onClose={() => setSelectedFolder(null)} 
-          />
-        </>
+        <FolderSidePanel
+          folder={selectedFolder.folder}
+          course={selectedFolder.course}
+          onClose={() => setSelectedFolder(null)}
+        />
       )}
 
       {showNewModal && <NewCourseModal onClose={() => setShowNewModal(false)} onSuccess={loadData} />}

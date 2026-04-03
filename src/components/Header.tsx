@@ -1,5 +1,5 @@
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home, Settings } from 'lucide-react';
+import { LogOut, Calculator, Shield, Home, Settings, Mail, AlertTriangle } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,7 +18,7 @@ export function Header({
   const { isAdmin } = useAdmin();
   const location = useLocation();
   const isAdminPage = location.pathname === '/admin';
-  const { user } = useAuth(); // <-- get logged‑in user
+  const { user } = useAuth();
 
   return (
     <header className="w-full z-40">
@@ -49,7 +49,7 @@ export function Header({
                   </span>
                 )}
               </div>
-              {/* Show logged‑in user email */}
+              {/* Show logged-in user email */}
               <p className="text-sm font-bold text-white">{user?.email || ''}</p>
             </div>
 
@@ -77,12 +77,12 @@ export function Header({
               </button>
             )}
 
-            {/* Only the notification bell (sino) remains */}
+            {/* Notification Bell */}
             <NotificationBell />
 
             <button
               onClick={() => {
-                // sign‑out logic handled elsewhere
+                // sign-out logic handled elsewhere
               }}
               className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
               title="Sair"

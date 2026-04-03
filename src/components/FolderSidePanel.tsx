@@ -24,7 +24,7 @@ export function FolderSidePanel({ folder, course, onClose }: FolderSidePanelProp
               <p className="text-xs text-gray-400 uppercase tracking-wider">{course.name}</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 hover:bg-white/10 rounded-full transition text-gray-400 hover:text-white"
           >

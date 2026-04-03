@@ -22,7 +22,7 @@ export const AdminAnnouncements = () => {
         .select('*')
         .eq('type', 'announcement')
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       setAnnouncements(data || []);
     } catch (error) {
@@ -91,7 +91,7 @@ export const AdminAnnouncements = () => {
 
   const handleDelete = async (announcement: any) => {
     if (!confirm(`Tem certeza que deseja excluir o anúncio "${announcement.title}" para TODOS os usuários?`)) return;
-    
+
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -151,7 +151,7 @@ export const AdminAnnouncements = () => {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Título</label>
@@ -172,7 +172,7 @@ export const AdminAnnouncements = () => {
                   placeholder="Descreva o anúncio aqui..."
                 />
               </div>
-              
+
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   onClick={() => setShowCreate(false)}
@@ -230,7 +230,7 @@ export const AdminAnnouncements = () => {
                     <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
                       <Users className="w-3.5 h-3.5 text-gray-400" />
                       <span>{a.recipientCount} usuários</span>
-                      <span className="text-gray-300">•</span>
+                      <span className="text-gray-300">·</span>
                       <span className="text-emerald-600">{a.readCount} lidos</span>
                     </div>
                   </td>
