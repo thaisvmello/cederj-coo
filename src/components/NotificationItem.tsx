@@ -14,9 +14,10 @@ interface NotificationItemProps {
     created_at: string;
   };
   onRead: () => void;
+  onSelect?: (notification: any) => void;
 }
 
-export function NotificationItem({ notification, onRead }: NotificationItemProps) {
+export function NotificationItem({ notification, onRead, onSelect }: NotificationItemProps) {
   const [isRead, setIsRead] = useState(notification.is_read);
   const { user } = useAuth();
 
@@ -31,6 +32,18 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
     if (!error) {
       setIsRead(true);
       onRead();
+    }
+  };
+
+  const handleClick = () => {
+    if (onSelect) {
+      onSelect(notification);
+    } else {
+      // Comportamento padrão: marcar como lida e abrir link se houver
+      markAsRead();
+      if (notification.link) {
+        window.open(notification.link, '_blank');
+      }
     }
   };
 
@@ -49,21 +62,12 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
     }
   };
 
-  const handleViewMessage = () => {
-    // Aqui poderíamos abrir uma visualização completa
-    // Por enquanto, apenas marcamos como lida e abrimos o link se houver
-    markAsRead();
-    if (notification.link) {
-      window.open(notification.link, '_blank');
-    }
-  };
-
   return (
     <div
       className={`p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
         !isRead ? 'border-l-4 border-blue-500' : ''
       }`}
-      onClick={handleViewMessage}
+      onClick={handleClick}
     >
       <div className="flex items-start space-x-3">
         <div className="flex-shrink-0">{getIcon(notification.type)}</div>

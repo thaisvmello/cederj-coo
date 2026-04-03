@@ -136,7 +136,7 @@ export function AdminBulkRename() {
         ) : (
           <button
             onClick={handleBulkRename}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
           >
             <Play className="w-5 h-5" />
             Iniciar Padronização de Nomes
