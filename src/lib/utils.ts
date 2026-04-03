@@ -60,3 +60,63 @@ export function formatFileName(disciplineName: string, originalFileName: string)
 
   return `${abbreviation}_${cleanOriginalName}${extension}`;
 }
+
+export function generateNewFileName(disciplineName: string, folderName: string, originalFileName: string): string {
+  const extension = originalFileName.substring(originalFileName.lastIndexOf('.'));
+  const nameWithoutExt = originalFileName.substring(0, originalFileName.lastIndexOf('.'));
+
+  // 1. Prefixo da disciplina
+  const disciplinePrefix = abbreviateDiscipline(disciplineName).toUpperCase() + '_';
+
+  // 2. Prefixo da prova (se a pasta for AD1, AP1, AP2, AP3)
+  let proofPrefix = '';
+  const proofMatch = folderName.match(/^(AD|AP)\d+$/);
+  if (proofMatch) {
+    proofPrefix = folderName + '_';
+  }
+
+  // 3. Extrair ano do nome original (2 ou 4 dígitos)
+  let year = '';
+  const yearMatch = nameWithoutExt.match(/\b(20\d{2}|\d{2})\b/);
+  if (yearMatch) {
+    let yearDigits = yearMatch[1];
+    if (yearDigits.length === 2) {
+      yearDigits = '20' + yearDigits;
+    }
+    year = yearDigits + '_';
+  }
+
+  // 4. Extrair semestre (1 ou 2) do nome original
+  let semester = '';
+  const semesterMatch = nameWithoutExt.match(/\b[_-]?([12])\b/);
+  if (semesterMatch) {
+    semester = semesterMatch[1] + '_';
+  }
+
+  // 5. Manter apenas palavras-chave: GABARITO, RESOLUÇÃO (e variações)
+  const keywords = ['GABARITO', 'RESOLUÇÃO', 'GABARITOS', 'RESOLUÇÕES'];
+  
+  // Remover ano e semestre do nome para não pegar como palavra-chave
+  let remaining = nameWithoutExt;
+  if (year) {
+    remaining = remaining.replace(year.slice(0, -1), '');
+  }
+  if (semester) {
+    remaining = remaining.replace(semester.slice(0, -1), '');
+  }
+  
+  // Extrair palavras e manter apenas as que são palavras-chave
+  const words = remaining.split(/[\s_-]+/);
+  const keptWords = words.filter(word => 
+    keywords.some(kw => word.toUpperCase().includes(kw))
+  );
+
+  // 6. Montar novo nome
+  let newName = disciplinePrefix + proofPrefix + year + semester;
+  if (keptWords.length > 0) {
+    newName += keptWords.join('_').toUpperCase() + '_';
+  }
+  newName = newName.replace(/_+$/, '') + extension;
+
+  return newName;
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { RefreshCw, Play, CheckCircle, AlertCircle, Loader, FileText } from 'lucide-react';
-import { formatFileName, abbreviateDiscipline } from '../lib/utils';
+import { generateNewFileName } from '../lib/utils';
 import toast from 'react-hot-toast';
 
 export function AdminBulkRename() {
@@ -10,7 +10,7 @@ export function AdminBulkRename() {
   const [results, setResults] = useState<{ success: number; skipped: number; error: number } | null>(null);
 
   const handleBulkRename = async () => {
-    if (!confirm('Isso irá renomear TODOS os arquivos no banco de dados para o padrão inteligente. Deseja continuar?')) {
+    if (!confirm('Isso irá renomear TODOS os arquivos em pastas de provas (AD1, AP1, AP2, AP3) para o padrão inteligente. Deseja continuar?')) {
       return;
     }
 
@@ -23,7 +23,7 @@ export function AdminBulkRename() {
     try {
       // 1. Buscar dados necessários
       const { data: courses } = await supabase.from('courses').select('id, name');
-      const { data: folders } = await supabase.from('folders').select('id, course_id');
+      const { data: folders } = await supabase.from('folders').select('id, course_id, name');
       const { data: files } = await supabase.from('files').select('id, name, folder_id');
 
       if (!files || !folders || !courses) throw new Error('Erro ao carregar dados');
@@ -36,16 +36,16 @@ export function AdminBulkRename() {
         const folder = folders.find(f => f.id === file.folder_id);
         const course = courses.find(c => c.id === folder?.course_id);
 
-        if (course) {
-          const abbreviation = abbreviateDiscipline(course.name);
-          const prefix = `${abbreviation}_`;
+        // Verificar se a pasta é de prova (AD1, AP1, AP2, AP3)
+        const isProofFolder = folder && /^(AD|AP)\d+$/.test(folder.name);
 
-          // Se o arquivo já começa com a abreviação correta, ignoramos
-          if (file.name.startsWith(prefix)) {
+        if (course && isProofFolder) {
+          const newName = generateNewFileName(course.name, folder.name, file.name);
+
+          // Se o arquivo já tem o nome correto, pular
+          if (file.name === newName) {
             skipped++;
           } else {
-            const newName = formatFileName(course.name, file.name);
-
             const { error: updateError } = await supabase
               .from('files')
               .update({ name: newName })
@@ -87,8 +87,17 @@ export function AdminBulkRename() {
       <div className="p-6 space-y-6">
         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
           <p className="text-sm text-indigo-900 leading-relaxed">
-            Esta ferramenta percorre todos os arquivos do acervo e aplica o <strong>prefixo inteligente</strong> 
-            (ex: <code>CONTAB_prova.pdf</code>) baseado na disciplina, caso o arquivo ainda não o possua.
+            Esta ferramenta percorre todos os arquivos do acervo em pastas de provas (AD1, AP1, AP2, AP3) e aplica o <strong>padrão de nomenclatura</strong>:
+          </p>
+          <ul className="text-sm text-indigo-800 mt-2 space-y-1 list-disc list-inside">
+            <li>Prefixo da disciplina (ex: INSTDIREITO_)</li>
+            <li>Nome da pasta (ex: AP1_)</li>
+            <li>Ano extraído do arquivo (ex: 2025_)</li>
+            <li>Semestre extraído (ex: 1_)</li>
+            <li>Palavras-chave mantidas (GABARITO, RESOLUÇÃO)</li>
+          </ul>
+          <p className="text-sm text-indigo-900 mt-2">
+            Exemplo: <code>25_1 Gabarito.pdf</code> → <code>INSTDIREITO_AP1_2025_1_GABARITO.pdf</code>
           </p>
         </div>
 
