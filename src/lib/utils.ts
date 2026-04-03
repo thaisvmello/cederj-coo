@@ -18,48 +18,30 @@ export function abbreviateDiscipline(name: string): string {
 
   // Lógica inteligente baseada no número de palavras
   if (words.length === 1) {
-    // Se for só uma palavra, pega até 12 letras
     abbreviation = words[0].substring(0, maxChars);
   } else if (words.length === 2) {
-    // Se forem duas palavras (ex: Contabilidade Gerencial), pega 6 de cada
-    // Resultaria em: CONTABGERENC
     abbreviation = words[0].substring(0, 6) + words[1].substring(0, 6);
   } else if (words.length === 3) {
-    // Se forem três palavras, pega 4 de cada
     abbreviation = words[0].substring(0, 4) + words[1].substring(0, 4) + words[2].substring(0, 4);
   } else {
-    // 4 ou mais palavras, pega as 3 primeiras letras de cada até bater o limite
     for (const word of words) {
       if (abbreviation.length >= maxChars) break;
       abbreviation += word.substring(0, 3);
     }
   }
 
-  // Garante que não passe de 12 e remove espaços extras
   return abbreviation.substring(0, maxChars).trim();
 }
 
 export function formatFileName(disciplineName: string, originalFileName: string): string {
-  // Encontrar a última ocorrência de ponto que não seja o primeiro caractere
   let lastDotIndex = originalFileName.lastIndexOf('.');
-  
-  // Se o ponto for o primeiro caractere (arquivo oculto), não considerar como extensão
-  if (lastDotIndex === 0) {
-    lastDotIndex = -1;
-  }
+  if (lastDotIndex <= 0) lastDotIndex = originalFileName.length;
 
-  const extension = lastDotIndex > 0 ? originalFileName.substring(lastDotIndex) : '';
-  const nameWithoutExt = lastDotIndex > 0 ? originalFileName.substring(0, lastDotIndex) : originalFileName;
+  const extension = originalFileName.substring(lastDotIndex);
+  const nameWithoutExt = originalFileName.substring(0, lastDotIndex);
 
-  // Gera a abreviação inteligente
   const abbreviation = abbreviateDiscipline(disciplineName);
   
-  // Formato: ABREVIACAO_NOMEDOARQUIVO.EXTENSAO
-  if (!abbreviation) {
-    return originalFileName;
-  }
-  
-  // Limpa o nome original de caracteres que podem quebrar a URL
   const cleanOriginalName = nameWithoutExt
     .replace(/\s+/g, '_')
     .replace(/[^a-zA-Z0-9_.-]/g, '');
@@ -75,49 +57,48 @@ export function generateNewFileName(disciplineName: string, folderName: string, 
   // 1. Prefixo da disciplina
   const disciplinePrefix = abbreviateDiscipline(disciplineName).toUpperCase() + '_';
 
-  // 2. Prefixo da prova (se a pasta for AD1, AP1, AP2, AP3)
+  // 2. Prefixo da prova (Extrai AD1, AP2, etc, mesmo que o nome da pasta tenha mais coisas)
   let proofPrefix = '';
-  const proofMatch = folderName.match(/^(AD|AP)[1-3]$/i);
+  const proofMatch = folderName.match(/(AD|AP)[1-3]/i);
   if (proofMatch) {
-    proofPrefix = folderName.toUpperCase() + '_';
+    proofPrefix = proofMatch[0].toUpperCase() + '_';
   }
 
-  // 3. Extrair ano do nome original (2 ou 4 dígitos)
+  // 3. Extrair ano (procura por 202X ou apenas XX)
   let year = '';
-  let remainingAfterYear = nameWithoutExt;
-  const yearMatch = nameWithoutExt.match(/\b(20\d{2}|\d{2})\b/);
+  const yearMatch = nameWithoutExt.match(/\b(202[0-9]|2[0-9])\b/);
   if (yearMatch) {
     let yearDigits = yearMatch[1];
-    if (yearDigits.length === 2) {
-      yearDigits = '20' + yearDigits;
-    }
+    if (yearDigits.length === 2) yearDigits = '20' + yearDigits;
     year = yearDigits + '_';
-    remainingAfterYear = nameWithoutExt.replace(yearMatch[0], '');
   }
 
-  // 4. Extrair semestre (1 ou 2) do nome original (após remover o ano)
+  // 4. Extrair semestre (procura por .1, .2, _1, _2 ou apenas 1, 2 isolado)
   let semester = '';
-  const semesterMatch = remainingAfterYear.match(/(?:^|[^0-9])([12])(?:$|[^0-9])/);
+  // Tenta achar algo como 2023.1 ou 2023_2 ou 23-1
+  const semesterMatch = nameWithoutExt.match(/(?:202[0-9]|2[0-9])[._-]?([12])\b/);
   if (semesterMatch) {
     semester = semesterMatch[1] + '_';
-    remainingAfterYear = remainingAfterYear.replace(semesterMatch[0], '');
+  } else {
+    // Se não achou colado no ano, procura um 1 ou 2 isolado
+    const isolatedSemester = nameWithoutExt.match(/\b([12])\b/);
+    if (isolatedSemester) semester = isolatedSemester[1] + '_';
   }
 
-  // 5. Manter apenas palavras-chave: GABARITO, RESOLUÇÃO (e variações)
-  const keywords = ['GABARITO', 'RESOLUCAO', 'GABARITOS', 'RESOLUCOES'];
-  
-  // Extrair palavras e manter apenas as que são palavras-chave
-  const words = remainingAfterYear.split(/[\s_.-]+/);
-  const keptWords = words.filter(word => 
-    keywords.some(kw => word.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === kw)
+  // 5. Palavras-chave
+  const keywords = ['GABARITO', 'RESOLUCAO', 'COMENTADA', 'RESUMO'];
+  const foundKeywords = keywords.filter(kw => 
+    nameWithoutExt.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(kw)
   );
 
   // 6. Montar novo nome
   let newName = disciplinePrefix + proofPrefix + year + semester;
-  if (keptWords.length > 0) {
-    newName += keptWords.join('_').toUpperCase() + '_';
+  if (foundKeywords.length > 0) {
+    newName += foundKeywords.join('_').toUpperCase() + '_';
   }
-  newName = newName.replace(/_+$/, '') + extension;
+  
+  // Limpeza final: remove underscores duplicados e no final
+  newName = newName.replace(/_+/g, '_').replace(/_$/, '') + extension;
 
   return newName;
 }

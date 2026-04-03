@@ -12,89 +12,78 @@ export function AdminBulkRename() {
   const handleBulkRename = async () => {
     setLoading(true);
     setResults(null);
+    setProgress({ current: 0, total: 0 });
 
     try {
-      // 1. Buscar dados necessários
+      // 1. Buscar dados
       const { data: courses } = await supabase.from('courses').select('id, name');
       const { data: folders } = await supabase.from('folders').select('id, course_id, name');
       const { data: files } = await supabase.from('files').select('id, name, folder_id');
 
-      if (!files || !folders || !courses) throw new Error('Erro ao carregar dados');
+      if (!files || !folders || !courses) throw new Error('Erro ao carregar dados do banco');
 
-      // Contar pastas de prova
-      const proofFolders = folders.filter(f => /^\s*(AD|AP)[\s_-]*[1-3]\s*$/i.test(f.name));
-      if (proofFolders.length === 0) {
-        toast.error('Nenhuma pasta de prova (AD1, AP1, AP2, AP3) encontrada!');
+      // 2. Filtrar apenas arquivos que estão em pastas de prova (AD/AP 1-3)
+      const filesToProcess = files.filter(file => {
+        const folder = folders.find(f => f.id === file.folder_id);
+        return folder && /(AD|AP)[1-3]/i.test(folder.name);
+      });
+
+      if (filesToProcess.length === 0) {
+        toast.error('Nenhum arquivo encontrado em pastas de prova (AD/AP)!');
         setLoading(false);
         return;
       }
 
-      if (!confirm(`Isso irá renomear TODOS os arquivos em ${proofFolders.length} pasta(s) de provas (AD1, AP1, AP2, AP3) para o padrão inteligente. Deseja continuar?`)) {
+      if (!confirm(`Encontrei ${filesToProcess.length} arquivos em pastas de provas. Deseja padronizar todos os nomes agora?`)) {
         setLoading(false);
         return;
       }
 
-      setProgress({ current: 0, total: files.length });
+      setProgress({ current: 0, total: filesToProcess.length });
 
       let success = 0;
       let skipped = 0;
       let error = 0;
-      let proofFilesCount = 0;
 
-      // 2. Processar cada arquivo
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const folder = folders.find(f => f.id === file.folder_id);
-        const course = courses.find(c => c.id === folder?.course_id);
+      // 3. Processar
+      for (let i = 0; i < filesToProcess.length; i++) {
+        const file = filesToProcess[i];
+        const folder = folders.find(f => f.id === file.folder_id)!;
+        const course = courses.find(c => c.id === folder.course_id)!;
 
-        // Verificar se a pasta é de prova (AD1, AP1, AP2, AP3)
-        if (course && folder) {
-          const proofMatch = folder.name.match(/^\s*(AD|AP)[\s_-]*[1-3]\s*$/i);
-          if (proofMatch) {
-            proofFilesCount++;
-            // Extrair o código da prova (AD1, AP1, etc.) sem espaços e em maiúsculas
-            const proofCode = folder.name.replace(/\s+/g, '').toUpperCase();
-            const newName = generateNewFileName(course.name, proofCode, file.name);
+        const newName = generateNewFileName(course.name, folder.name, file.name);
 
-            // Se o arquivo já tem o nome correto, pular
-            if (file.name === newName) {
-              skipped++;
-            } else {
-              const { error: updateError } = await supabase
-                .from('files')
-                .update({ name: newName })
-                .eq('id', file.id);
-
-              if (updateError) {
-                console.error(`Erro ao renomear ${file.name}:`, updateError);
-                error++;
-              } else {
-                success++;
-              }
-            }
-          } else {
-            skipped++;
-          }
-        } else {
+        if (file.name === newName) {
           skipped++;
+        } else {
+          const { error: updateError } = await supabase
+            .from('files')
+            .update({ name: newName })
+            .eq('id', file.id);
+
+          if (updateError) {
+            console.error(`Erro em ${file.name}:`, updateError);
+            error++;
+          } else {
+            success++;
+          }
         }
 
         setProgress(prev => ({ ...prev, current: i + 1 }));
       }
 
-      console.log(`Total de arquivos: ${files.length}, arquivos de prova: ${proofFilesCount}`);
       setResults({ success, skipped, error });
-      toast.success(`Processo concluído! Arquivos de prova: ${proofFilesCount}. Renomeados: ${success}, Mantidos: ${skipped}, Erros: ${error}`);
+      toast.success('Processo concluído!');
     } catch (err: any) {
       console.error('Erro no bulk rename:', err);
-      toast.error(err.message || 'Erro ao processar renomeação');
+      toast.error(err.message || 'Erro ao processar');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
       <div className="p-4 border-b border-gray-100 bg-indigo-50">
         <div className="flex items-center gap-2">
           <RefreshCw className="w-5 h-5 text-indigo-600" />
@@ -105,18 +94,11 @@ export function AdminBulkRename() {
       <div className="p-6 space-y-6">
         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
           <p className="text-sm text-indigo-900 leading-relaxed">
-            Esta ferramenta percorre todos os arquivos do acervo em pastas de provas (AD1, AP1, AP2, AP3) e aplica o <strong>padrão de nomenclatura</strong>:
+            Esta ferramenta organiza os nomes dos arquivos em pastas de <strong>ADs e APs</strong> seguindo o padrão:
           </p>
-          <ul className="text-sm text-indigo-800 mt-2 space-y-1 list-disc list-inside">
-            <li>Prefixo da disciplina (ex: INSTDIREITO_)</li>
-            <li>Nome da pasta (ex: AP1_)</li>
-            <li>Ano extraído do arquivo (ex: 2025_)</li>
-            <li>Semestre extraído (ex: 1_)</li>
-            <li>Palavras-chave mantidas (GABARITO, RESOLUÇÃO)</li>
-          </ul>
-          <p className="text-sm text-indigo-900 mt-2">
-            Exemplo: <code>25_1 Gabarito.pdf</code> → <code>INSTDIREITO_AP1_2025_1_GABARITO.pdf</code>
-          </p>
+          <div className="mt-3 p-3 bg-white/50 rounded-lg font-mono text-xs text-indigo-700">
+            DISCIPLINA_PROVA_ANO_SEMESTRE_KEYWORDS.pdf
+          </div>
         </div>
 
         {loading ? (
@@ -131,10 +113,6 @@ export function AdminBulkRename() {
                 style={{ width: `${(progress.current / progress.total) * 100}%` }}
               />
             </div>
-            <div className="flex items-center justify-center gap-2 text-xs text-gray-400 animate-pulse">
-              <Loader className="w-3 h-3 animate-spin" />
-              Não feche esta página até concluir
-            </div>
           </div>
         ) : results ? (
           <div className="grid grid-cols-3 gap-4">
@@ -146,7 +124,7 @@ export function AdminBulkRename() {
             <div className="p-4 bg-gray-50 border border-gray-100 rounded-xl text-center">
               <FileText className="w-5 h-5 text-gray-400 mx-auto mb-2" />
               <p className="text-xl font-bold text-gray-600">{results.skipped}</p>
-              <p className="text-[10px] text-gray-400 font-bold uppercase">Mantidos</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase">Já padronizados</p>
             </div>
             <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-center">
               <AlertCircle className="w-5 h-5 text-red-600 mx-auto mb-2" />
@@ -157,7 +135,7 @@ export function AdminBulkRename() {
               onClick={() => setResults(null)}
               className="col-span-3 mt-2 text-xs text-indigo-600 font-bold hover:underline"
             >
-              Limpar resultados e voltar
+              Limpar e voltar
             </button>
           </div>
         ) : (
