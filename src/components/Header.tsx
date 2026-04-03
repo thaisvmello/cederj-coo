@@ -1,5 +1,5 @@
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home, Settings } from 'lucide-react';
+import { LogOut, Calculator, Shield, Home, Settings, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,7 +18,8 @@ export function Header({
   const { isAdmin } = useAdmin();
   const location = useLocation();
   const isAdminPage = location.pathname === '/admin';
-  const { user } = useAuth();
+  const isProfilePage = location.pathname === '/profile';
+  const { user, signOut } = useAuth();
 
   return (
     <header className="w-full z-40">
@@ -40,17 +41,18 @@ export function Header({
 
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <div className="flex items-center gap-2 justify-end mb-0.5">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Usuário</p>
-                {isAdmin && (
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-medium">
-                    <Shield className="w-3 h-3" />
-                    Admin
-                  </span>
-                )}
-              </div>
-              {/* Show logged-in user email */}
-              <p className="text-sm font-bold text-white">{user?.email || ''}</p>
+              <Link to="/profile" className="group">
+                <div className="flex items-center gap-2 justify-end mb-0.5">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider group-hover:text-blue-400 transition-colors">Usuário</p>
+                  {isAdmin && (
+                    <span className="inline-flex items-center gap-1 text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-medium">
+                      <Shield className="w-3 h-3" />
+                      Admin
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">{user?.email || ''}</p>
+              </Link>
             </div>
 
             {isAdmin && (
@@ -67,7 +69,7 @@ export function Header({
               </Link>
             )}
 
-            {showHomeButton && onGoHome && !isAdminPage && (
+            {!isAdminPage && !isProfilePage && showHomeButton && onGoHome && (
               <button
                 onClick={onGoHome}
                 className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
@@ -81,9 +83,7 @@ export function Header({
             <NotificationBell />
 
             <button
-              onClick={() => {
-                // sign-out logic handled elsewhere
-              }}
+              onClick={() => signOut()}
               className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
               title="Sair"
             >
@@ -94,7 +94,7 @@ export function Header({
       </div>
 
       {/* Secondary Nav */}
-      {!isAdminPage && (
+      {!isAdminPage && !isProfilePage && (
         <div className="bg-[#004157] text-gray-300 border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-2">
           <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap no-scrollbar">
             <button
