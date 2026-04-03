@@ -1,6 +1,8 @@
+"use client";
+
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader, AlertCircle, FileText, Upload, X } from 'lucide-react';
+import { Loader, AlertCircle, FileText, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFileValidation } from '../hooks/useFileValidation';
 import { FolderWarningBanner } from './FolderWarningBanner';
@@ -21,6 +23,7 @@ interface PendingFile {
   uploading: boolean;
   uploaded: boolean;
   isDuplicate: boolean;
+  isImage: boolean;
   error?: string;
 }
 
@@ -38,15 +41,11 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
     const isMaterialsFolder = folderName.toUpperCase() === 'MATERIAIS';
 
     const newFiles: PendingFile[] = [];
-
-    // Regex para detectar AD ou AP como palavra isolada ou prefixo (ex: AD1, AP_2023, AD 2)
-    // \b garante que seja o início de uma palavra
-    // (AD|AP) busca as siglas
-    // ([0-9]|_|\s|$) garante que seja seguido por número, underline, espaço ou fim da string
     const adapRegex = /\b(AD|AP)([0-9]|_|\s|$)/i;
 
     Array.from(files).forEach(file => {
       const hasADAP = adapRegex.test(file.name);
+      const isImage = file.type.startsWith('image/');
 
       if (isADAPFolder && !hasADAP) {
         toast.error(
@@ -64,13 +63,20 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
         return;
       }
 
+      // Se for imagem, já sugerimos o nome com .pdf
+      let suggestedName = formatFileName(disciplineName, file.name);
+      if (isImage) {
+        suggestedName = suggestedName.replace(/\.(png|jpg|jpeg|webp|jfif)$/i, '.pdf');
+      }
+
       newFiles.push({
         id: Math.random().toString(36).substring(2, 9),
-        name: formatFileName(disciplineName, file.name),
+        name: suggestedName,
         file,
         uploading: false,
         uploaded: false,
         isDuplicate: false,
+        isImage
       });
     });
 
@@ -88,12 +94,31 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
     });
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    processFiles(e.target.files);
-  };
-
-  const removeFile = (id: string) => {
-    setPendingFiles(prev => prev.filter(f => f.id !== id));
+  const convertImageToPdf = async (imageFile: File): Promise<Blob> => {
+    const { jsPDF } = await import('jspdf');
+    
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // Criar PDF com as dimensões da imagem
+          const orientation = img.width > img.height ? 'l' : 'p';
+          const pdf = new jsPDF({
+            orientation,
+            unit: 'px',
+            format: [img.width, img.height]
+          });
+          
+          pdf.addImage(e.target?.result as string, 'JPEG', 0, 0, img.width, img.height);
+          resolve(pdf.output('blob'));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(imageFile);
+    });
   };
 
   const uploadFile = async (pendingFile: PendingFile): Promise<boolean> => {
@@ -104,6 +129,19 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
     );
 
     try {
+      let fileToUpload = pendingFile.file;
+      let fileType = pendingFile.file.type;
+      let fileName = pendingFile.name;
+
+      // Conversão de Imagem para PDF
+      if (pendingFile.isImage) {
+        toast.loading(`Convertendo "${pendingFile.file.name}" para PDF...`, { id: `conv-${pendingFile.id}` });
+        const pdfBlob = await convertImageToPdf(pendingFile.file);
+        fileToUpload = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        fileType = 'application/pdf';
+        toast.success(`Conversão concluída!`, { id: `conv-${pendingFile.id}` });
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       const anonKey = (supabase as any).supabaseKey;
       
@@ -119,8 +157,8 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
           'apikey': anonKey,
         },
         body: JSON.stringify({
-          fileName: pendingFile.file.name,
-          fileType: pendingFile.file.type,
+          fileName: fileName,
+          fileType: fileType,
           folderId
         })
       });
@@ -134,9 +172,9 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
 
       const uploadRes = await fetch(data.uploadUrl, {
         method: 'PUT',
-        body: pendingFile.file,
+        body: fileToUpload,
         headers: { 
-          'Content-Type': pendingFile.file.type 
+          'Content-Type': fileType 
         }
       });
 
@@ -146,10 +184,10 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
 
       const { error: dbError } = await supabase.from('files').insert({
         folder_id: folderId,
-        name: pendingFile.name,
+        name: fileName,
         file_path: data.publicUrl,
-        file_size: pendingFile.file.size,
-        file_type: pendingFile.file.type,
+        file_size: fileToUpload.size,
+        file_type: fileType,
         uploaded_by: user.id,
       });
 
@@ -252,7 +290,7 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
               <input
                 type="file"
                 multiple
-                onChange={handleFileSelect}
+                onChange={(e) => processFiles(e.target.files)}
                 className="hidden"
               />
             </label>
@@ -290,24 +328,35 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
                 }`}  
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <FileText className={`w-4 h-4 shrink-0 ${file.error ? 'text-red-400' : file.uploaded ? 'text-green-500' : file.isDuplicate ? 'text-amber-500' : 'text-blue-500'}`} />
+                  {file.isImage ? (
+                    <ImageIcon className="w-4 h-4 shrink-0 text-purple-500" />
+                  ) : (
+                    <FileText className={`w-4 h-4 shrink-0 ${file.error ? 'text-red-400' : file.uploaded ? 'text-green-500' : file.isDuplicate ? 'text-amber-500' : 'text-blue-500'}`} />
+                  )}
                   <div className="min-w-0">
                     {!file.uploaded && !file.uploading ? (
-                      <input
-                        type="text"
-                        value={file.name}
-                        onChange={(e) => {
-                          setPendingFiles(prev =>
-                            prev.map(f => 
-                              f.id === file.id 
-                                ? { ...f, name: e.target.value } 
-                                : f
-                            )
-                          );
-                        }}
-                        className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                        autoFocus
-                      />
+                      <div className="flex flex-col">
+                        <input
+                          type="text"
+                          value={file.name}
+                          onChange={(e) => {
+                            setPendingFiles(prev =>
+                              prev.map(f => 
+                                f.id === file.id 
+                                  ? { ...f, name: e.target.value } 
+                                  : f
+                              )
+                            );
+                          }}
+                          className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                          autoFocus
+                        />
+                        {file.isImage && (
+                          <span className="text-[9px] text-purple-600 font-bold uppercase mt-0.5">
+                            ✨ Será convertido para PDF automaticamente
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-sm font-medium text-gray-900 truncate block">{file.name}</span>
                     )}
@@ -344,7 +393,7 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
               {isUploading ? (
                 <>
                   <Loader className="w-4 h-4 animate-spin" />
-                  Enviando...
+                  Processando e Enviando...
                 </>
               ) : (
                 <>
