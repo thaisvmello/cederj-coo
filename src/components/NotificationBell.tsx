@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +8,7 @@ export const NotificationBell = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const { user } = useAuth();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -31,6 +32,23 @@ export const NotificationBell = () => {
       channel?.unsubscribe?.();
     };
   }, [user]);
+
+  // Lógica para fechar ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -71,7 +89,7 @@ export const NotificationBell = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
         className="relative p-2 text-gray-500 hover:text-gray-700 transition-colors"
@@ -108,7 +126,7 @@ export const NotificationBell = () => {
               Marcar todas como lidas
             </button>
           </div>
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto custom-scrollbar">
             {notifications.length === 0 ? (
               <div className="p-4 text-gray-500 text-center">Nenhuma notificação</div>
             ) : (
@@ -126,7 +144,6 @@ export const NotificationBell = () => {
                   <div className="flex-shrink-0">{getIcon(n.type)}</div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-gray-900">{n.title}</p>
-                    {/* REMOVIDO line-clamp-2 - mensagem completa */}
                     <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
                       {n.content}
                     </p>
