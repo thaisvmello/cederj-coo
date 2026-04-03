@@ -126,15 +126,15 @@ export const NotificationBell = () => {
                   <div className="flex-shrink-0">{getIcon(n.type)}</div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-gray-900">{n.title}</p>
-                    <p className="text-sm text-gray-600 line-clamp-2">{n.content}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(n.created_at).toLocaleString('pt-BR', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                    {/* REMOVIDO line-clamp-2 - mensagem completa */}
+                    <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                      {n.content}
                     </p>
+                    {n.link && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Abrir no site
+                      </p>
+                    )}
                   </div>
                 </div>
               ))
