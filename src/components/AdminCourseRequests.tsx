@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Check, X, Clock, BookOpen, Loader, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../contexts/AuthContext';
+import { RejectRequestModal } from './RejectRequestModal';
 import toast from 'react-hot-toast';
 
 interface CourseRequest {
@@ -24,6 +25,8 @@ export function AdminCourseRequests() {
   const [requests, setRequests] = useState<CourseRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [requestToReject, setRequestToReject] = useState<CourseRequest | null>(null);
 
   useEffect(() => {
     if (isAdmin) loadRequests();
@@ -107,20 +110,47 @@ export function AdminCourseRequests() {
     }
   };
 
-  const handleReject = async (requestId: string) => {
+  const handleRejectClick = (request: CourseRequest) => {
+    setRequestToReject(request);
+    setShowRejectModal(true);
+  };
+
+  const submitRejection = async (requestId: string, message: string, link?: string) => {
+    if (!user || !requestToReject) return;
+    
     setProcessingId(requestId);
     try {
-      await supabase.from('course_requests').update({ 
-        status: 'rejected', 
-        reviewed_by: user?.id,
-        updated_at: new Date().toISOString()
-      }).eq('id', requestId);
+      // 1. Atualizar status da solicitação
+      const { error: updateError } = await supabase
+        .from('course_requests')
+        .update({ 
+          status: 'rejected',
+          reviewed_by: user.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
 
-      toast.success('Solicitação rejeitada');
+      if (updateError) throw updateError;
+
+      // 2. Enviar notificação para o usuário
+      const { error: notifError } = await supabase.from('notifications').insert({
+        user_id: requestToReject.requested_by,
+        title: 'Solicitação de disciplina recusada',
+        content: `Sua solicitação para a disciplina "${requestToReject.name}" foi recusada. Motivo: ${message}`,
+        type: 'folder_request_rejection',
+        link: link || null,
+        is_read: false,
+      });
+
+      if (notifError) throw notifError;
+
+      toast.success('Solicitação recusada e usuário notificado');
+      setShowRejectModal(false);
+      setRequestToReject(null);
       loadRequests();
     } catch (error) {
       console.error('Erro ao rejeitar:', error);
-      toast.error('Erro ao rejeitar solicitação');
+      toast.error('Erro ao processar recusa');
     } finally {
       setProcessingId(null);
     }
@@ -187,7 +217,7 @@ export function AdminCourseRequests() {
                     {processingId === request.id ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   </button>
                   <button
-                    onClick={() => handleReject(request.id)}
+                    onClick={() => handleRejectClick(request)}
                     disabled={processingId === request.id}
                     className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition disabled:opacity-50"
                   >
@@ -198,6 +228,20 @@ export function AdminCourseRequests() {
             </div>
           ))}
         </div>
+      )}
+
+      {showRejectModal && requestToReject && (
+        <RejectRequestModal
+          isOpen={showRejectModal}
+          onRequestId={requestToReject.id}
+          onRequesterName={requestToReject.requester_name || 'Usuário'}
+          onRequestTitle={`Disciplina: ${requestToReject.name}`}
+          onClose={() => {
+            setShowRejectModal(false);
+            setRequestToReject(null);
+          }}
+          onReject={submitRejection}
+        />
       )}
     </div>
   );

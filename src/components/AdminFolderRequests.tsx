@@ -7,15 +7,19 @@ import toast from 'react-hot-toast';
 import { RejectRequestModal } from './RejectRequestModal';
 import { FolderRequest } from '../lib/types';
 
+interface ExtendedFolderRequest extends FolderRequest {
+  requester_name?: string;
+}
+
 export function AdminFolderRequests() {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
 
-  const [requests, setRequests] = useState<FolderRequest[]>([]);
+  const [requests, setRequests] = useState<ExtendedFolderRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [requestToReject, setRequestToReject] = useState<FolderRequest | null>(null);
+  const [requestToReject, setRequestToReject] = useState<ExtendedFolderRequest | null>(null);
 
   useEffect(() => {
     if (isAdmin) loadRequests();
@@ -30,22 +34,37 @@ export function AdminFolderRequests() {
         .eq('status', 'pending')
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('Error loading folder requests:', error);
-        setRequests([]);
-        return;
-      }
+      if (error) throw error;
 
-      setRequests(data || []);
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map(r => r.requested_by))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', userIds);
+
+        const formatted = data.map(req => {
+          const profile = profiles?.find(p => p.id === req.requested_by);
+          return {
+            ...req,
+            requester_name: profile 
+              ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Usuário'
+              : 'Usuário desconhecido'
+          };
+        });
+        setRequests(formatted);
+      } else {
+        setRequests([]);
+      }
     } catch (e) {
-      console.error('Unexpected error loading folder requests:', e);
+      console.error('Error loading folder requests:', e);
       setRequests([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async (req: FolderRequest) => {
+  const handleApprove = async (req: ExtendedFolderRequest) => {
     setProcessingId(req.id);
     try {
       const { error: folderError } = await supabase
@@ -75,35 +94,44 @@ export function AdminFolderRequests() {
     }
   };
 
-  const handleReject = (req: FolderRequest) => {
+  const handleReject = (req: ExtendedFolderRequest) => {
     setRequestToReject(req);
     setShowRejectModal(true);
   };
 
   const submitRejection = async (requestId: string, message: string, link?: string) => {
-    if (!user) return;
-    const { error: updateError } = await supabase
-      .from('folder_requests')
-      .update({ status: 'rejected' })
-      .eq('id', requestId);
+    if (!user || !requestToReject) return;
+    
+    setProcessingId(requestId);
+    try {
+      const { error: updateError } = await supabase
+        .from('folder_requests')
+        .update({ status: 'rejected' })
+        .eq('id', requestId);
 
-    if (updateError) throw updateError;
+      if (updateError) throw updateError;
 
-    const { error: notifError } = await supabase.from('notifications').insert({
-      user_id: requestToReject?.requested_by,
-      title: 'Solicitação de pasta rejeitada',
-      content: message,
-      type: 'folder_request_rejection',
-      link: link || null,
-      is_read: false,
-    });
+      const { error: notifError } = await supabase.from('notifications').insert({
+        user_id: requestToReject.requested_by,
+        title: 'Solicitação de pasta recusada',
+        content: `Sua solicitação para a pasta "${requestToReject.folder_name}" foi recusada. Motivo: ${message}`,
+        type: 'folder_request_rejection',
+        link: link || null,
+        is_read: false,
+      });
 
-    if (notifError) throw notifError;
+      if (notifError) throw notifError;
 
-    toast.success('Rejeição enviada ao solicitante');
-    setShowRejectModal(false);
-    setRequestToReject(null);
-    loadRequests();
+      toast.success('Rejeição enviada ao solicitante');
+      setShowRejectModal(false);
+      setRequestToReject(null);
+      loadRequests();
+    } catch (e) {
+      console.error('Error rejecting:', e);
+      toast.error('Erro ao processar recusa');
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   if (!isAdmin) return null;
@@ -141,9 +169,7 @@ export function AdminFolderRequests() {
             <div key={req.id} className="p-4 hover:bg-gray-50 transition flex items-start justify-between">
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900">{req.folder_name}</p>
-                <p className="text-sm text-gray-600">
-                  <strong>Curso ID:</strong> {req.course_id}
-                </p>
+                <p className="text-xs text-gray-500">Solicitado por: {req.requester_name}</p>
                 <p className="text-xs text-gray-400 mt-2">
                   <Clock className="inline w-3 h-3 mr-1" />
                   {new Date(req.created_at).toLocaleString()}
@@ -159,7 +185,8 @@ export function AdminFolderRequests() {
                 </button>
                 <button
                   onClick={() => handleReject(req)}
-                  className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                  disabled={processingId === req.id}
+                  className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition disabled:opacity-50"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -173,9 +200,12 @@ export function AdminFolderRequests() {
         <RejectRequestModal
           isOpen={showRejectModal}
           onRequestId={requestToReject.id}
-          onRequesterName={requestToReject.requested_by}
-          onRequestTitle={requestToReject.folder_name}
-          onClose={() => setShowRejectModal(false)}
+          onRequesterName={requestToReject.requester_name || 'Usuário'}
+          onRequestTitle={`Pasta: ${requestToReject.folder_name}`}
+          onClose={() => {
+            setShowRejectModal(false);
+            setRequestToReject(null);
+          }}
           onReject={submitRejection}
         />
       )}
