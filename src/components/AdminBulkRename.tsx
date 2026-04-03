@@ -1,1 +1,1 @@
-const isProofFolder = folder && /^(AD|AP)[1-3]$/.test(folder.name);
+const isProofFolder = folder && /^(AD|AP)[1-3]$/i.test(folder.name);
