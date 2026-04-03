@@ -10,15 +10,8 @@ export function AdminBulkRename() {
   const [results, setResults] = useState<{ success: number; skipped: number; error: number } | null>(null);
 
   const handleBulkRename = async () => {
-    if (!confirm('Isso irá renomear TODOS os arquivos em pastas de provas (AD1, AP1, AP2, AP3) para o padrão inteligente. Deseja continuar?')) {
-      return;
-    }
-
     setLoading(true);
     setResults(null);
-    let success = 0;
-    let skipped = 0;
-    let error = 0;
 
     try {
       // 1. Buscar dados necessários
@@ -28,7 +21,25 @@ export function AdminBulkRename() {
 
       if (!files || !folders || !courses) throw new Error('Erro ao carregar dados');
 
+      // Contar pastas de prova
+      const proofFolders = folders.filter(f => /^\s*(AD|AP)[\s_-]*[1-3]\s*$/i.test(f.name));
+      if (proofFolders.length === 0) {
+        toast.error('Nenhuma pasta de prova (AD1, AP1, AP2, AP3) encontrada!');
+        setLoading(false);
+        return;
+      }
+
+      if (!confirm(`Isso irá renomear TODOS os arquivos em ${proofFolders.length} pasta(s) de provas (AD1, AP1, AP2, AP3) para o padrão inteligente. Deseja continuar?`)) {
+        setLoading(false);
+        return;
+      }
+
       setProgress({ current: 0, total: files.length });
+
+      let success = 0;
+      let skipped = 0;
+      let error = 0;
+      let proofFilesCount = 0;
 
       // 2. Processar cada arquivo
       for (let i = 0; i < files.length; i++) {
@@ -37,24 +48,32 @@ export function AdminBulkRename() {
         const course = courses.find(c => c.id === folder?.course_id);
 
         // Verificar se a pasta é de prova (AD1, AP1, AP2, AP3)
-        if (course && folder && /^(AD|AP)[1-3]$/i.test(folder.name)) {
-          const newName = generateNewFileName(course.name, folder.name, file.name);
+        if (course && folder) {
+          const proofMatch = folder.name.match(/^\s*(AD|AP)[\s_-]*[1-3]\s*$/i);
+          if (proofMatch) {
+            proofFilesCount++;
+            // Extrair o código da prova (AD1, AP1, etc.) sem espaços e em maiúsculas
+            const proofCode = folder.name.replace(/\s+/g, '').toUpperCase();
+            const newName = generateNewFileName(course.name, proofCode, file.name);
 
-          // Se o arquivo já tem o nome correto, pular
-          if (file.name === newName) {
-            skipped++;
-          } else {
-            const { error: updateError } = await supabase
-              .from('files')
-              .update({ name: newName })
-              .eq('id', file.id);
-
-            if (updateError) {
-              console.error(`Erro ao renomear ${file.name}:`, updateError);
-              error++;
+            // Se o arquivo já tem o nome correto, pular
+            if (file.name === newName) {
+              skipped++;
             } else {
-              success++;
+              const { error: updateError } = await supabase
+                .from('files')
+                .update({ name: newName })
+                .eq('id', file.id);
+
+              if (updateError) {
+                console.error(`Erro ao renomear ${file.name}:`, updateError);
+                error++;
+              } else {
+                success++;
+              }
             }
+          } else {
+            skipped++;
           }
         } else {
           skipped++;
@@ -63,8 +82,9 @@ export function AdminBulkRename() {
         setProgress(prev => ({ ...prev, current: i + 1 }));
       }
 
+      console.log(`Total de arquivos: ${files.length}, arquivos de prova: ${proofFilesCount}`);
       setResults({ success, skipped, error });
-      toast.success('Processo de renomeação concluído!');
+      toast.success(`Processo concluído! Arquivos de prova: ${proofFilesCount}. Renomeados: ${success}, Mantidos: ${skipped}, Erros: ${error}`);
     } catch (err: any) {
       console.error('Erro no bulk rename:', err);
       toast.error(err.message || 'Erro ao processar renomeação');
