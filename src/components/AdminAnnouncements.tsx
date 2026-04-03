@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { Trash2, Loader, Plus, X, Megaphone, Users } from 'lucide-react';
+import { Trash2, Loader, Plus, X, Users } from 'lucide-react';
 
 export const AdminAnnouncements = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -129,7 +129,9 @@ export const AdminAnnouncements = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Megaphone className="w-6 h-6 text-blue-600" />
+          <div className="p-2 bg-blue-50 rounded-lg">
+            <Plus className="w-5 h-5 text-blue-600" />
+          </div>
           <h2 className="text-2xl font-bold text-gray-900">Anúncios Globais</h2>
         </div>
         <button

@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { NotificationItem } from './NotificationItem';
 import { MessageView } from './MessageView';
-import { X, Bell, Mail, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, Bell } from 'lucide-react';
 
 interface MessageSidebarProps {
   isOpen: boolean;

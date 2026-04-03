@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertTriangle, Mail, Clock, ArrowRight } from 'lucide-react';
+import { AlertTriangle, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface NotificationItemProps {
@@ -83,7 +83,6 @@ export function NotificationItem({ notification, onRead, onSelect }: Notificatio
           </p>
           {notification.link && (
             <p className="text-xs text-blue-600 mt-1">
-              <ArrowRight className="w-3 h-3 inline" />
               Abrir no site
             </p>
           )}

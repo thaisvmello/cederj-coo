@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Mail, AlertTriangle } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { MessageSidebar } from './MessageSidebar';
 
 export const MessageBell = () => {
@@ -20,18 +21,6 @@ export const MessageBell = () => {
       console.error('Error fetching notifications:', error);
     } else {
       setNotifications(data || []);
-    }
-  };
-
-  const markAllAsRead = async () => {
-    if (!user) return;
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', user.id);
-    
-    if (!error) {
-      fetchNotifications();
     }
   };
 

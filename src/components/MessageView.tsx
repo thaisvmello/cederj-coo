@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { X, CheckCircle, AlertTriangle, Mail, Clock, ArrowLeft } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Mail, ArrowLeft } from 'lucide-react';
 
 interface MessageViewProps {
   notification: any;
