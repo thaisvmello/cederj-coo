@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { Trash2, Loader, Plus, X, Users } from 'lucide-react';
+import { Trash2, Loader, Plus, X, User } from 'lucide-react';
 
 export const AdminAnnouncements = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -33,7 +33,6 @@ export const AdminAnnouncements = () => {
     }
   };
 
-  // Agrupa os anúncios por título e conteúdo para não repetir na tabela
   const groupedAnnouncements = useMemo(() => {
     const groups: Record<string, any> = {};
     announcements.forEach(a => {
@@ -230,7 +229,7 @@ export const AdminAnnouncements = () => {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                      <Users className="w-3.5 h-3.5 text-gray-400" />
+                      <User className="w-3.5 h-3.5 text-gray-400" />
                       <span>{a.recipientCount} usuários</span>
                       <span className="text-gray-300">·</span>
                       <span className="text-emerald-600">{a.readCount} lidos</span>
