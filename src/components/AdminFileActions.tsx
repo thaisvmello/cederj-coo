@@ -51,7 +51,7 @@ export function AdminFileActions() {
       const formatted = requestsData.map(req => {
         const file = filesData?.find(f => f.id === req.file_id);
         const profile = profilesData?.find(p => p.id === req.requested_by);
-        
+
         return {
           ...req,
           file_name: file?.name || 'Arquivo não encontrado',
@@ -81,8 +81,8 @@ export function AdminFileActions() {
         if (error) throw error;
       }
 
-      await supabase.from('file_actions').update({ 
-        status: 'approved', 
+      await supabase.from('file_actions').update({
+        status: 'approved',
         reviewed_by: user?.id,
         updated_at: new Date().toISOString()
       }).eq('id', request.id);
@@ -100,8 +100,8 @@ export function AdminFileActions() {
   const handleReject = async (requestId: string) => {
     setProcessingId(requestId);
     try {
-      await supabase.from('file_actions').update({ 
-        status: 'rejected', 
+      await supabase.from('file_actions').update({
+        status: 'rejected',
         reviewed_by: user?.id,
         updated_at: new Date().toISOString()
       }).eq('id', requestId);

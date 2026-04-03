@@ -55,7 +55,7 @@ export function AdminCommentsManager() {
         const profile = profilesData?.find(p => p.id === comment.user_id);
         const folder = foldersData?.find(f => f.id === comment.folder_id);
         const course = coursesData?.find(c => c.id === folder?.course_id);
-        
+
         return {
           ...comment,
           first_name: profile?.first_name || 'Estudante',
@@ -78,7 +78,7 @@ export function AdminCommentsManager() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este comentário?')) return;
-    
+
     setDeletingId(id);
     try {
       const { error } = await supabase.from('folder_comments').delete().eq('id', id);
@@ -100,7 +100,7 @@ export function AdminCommentsManager() {
   if (!isAdmin) return null;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div className="p-4 border-b border-gray-100 bg-gray-50/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -159,7 +159,7 @@ export function AdminCommentsManager() {
                       <button
                         onClick={() => handleDelete(comment.id)}
                         disabled={deletingId === comment.id}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
                         title="Excluir comentário"
                       >
                         {deletingId === comment.id ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -184,7 +184,7 @@ export function AdminCommentsManager() {
                   </div>
 
                   <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
-                    <p className="text-sm text-gray-700 leading-relaxed">{comment.content}</p>
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{comment.content}</p>
                   </div>
                 </div>
               </div>

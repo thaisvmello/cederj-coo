@@ -45,7 +45,7 @@ export function AdminBulkRename() {
             skipped++;
           } else {
             const newName = formatFileName(course.name, file.name);
-            
+
             const { error: updateError } = await supabase
               .from('files')
               .update({ name: newName })
