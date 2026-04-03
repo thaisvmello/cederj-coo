@@ -132,7 +132,7 @@ export const MessageBell = () => {
       {/* Overlay */}
       {showSidebar && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity cursor-pointer"
           onClick={closeSidebar}
           onKeyDown={(e) => e.key === 'Escape' && closeSidebar()}
           tabIndex={0}
@@ -164,6 +164,7 @@ export const MessageBell = () => {
           role="dialog"
           aria-modal="true"
           aria-label="Painel de notificações"
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
