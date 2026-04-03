@@ -1,4 +1,4 @@
-import { Search, Plus, BookOpen, Star, LayoutGrid, List, ChevronLeft, FileText, Folder } from 'lucide-react';
+import { Search, Plus, BookOpen, Star, LayoutGrid, List, FileText, Folder } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Course, Folder as FolderType } from '../lib/types';
@@ -107,9 +107,6 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <button onClick={handleBackToCourses} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-500">
-              <ChevronLeft className="w-5 h-5" />
-            </button>
             <div className="p-2 bg-blue-50 rounded-lg">
               <BookOpen className="w-6 h-6 text-blue-600" />
             </div>
