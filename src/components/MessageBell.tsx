@@ -80,6 +80,23 @@ export const MessageBell = () => {
     setShowSidebar(false);
   }, []);
 
+  // Fechar ao clicar fora da sidebar
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showSidebar && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+        closeSidebar();
+      }
+    };
+
+    if (showSidebar) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSidebar, closeSidebar]);
+
   const markAllAsRead = async () => {
     if (!user) return;
     const { error } = await supabase
@@ -129,13 +146,10 @@ export const MessageBell = () => {
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay (apenas para escurecer o fundo) */}
       {showSidebar && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 transition-opacity cursor-pointer"
-          onClick={closeSidebar}
-          onKeyDown={(e) => e.key === 'Escape' && closeSidebar()}
-          tabIndex={0}
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
           aria-hidden="true"
         />
       )}
@@ -164,7 +178,6 @@ export const MessageBell = () => {
           role="dialog"
           aria-modal="true"
           aria-label="Painel de notificações"
-          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
