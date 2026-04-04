@@ -58,7 +58,7 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
       .from('files')
       .select('*')
       .eq('folder_id', folderId)
-      .order('created_at', { ascending: false });
+      .order('name', { ascending: true }); // Alterado para ordenar por nome
 
     if (error) {
       console.error('Error loading files:', error);
