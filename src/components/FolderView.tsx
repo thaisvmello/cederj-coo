@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronLeft, Folder, ChevronRight, FolderPlus, Pencil } from 'lucide-react';
+import { ChevronLeft, Folder, ChevronRight, FolderPlus, Pencil, Archive, Loader } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { FileList } from './FileList';
 import { FileUploadWithValidation } from './FileUploadWithValidation';
@@ -9,6 +9,8 @@ import { FolderComments } from './FolderComments';
 import { useAdmin } from '../hooks/useAdmin';
 import { EditCourseModal } from './EditCourseModal';
 import { EditFolderModal } from './EditFolderModal';
+import JSZip from 'jszip';
+import toast from 'react-hot-toast';
 
 interface FolderViewProps {
   course: Course;
@@ -21,6 +23,7 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<FolderType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [zipping, setZipping] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showEditCourse, setShowEditCourse] = useState(false);
@@ -48,6 +51,91 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
       }
     }
     setLoading(false);
+  };
+
+  const handleDownloadFullCourse = async () => {
+    if (folders.length === 0) {
+      toast.error('Esta disciplina não possui pastas com arquivos.');
+      return;
+    }
+
+    setZipping(true);
+    const toastId = toast.loading('Iniciando download completo da disciplina...');
+
+    try {
+      // 1. Buscar todos os arquivos de todas as pastas desta disciplina
+      const folderIds = folders.map(f => f.id);
+      const { data: allFiles, error: filesError } = await supabase
+        .from('files')
+        .select('*')
+        .in('folder_id', folderIds);
+
+      if (filesError) throw filesError;
+      if (!allFiles || allFiles.length === 0) {
+        toast.error('Nenhum arquivo encontrado nesta disciplina.', { id: toastId });
+        setZipping(false);
+        return;
+      }
+
+      const zip = new JSZip();
+      let successCount = 0;
+      let errorCount = 0;
+
+      toast.loading(`Baixando ${allFiles.length} arquivos...`, { id: toastId });
+
+      // 2. Baixar cada arquivo e adicionar ao ZIP dentro de sua respectiva pasta
+      for (const file of allFiles) {
+        try {
+          const folder = folders.find(f => f.id === file.folder_id);
+          const folderName = folder ? folder.name : 'Outros';
+          
+          const response = await fetch(file.file_path);
+          if (!response.ok) throw new Error(`Falha ao baixar ${file.name}`);
+          
+          const blob = await response.blob();
+          // Adiciona ao ZIP: "Nome da Pasta/Nome do Arquivo"
+          zip.folder(folderName)?.file(file.name, blob);
+          successCount++;
+        } catch (err) {
+          console.error(`Erro ao processar arquivo ${file.name}:`, err);
+          errorCount++;
+        }
+      }
+
+      if (successCount === 0) {
+        toast.error('Não foi possível baixar nenhum arquivo.', { id: toastId });
+        setZipping(false);
+        return;
+      }
+
+      toast.loading('Gerando arquivo ZIP final...', { id: toastId });
+      
+      const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
+      
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ACERVO_${course.name.replace(/\s+/g, '_').toUpperCase()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      if (errorCount > 0) {
+        toast.success(`${successCount} arquivos baixados, ${errorCount} falharam.`, { id: toastId });
+      } else {
+        toast.success('Disciplina completa baixada com sucesso!', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Erro no download completo:', error);
+      toast.error('Erro ao gerar download completo.', { id: toastId });
+    } finally {
+      setZipping(false);
+    }
   };
 
   if (loading) {
@@ -95,6 +183,23 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          <button 
+            onClick={handleDownloadFullCourse}
+            disabled={zipping || folders.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition shadow-sm disabled:opacity-50"
+          >
+            {zipping ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Compactando...
+              </>
+            ) : (
+              <>
+                <Archive className="w-4 h-4" />
+                Baixar Disciplina Completa
+              </>
+            )}
+          </button>
           <button 
             onClick={() => setShowRequestModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm font-semibold text-amber-700 hover:bg-amber-100 transition"
