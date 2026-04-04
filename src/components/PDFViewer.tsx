@@ -8,7 +8,7 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ file, onClose }: PDFViewerProps) {
-  // No Firebase, já estamos guardando a URL pública no file_path
+  // O file_path contém a URL pública do Cloudflare R2
   const url = file.file_path;
 
   const handleDownload = () => {

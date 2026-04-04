@@ -34,6 +34,10 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
+  const removeFile = (id: string) => {
+    setPendingFiles(prev => prev.filter(f => f.id !== id));
+  };
+
   const processFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
@@ -63,7 +67,6 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
         return;
       }
 
-      // Se for imagem, já sugerimos o nome com .pdf
       let suggestedName = formatFileName(disciplineName, file.name);
       if (isImage) {
         suggestedName = suggestedName.replace(/\.(png|jpg|jpeg|webp|jfif)$/i, '.pdf');
@@ -102,7 +105,6 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          // Criar PDF com as dimensões da imagem
           const orientation = img.width > img.height ? 'l' : 'p';
           const pdf = new jsPDF({
             orientation,
@@ -133,7 +135,6 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
       let fileType = pendingFile.file.type;
       let fileName = pendingFile.name;
 
-      // Conversão de Imagem para PDF
       if (pendingFile.isImage) {
         toast.loading(`Convertendo "${pendingFile.file.name}" para PDF...`, { id: `conv-${pendingFile.id}` });
         const pdfBlob = await convertImageToPdf(pendingFile.file);
@@ -179,7 +180,7 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
       });
 
       if (!uploadRes.ok) {
-        throw new Error(`Falha no upload (${uploadRes.status})`);
+        throw new Error(`Falha no upload para R2 (${uploadRes.status})`);
       }
 
       const { error: dbError } = await supabase.from('files').insert({
