@@ -59,7 +59,6 @@ export function generateNewFileName(disciplineName: string, folderName: string, 
 
   // 2. Prefixo da prova (Extrai AD1, AP2, AD 1, ADs, etc)
   let proofPrefix = '';
-  // Regex melhorada: Procura AD ou AP, opcionalmente seguido de espaço, opcionalmente seguido de número ou 'S'
   const proofMatch = folderName.match(/(AD|AP)\s?([1-3]|S)?/i);
   if (proofMatch) {
     const type = proofMatch[1].toUpperCase();
