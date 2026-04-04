@@ -63,7 +63,6 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
     const toastId = toast.loading('Iniciando download completo da disciplina...');
 
     try {
-      // 1. Buscar todos os arquivos de todas as pastas desta disciplina
       const folderIds = folders.map(f => f.id);
       const { data: allFiles, error: filesError } = await supabase
         .from('files')
@@ -83,7 +82,6 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
 
       toast.loading(`Baixando ${allFiles.length} arquivos...`, { id: toastId });
 
-      // 2. Baixar cada arquivo e adicionar ao ZIP dentro de sua respectiva pasta
       for (const file of allFiles) {
         try {
           const folder = folders.find(f => f.id === file.folder_id);
@@ -93,7 +91,6 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
           if (!response.ok) throw new Error(`Falha ao baixar ${file.name}`);
           
           const blob = await response.blob();
-          // Adiciona ao ZIP: "Nome da Pasta/Nome do Arquivo"
           zip.folder(folderName)?.file(file.name, blob);
           successCount++;
         } catch (err) {
@@ -196,7 +193,7 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
             ) : (
               <>
                 <Archive className="w-4 h-4" />
-                Baixar Disciplina Completa
+                Baixar Pasta Completa
               </>
             )}
           </button>
