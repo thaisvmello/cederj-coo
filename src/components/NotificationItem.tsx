@@ -39,11 +39,8 @@ export function NotificationItem({ notification, onRead, onSelect }: Notificatio
     if (onSelect) {
       onSelect(notification);
     } else {
-      // Comportamento padrão: marcar como lida e abrir link se houver
+      // Apenas marca como lida, sem abrir links
       markAsRead();
-      if (notification.link) {
-        window.open(notification.link, '_blank');
-      }
     }
   };
 
@@ -81,11 +78,6 @@ export function NotificationItem({ notification, onRead, onSelect }: Notificatio
           <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
             {notification.content}
           </p>
-          {notification.link && (
-            <p className="text-xs text-blue-600 mt-1">
-              Abrir no site
-            </p>
-          )}
         </div>
       </div>
     </div>

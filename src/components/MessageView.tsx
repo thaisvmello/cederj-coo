@@ -42,7 +42,6 @@ export function MessageView({ notification, onClose }: MessageViewProps) {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header da mensagem */}
       <div className="p-4 border-b border-gray-200 flex items-center gap-3">
         <button 
           onClick={onClose}
@@ -56,7 +55,6 @@ export function MessageView({ notification, onClose }: MessageViewProps) {
         </div>
       </div>
 
-      {/* Conteúdo da mensagem */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="flex items-start gap-3 mb-4">
           {getIcon(notification.type)}
@@ -77,20 +75,6 @@ export function MessageView({ notification, onClose }: MessageViewProps) {
                 {notification.content}
               </p>
             </div>
-
-            {notification.link && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                <a 
-                  href={notification.link} 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Abrir no site
-                  <ArrowLeft className="w-4 h-4 rotate-180" />
-                </a>
-              </div>
-            )}
 
             {!isRead && (
               <button
