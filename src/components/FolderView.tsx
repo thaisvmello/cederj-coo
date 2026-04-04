@@ -271,6 +271,8 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
           <div className="lg:col-span-2 space-y-4">
             <FileList 
               folderId={selectedFolder.id} 
+              courseName={course.name}
+              folderName={selectedFolder.name}
               onToggleUpload={() => setShowUpload(!showUpload)}
               isUploadOpen={showUpload}
             />

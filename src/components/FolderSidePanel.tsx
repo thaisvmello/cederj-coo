@@ -40,7 +40,11 @@ export function FolderSidePanel({ folder, course, onClose }: FolderSidePanelProp
             <FileText className="w-4 h-4 text-blue-600" />
             Arquivos Disponíveis
           </div>
-          <FileList folderId={folder.id} />
+          <FileList 
+            folderId={folder.id} 
+            courseName={course.name}
+            folderName={folder.name}
+          />
         </section>
 
         <section className="space-y-4">

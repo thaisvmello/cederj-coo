@@ -13,11 +13,13 @@ import JSZip from 'jszip';
 
 interface FileListProps {
   folderId: string;
+  courseName?: string;
+  folderName?: string;
   onToggleUpload?: () => void;
   isUploadOpen?: boolean;
 }
 
-export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListProps) {
+export function FileList({ folderId, courseName, folderName, onToggleUpload, isUploadOpen }: FileListProps) {
   const [files, setFiles] = useState<FileType[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
@@ -157,7 +159,15 @@ export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListPro
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `arquivos-${folderId}-${Date.now()}.zip`;
+      
+      // Nome do arquivo ZIP: DISCIPLINA_SUBPASTA.zip
+      const zipName = `${courseName || 'ACERVO'}_${folderName || 'ARQUIVOS'}`
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+        
+      a.download = `${zipName}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
