@@ -57,11 +57,14 @@ export function generateNewFileName(disciplineName: string, folderName: string, 
   // 1. Prefixo da disciplina
   const disciplinePrefix = abbreviateDiscipline(disciplineName).toUpperCase() + '_';
 
-  // 2. Prefixo da prova (Extrai AD1, AP2, etc, mesmo que o nome da pasta tenha mais coisas)
+  // 2. Prefixo da prova (Extrai AD1, AP2, AD 1, ADs, etc)
   let proofPrefix = '';
-  const proofMatch = folderName.match(/(AD|AP)[1-3]/i);
+  // Regex melhorada: Procura AD ou AP, opcionalmente seguido de espaço, opcionalmente seguido de número ou 'S'
+  const proofMatch = folderName.match(/(AD|AP)\s?([1-3]|S)?/i);
   if (proofMatch) {
-    proofPrefix = proofMatch[0].toUpperCase() + '_';
+    const type = proofMatch[1].toUpperCase();
+    const suffix = proofMatch[2] ? proofMatch[2].toUpperCase() : '';
+    proofPrefix = type + suffix + '_';
   }
 
   // 3. Extrair ano (procura por 202X ou apenas XX)
@@ -75,12 +78,10 @@ export function generateNewFileName(disciplineName: string, folderName: string, 
 
   // 4. Extrair semestre (procura por .1, .2, _1, _2 ou apenas 1, 2 isolado)
   let semester = '';
-  // Tenta achar algo como 2023.1 ou 2023_2 ou 23-1
   const semesterMatch = nameWithoutExt.match(/(?:202[0-9]|2[0-9])[._-]?([12])\b/);
   if (semesterMatch) {
     semester = semesterMatch[1] + '_';
   } else {
-    // Se não achou colado no ano, procura um 1 ou 2 isolado
     const isolatedSemester = nameWithoutExt.match(/\b([12])\b/);
     if (isolatedSemester) semester = isolatedSemester[1] + '_';
   }
@@ -97,7 +98,7 @@ export function generateNewFileName(disciplineName: string, folderName: string, 
     newName += foundKeywords.join('_').toUpperCase() + '_';
   }
   
-  // Limpeza final: remove underscores duplicados e no final
+  // Limpeza final
   newName = newName.replace(/_+/g, '_').replace(/_$/, '') + extension;
 
   return newName;
