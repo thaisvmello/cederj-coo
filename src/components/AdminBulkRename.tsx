@@ -23,10 +23,16 @@ export function AdminBulkRename() {
       if (!files || !folders || !courses) throw new Error('Erro ao carregar dados do banco');
 
       // 2. Filtrar apenas arquivos que estão em pastas de prova (AD/AP)
-      // Regex mais flexível: \b garante que pegue a palavra AD ou AP isolada
+      // Regex aprimorada: Procura AD ou AP no início ou após espaço, seguido de número, 's' ou fim da string
+      // Ex: "AD1", "ADs", "AD 1", "Pasta AD", "APs 2024"
       const filesToProcess = files.filter(file => {
         const folder = folders.find(f => f.id === file.folder_id);
-        return folder && /\b(AD|AP)\b/i.test(folder.name);
+        if (!folder) return false;
+        
+        const folderName = folder.name.toUpperCase();
+        const isADAP = /(^|\s)(AD|AP)([0-9]|S|\s|$)/i.test(folderName);
+        
+        return isADAP;
       });
 
       if (filesToProcess.length === 0) {
