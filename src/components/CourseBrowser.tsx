@@ -73,10 +73,20 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
     setLoading(false);
   };
 
-  const filteredCourses = courses.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.code && c.code.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const normalizeString = (str: string) => {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  };
+
+  const filteredCourses = courses.filter(c => {
+    const normalizedSearch = normalizeString(searchQuery);
+    const normalizedName = normalizeString(c.name);
+    const normalizedCode = c.code ? normalizeString(c.code) : '';
+    
+    return normalizedName.includes(normalizedSearch) || normalizedCode.includes(normalizedSearch);
+  });
 
   const favoriteCourses = filteredCourses.filter(c => favorites.includes(c.id));
   const otherCourses = filteredCourses.filter(c => !favorites.includes(c.id));
