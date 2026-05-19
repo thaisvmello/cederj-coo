@@ -368,7 +368,7 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
                           <div className="flex items-center gap-2 min-w-0">
                             <FileText className={`w-4 h-4 shrink-0 ${isDuplicate ? 'text-orange-600' : 'text-blue-400'}`} />
                             <span className={`text-sm font-medium truncate block ${isDuplicate ? 'text-orange-700 flex items-center gap-1.5' : 'text-gray-700'}`}>
-                              {isDuplicate && <AlertTriangle className="w-3.5 h-3.5 shrink-0" title="Nome duplicado detectado" />}
+                              {isDuplicate && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
                               {file.name}
                             </span>
                           </div>
