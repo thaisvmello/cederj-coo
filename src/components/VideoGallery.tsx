@@ -46,31 +46,19 @@ export function VideoGallery({ courseId }: { courseId: string }) {
     // YouTube Patterns
     const ytMatch = convertedUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)/);
     if (ytMatch) {
-      // Handle watch?v=ID
       if (convertedUrl.includes('watch?v=')) {
         const id = new URL(convertedUrl).searchParams.get('v');
         return `https://www.youtube.com/embed/${id}`;
       }
-      // Handle youtu.be/ID
       if (convertedUrl.includes('youtu.be/')) {
         const id = convertedUrl.split('/').pop()?.split('?')[0];
         return `https://www.youtube.com/embed/${id}`;
       }
-      // Handle shorts/ID
       if (convertedUrl.includes('/shorts/')) {
         const id = convertedUrl.split('/shorts/')[1].split('?')[0];
         return `https://www.youtube.com/embed/${id}`;
       }
-      // Handle embed/ID (already correct)
-      if (convertedUrl.includes('/embed/')) {
-        return convertedUrl;
-      }
     }
-
-    // ScreenApp or others (Generic check for common patterns)
-    // If it's already an embed link, keep it. If not, we try to detect if it needs conversion.
-    // For now, we support YouTube specifically and keep others as is or suggest embed format.
-    
     return convertedUrl;
   };
 
@@ -85,7 +73,6 @@ export function VideoGallery({ courseId }: { courseId: string }) {
     setSubmitting(true);
     try {
       const embedUrl = convertToEmbedUrl(newUrl);
-
       const { error } = await supabase.from('video_lessons').insert({
         course_id: courseId,
         title: newTitle.trim(),
@@ -101,7 +88,7 @@ export function VideoGallery({ courseId }: { courseId: string }) {
       fetchVideos();
     } catch (error) {
       console.error('Erro ao adicionar vídeo:', error);
-      toast.error('Erro ao salvar vídeo. Verifique o link.');
+      toast.error('Erro ao salvar vídeo.');
     } finally {
       setSubmitting(false);
     }
@@ -137,6 +124,7 @@ export function VideoGallery({ courseId }: { courseId: string }) {
           <Video className="w-4 h-4 text-blue-500" />
           <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">GALERIA DE VIDEOAULAS</h3>
         </div>
+        {/* Botão de adição liberado para todos os usuários logados */}
         <button
           onClick={() => setShowAddModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition shadow-md shadow-blue-100"
@@ -185,10 +173,12 @@ export function VideoGallery({ courseId }: { courseId: string }) {
                   >
                     <ExternalLink className="w-3 h-3" /> Ver Original
                   </a>
+                  {/* Botão de exclusão visível apenas para Admins */}
                   {isAdmin && (
                     <button 
                       onClick={() => handleDeleteVideo(video.id)}
                       className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                      title="Excluir vídeo (Apenas Admin)"
                     >
                       <X className="w-4 h-4" />
                     </button>
