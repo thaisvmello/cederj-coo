@@ -135,7 +135,7 @@ export function VideoGallery({ courseId }: { courseId: string }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Video className="w-4 h-4 text-blue-500" />
-          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Galeria de Videoaulas</h3>
+          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">GALERIA DE VIDEOAULAS</h3>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -188,7 +188,7 @@ export function VideoGallery({ courseId }: { courseId: string }) {
                   {isAdmin && (
                     <button 
                       onClick={() => handleDeleteVideo(video.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                     >
                       <X className="w-4 h-4" />
                     </button>

@@ -264,7 +264,7 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
           >
             <Video className={`w-8 h-8 mb-3 ${showVideos ? 'text-blue-500' : 'text-gray-400'}`} />
             <span className={`text-xs font-bold text-center ${showVideos ? 'text-gray-900' : 'text-gray-600'}`}>
-              Videoaulas
+              VIDEOAULAS
             </span>
           </button>
 
