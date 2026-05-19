@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Trash2, MessageSquare, Loader, RefreshCw, Folder, BookOpen, ExternalLink } from 'lucide-react';
+import { Trash2, MessageSquare, Loader, RefreshCw, BookOpen, ExternalLink } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import type { FolderComment } from '../lib/types';
 import toast from 'react-hot-toast';
@@ -8,7 +8,7 @@ import { AvatarFallback } from './AvatarFallback';
 
 interface ExtendedComment extends FolderComment {
   course_name?: string;
-  course_id?: string;
+  course_id: string;
   folder_name?: string;
 }
 
@@ -38,32 +38,24 @@ export function AdminCommentsManager() {
       }
 
       const userIds = Array.from(new Set(commentsData.map(c => c.user_id)));
-      const folderIds = Array.from(new Set(commentsData.map(c => c.folder_id)));
+      const courseIds = Array.from(new Set(commentsData.map(c => c.course_id)));
 
-      const [{ data: profilesData }, { data: foldersData }] = await Promise.all([
+      const [{ data: profilesData }, { data: coursesData }] = await Promise.all([
         supabase.from('profiles').select('id, first_name, last_name, avatar_url').in('id', userIds),
-        supabase.from('folders').select('id, name, course_id').in('id', folderIds)
+        supabase.from('courses').select('id, name').in('id', courseIds)
       ]);
-
-      const courseIds = Array.from(new Set(foldersData?.map(f => f.course_id) || []));
-      const { data: coursesData } = await supabase
-        .from('courses')
-        .select('id, name')
-        .in('id', courseIds);
 
       const formatted = commentsData.map(comment => {
         const profile = profilesData?.find(p => p.id === comment.user_id);
-        const folder = foldersData?.find(f => f.id === comment.folder_id);
-        const course = coursesData?.find(c => c.id === folder?.course_id);
+        const course = coursesData?.find(c => c.id === comment.course_id);
 
         return {
           ...comment,
           first_name: profile?.first_name || 'Estudante',
           last_name: profile?.last_name || '',
           avatar_url: profile?.avatar_url || null,
-          folder_name: folder?.name || 'Pasta não encontrada',
           course_name: course?.name || 'Disciplina não encontrada',
-          course_id: course?.id
+          course_id: comment.course_id
         };
       });
 
@@ -172,13 +164,6 @@ export function AdminCommentsManager() {
                       <BookOpen className="w-3 h-3 text-blue-500" />
                       <span className="text-[10px] font-bold text-blue-700 uppercase truncate max-w-[150px]">
                         {comment.course_name}
-                      </span>
-                    </div>
-                    <span className="text-gray-300 text-xs">/</span>
-                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md">
-                      <Folder className="w-3 h-3 text-gray-500" />
-                      <span className="text-[10px] font-bold text-gray-600 uppercase truncate max-w-[150px]">
-                        {comment.folder_name}
                       </span>
                     </div>
                   </div>

@@ -10,10 +10,10 @@ import toast from 'react-hot-toast';
 import { AvatarFallback } from './AvatarFallback';
 
 interface FolderCommentsProps {
-  folderId: string;
+  courseId: string;
 }
 
-export function FolderComments({ folderId }: FolderCommentsProps) {
+export function FolderComments({ courseId }: FolderCommentsProps) {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const [comments, setComments] = useState<FolderComment[]>([]);
@@ -24,7 +24,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
 
   useEffect(() => {
     loadComments();
-  }, [folderId]);
+  }, [courseId]);
 
   const loadComments = async () => {
     setLoading(true);
@@ -32,7 +32,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       const { data: commentsData, error: commentsError } = await supabase
         .from('folder_comments')
         .select('*')
-        .eq('folder_id', folderId)
+        .eq('course_id', courseId)
         .order('created_at', { ascending: true });
 
       if (commentsError) throw commentsError;
@@ -75,7 +75,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
     setSubmitting(true);
     try {
       const { error } = await supabase.from('folder_comments').insert({
-        folder_id: folderId,
+        course_id: courseId,
         user_id: user.id,
         content: newComment.trim(),
         parent_id: replyTo?.id || null
@@ -88,7 +88,7 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
       toast.success(replyTo ? 'Resposta enviada!' : 'Comentário enviado!');
     } catch (error) {
       console.error('Erro ao enviar comentário:', error);
-      toast.error('Verifique se a coluna parent_id existe no banco de dados.');
+      toast.error('Erro ao enviar comentário. Tente novamente.');
     } finally {
       setSubmitting(false);
     }
@@ -118,7 +118,6 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
 
   const CommentItem = ({ comment, isReply = false }: { comment: any, isReply?: boolean }) => (
     <div className={`relative ${isReply ? 'ml-10 mt-4' : 'mt-6 first:mt-0'}`}>
-      {/* Linha vertical de conexão para respostas */}
       {isReply && (
         <div className="absolute -left-6 top-0 bottom-4 w-0.5 bg-blue-100 rounded-full" />
       )}
@@ -170,7 +169,6 @@ export function FolderComments({ folderId }: FolderCommentsProps) {
             </div>
           </div>
 
-          {/* Renderização recursiva das respostas */}
           {comment.replies && comment.replies.length > 0 && (
             <div className="space-y-1">
               {comment.replies.map((reply: any) => (

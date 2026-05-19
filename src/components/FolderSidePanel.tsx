@@ -52,7 +52,7 @@ export function FolderSidePanel({ folder, course, onClose }: FolderSidePanelProp
             <MessageSquare className="w-4 h-4 text-blue-600" />
             Discussão e Dicas
           </div>
-          <FolderComments folderId={folder.id} />
+          <FolderComments courseId={course.id} />
         </section>
       </div>
     </div>

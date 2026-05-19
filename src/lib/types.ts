@@ -38,15 +38,17 @@ export interface User {
 
 export interface FolderComment {
   id: string;
-  folder_id: string;
+  folder_id?: string; // Agora opcional
+  course_id: string;   // Novo campo obrigatório
   user_id: string;
-  parent_id: string | null; // Adicionado para respostas
+  parent_id: string | null;
   content: string;
   created_at: string;
   first_name?: string;
   last_name?: string;
   avatar_url?: string | null;
   folder_name?: string;
+  course_name?: string;
 }
 
 export interface FileAction {

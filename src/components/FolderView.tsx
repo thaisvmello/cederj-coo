@@ -278,7 +278,7 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
             />
           </div>
           <div className="space-y-4">
-            <FolderComments folderId={selectedFolder.id} />
+            <FolderComments courseId={course.id} />
           </div>
         </div>
       )}
