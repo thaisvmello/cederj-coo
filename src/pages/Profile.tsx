@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 
 export function Profile() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [loading, setLoading] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');

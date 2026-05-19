@@ -1,7 +1,5 @@
-"use client";
-
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home, Settings } from 'lucide-react';
+import { LogOut, Calculator, Shield, Home, Settings, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,7 +28,7 @@ export function Header({
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" onClick={onGoHome} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
             <img
-              src="/favicon.png"
+              src="/57002beae21c30a2d583825b8ea17010.png"
               alt="Logo Acervo Acadêmico"
               className="h-14 w-auto object-contain"
             />

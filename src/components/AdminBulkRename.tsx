@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { RefreshCw, Play, CheckCircle, AlertCircle, FileText } from 'lucide-react';
+import { RefreshCw, Play, CheckCircle, AlertCircle, Loader, FileText } from 'lucide-react';
 import { generateNewFileName } from '../lib/utils';
 import toast from 'react-hot-toast';
 
