@@ -38,8 +38,8 @@ export interface User {
 
 export interface FolderComment {
   id: string;
-  folder_id?: string; // Agora opcional
-  course_id: string;   // Novo campo obrigatório
+  folder_id?: string;
+  course_id: string;
   user_id: string;
   parent_id: string | null;
   content: string;
@@ -49,6 +49,14 @@ export interface FolderComment {
   avatar_url?: string | null;
   folder_name?: string;
   course_name?: string;
+}
+
+export interface VideoLesson {
+  id: string;
+  course_id: string;
+  title: string;
+  url: string;
+  created_at: string;
 }
 
 export interface FileAction {
@@ -123,7 +131,6 @@ export interface AuthProviderState {
   error: AuthError | null;
 }
 
-/* New type for folder request handling */
 export interface FolderRequest {
   id: string;
   course_id: string;

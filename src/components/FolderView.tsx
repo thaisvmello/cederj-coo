@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronLeft, Folder, ChevronRight, FolderPlus, Pencil, Archive, Loader } from 'lucide-react';
+import { ChevronLeft, Folder, ChevronRight, FolderPlus, Pencil, Archive, Loader, Video } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { FileList } from './FileList';
 import { FileUploadWithValidation } from './FileUploadWithValidation';
 import { FolderRequestModal } from './FolderRequestModal';
 import { FolderComments } from './FolderComments';
+import { VideoGallery } from './VideoGallery';
 import { useAdmin } from '../hooks/useAdmin';
 import { EditCourseModal } from './EditCourseModal';
 import { EditFolderModal } from './EditFolderModal';
@@ -22,6 +23,7 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
   const [course, setCourse] = useState<Course>(initialCourse);
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<FolderType | null>(null);
+  const [showVideos, setShowVideos] = useState(false);
   const [loading, setLoading] = useState(true);
   const [zipping, setZipping] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -46,11 +48,21 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
     } else {
       const folderList = data || [];
       setFolders(folderList);
-      if (folderList.length > 0 && !selectedFolder) {
+      if (folderList.length > 0 && !selectedFolder && !showVideos) {
         setSelectedFolder(folderList[0]);
       }
     }
     setLoading(false);
+  };
+
+  const handleSelectFolder = (folder: FolderType) => {
+    setShowVideos(false);
+    setSelectedFolder(folder);
+  };
+
+  const handleSelectVideos = () => {
+    setSelectedFolder(null);
+    setShowVideos(true);
   };
 
   const handleDownloadFullCourse = async () => {
@@ -209,11 +221,11 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
 
       <div className="space-y-4">
         <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pastas de Materiais</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-4">
           {folders.map((folder) => (
             <div key={folder.id} className="relative group">
               <button
-                onClick={() => setSelectedFolder(folder)}
+                onClick={() => handleSelectFolder(folder)}
                 className={`w-full flex flex-col items-center justify-center p-6 rounded-xl border transition-all ${
                   selectedFolder?.id === folder.id
                     ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
@@ -240,7 +252,23 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
               )}
             </div>
           ))}
-          {folders.length === 0 && (
+          
+          {/* Aba Videoaulas */}
+          <button
+            onClick={handleSelectVideos}
+            className={`flex flex-col items-center justify-center p-6 rounded-xl border transition-all ${
+              showVideos
+                ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
+                : 'bg-white border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <Video className={`w-8 h-8 mb-3 ${showVideos ? 'text-blue-500' : 'text-gray-400'}`} />
+            <span className={`text-xs font-bold text-center ${showVideos ? 'text-gray-900' : 'text-gray-600'}`}>
+              Videoaulas
+            </span>
+          </button>
+
+          {folders.length === 0 && !showVideos && (
             <div className="col-span-full py-8 text-center border-2 border-dashed border-gray-200 rounded-xl">
               <p className="text-sm text-gray-400">Nenhuma pasta criada ainda.</p>
               <button
@@ -266,9 +294,11 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
         />
       )}
 
-      {selectedFolder && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          {showVideos ? (
+            <VideoGallery courseId={course.id} />
+          ) : selectedFolder ? (
             <FileList 
               folderId={selectedFolder.id} 
               courseName={course.name}
@@ -276,12 +306,12 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
               onToggleUpload={() => setShowUpload(!showUpload)}
               isUploadOpen={showUpload}
             />
-          </div>
-          <div className="space-y-4">
-            <FolderComments courseId={course.id} />
-          </div>
+          ) : null}
         </div>
-      )}
+        <div className="space-y-4">
+          <FolderComments courseId={course.id} />
+        </div>
+      </div>
 
       {showRequestModal && (
         <FolderRequestModal 
