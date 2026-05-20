@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronLeft, Folder, ChevronRight, FolderPlus, Pencil, Archive, Loader, Video } from 'lucide-react';
+import { ChevronLeft, Folder, ChevronRight, FolderPlus, Pencil, Archive, Loader, Video, Link as LinkIcon } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { FileList } from './FileList';
 import { FileUploadWithValidation } from './FileUploadWithValidation';
 import { FolderRequestModal } from './FolderRequestModal';
 import { FolderComments } from './FolderComments';
 import { VideoGallery } from './VideoGallery';
+import { ExternalLinksList } from './ExternalLinksList';
 import { useAdmin } from '../hooks/useAdmin';
 import { EditCourseModal } from './EditCourseModal';
 import { EditFolderModal } from './EditFolderModal';
@@ -295,17 +296,22 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-8">
           {showVideos ? (
             <VideoGallery courseId={course.id} />
           ) : selectedFolder ? (
-            <FileList 
-              folderId={selectedFolder.id} 
-              courseName={course.name}
-              folderName={selectedFolder.name}
-              onToggleUpload={() => setShowUpload(!showUpload)}
-              isUploadOpen={showUpload}
-            />
+            <>
+              <FileList 
+                folderId={selectedFolder.id} 
+                courseName={course.name}
+                folderName={selectedFolder.name}
+                onToggleUpload={() => setShowUpload(!showUpload)}
+                isUploadOpen={showUpload}
+              />
+              <div className="pt-4">
+                <ExternalLinksList courseId={course.id} folderId={selectedFolder.id} />
+              </div>
+            </>
           ) : null}
         </div>
         <div className="space-y-4">

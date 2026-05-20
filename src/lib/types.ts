@@ -28,6 +28,17 @@ export interface File {
   created_at: string;
 }
 
+export interface ExternalLink {
+  id: string;
+  course_id: string;
+  folder_id: string | null;
+  title: string;
+  url: string;
+  description: string | null;
+  created_at: string;
+  uploaded_by: string;
+}
+
 export interface User {
   id: string;
   email: string;
