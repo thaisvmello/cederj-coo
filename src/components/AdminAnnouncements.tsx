@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Trash2, Loader, Plus, X, User } from 'lucide-react';
 
@@ -17,6 +17,7 @@ export const AdminAnnouncements = () => {
   const fetchAnnouncements = async () => {
     setLoading(true);
     try {
+      // Buscar todos os anúncios (não mais agrupados, pois cada anúncio é único)
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -33,24 +34,6 @@ export const AdminAnnouncements = () => {
     }
   };
 
-  const groupedAnnouncements = useMemo(() => {
-    const groups: Record<string, any> = {};
-    announcements.forEach(a => {
-      const key = `${a.title}-${a.content}`;
-      if (!groups[key]) {
-        groups[key] = {
-          ...a,
-          recipientCount: 1,
-          readCount: a.is_read ? 1 : 0
-        };
-      } else {
-        groups[key].recipientCount++;
-        if (a.is_read) groups[key].readCount++;
-      }
-    });
-    return Object.values(groups);
-  }, [announcements]);
-
   const sendAnnouncement = async () => {
     if (!title.trim() || !content.trim()) {
       toast.error('Preencha título e conteúdo.');
@@ -58,12 +41,20 @@ export const AdminAnnouncements = () => {
     }
     setLoading(true);
     try {
+      // Buscar todos os usuários ativos (com profile)
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id');
 
       if (profilesError) throw profilesError;
 
+      if (!profiles || profiles.length === 0) {
+        toast.error('Nenhum usuário encontrado para enviar o anúncio.');
+        setLoading(false);
+        return;
+      }
+
+      // Criar UM registro de notificação por usuário
       const notifications = (profiles || []).map((p: any) => ({
         user_id: p.id,
         title: title.trim(),
@@ -75,7 +66,7 @@ export const AdminAnnouncements = () => {
       const { error: insertError } = await supabase.from('notifications').insert(notifications);
       if (insertError) throw insertError;
 
-      toast.success('Anúncio enviado para todos os usuários!');
+      toast.success(`Anúncio enviado para ${profiles.length} usuário(s)!`);
       setTitle('');
       setContent('');
       setShowCreate(false);
@@ -89,7 +80,7 @@ export const AdminAnnouncements = () => {
   };
 
   const handleDelete = async (announcement: any) => {
-    if (!confirm(`Tem certeza que deseja excluir o anúncio "${announcement.title}" para TODOS os usuários?`)) return;
+    if (!confirm(`Tem certeza que deseja excluir este anúncio para TODOS os usuários?`)) return;
 
     setLoading(true);
     try {
@@ -207,49 +198,63 @@ export const AdminAnnouncements = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {loading && groupedAnnouncements.length === 0 ? (
+            {loading && announcements.length === 0 ? (
               <tr>
                 <td colSpan={4} className="p-12 text-center">
                   <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
                   <p className="text-xs text-gray-400 font-bold uppercase">Carregando...</p>
                 </td>
               </tr>
-            ) : groupedAnnouncements.length === 0 ? (
+            ) : announcements.length === 0 ? (
               <tr>
                 <td colSpan={4} className="p-12 text-center text-gray-500">
                   Nenhum anúncio enviado ainda.
                 </td>
               </tr>
             ) : (
-              groupedAnnouncements.map((a, idx) => (
-                <tr key={idx} className="hover:bg-gray-50/50 transition group">
-                  <td className="p-4">
-                    <p className="font-bold text-gray-900 text-sm">{a.title}</p>
-                    <p className="text-xs text-gray-500 line-clamp-1">{a.content}</p>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                      <User className="w-3.5 h-3.5 text-gray-400" />
-                      <span>{a.recipientCount} usuários</span>
-                      <span className="text-gray-300">·</span>
-                      <span className="text-emerald-600">{a.readCount} lidos</span>
-                    </div>
-                  </td>
-                  <td className="p-4 text-xs text-gray-400">
-                    {new Date(a.created_at).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() => handleDelete(a)}
-                      disabled={loading}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
-                      title="Excluir para todos"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))
+              // Agrupar anúncios repetidos com mesmo título e conteúdo
+              (() => {
+                const groups = announcements.reduce((acc: any, a: any) => {
+                  const key = `${a.title}|${a.content}`;
+                  if (!acc[key]) {
+                    acc[key] = { ...a, count: 1, readCount: a.is_read ? 1 : 0 };
+                  } else {
+                    acc[key].count++;
+                    if (a.is_read) acc[key].readCount++;
+                  }
+                  return acc;
+                }, {});
+
+                return Object.values(groups).map((a: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-gray-50/50 transition group">
+                    <td className="p-4">
+                      <p className="font-bold text-gray-900 text-sm">{a.title}</p>
+                      <p className="text-xs text-gray-500 line-clamp-1">{a.content}</p>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                        <User className="w-3.5 h-3.5 text-gray-400" />
+                        <span>{a.count} usuários</span>
+                        <span className="text-gray-300">·</span>
+                        <span className="text-emerald-600">{a.readCount} lidos</span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-xs text-gray-400">
+                      {new Date(a.created_at).toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => handleDelete(a)}
+                        disabled={loading}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                        title="Excluir para todos"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ));
+              })()
             )}
           </tbody>
         </table>
