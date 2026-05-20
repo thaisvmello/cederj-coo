@@ -61,4 +61,6 @@ declare module 'lucide-react' {
   export const Bell: Icon;
   export const Image: Icon;
   export const Video: Icon;
+  export const Link: Icon;
+  export const Globe: Icon;
 }

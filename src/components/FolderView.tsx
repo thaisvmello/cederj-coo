@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronLeft, Folder, ChevronRight, FolderPlus, Pencil, Archive, Loader, Video, Link as LinkIcon } from 'lucide-react';
+import { ChevronLeft, Folder, ChevronRight, FolderPlus, Pencil, Archive, Loader, Video } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { FileList } from './FileList';
 import { FileUploadWithValidation } from './FileUploadWithValidation';
