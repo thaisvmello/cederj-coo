@@ -24,6 +24,7 @@ interface PendingFile {
   uploaded: boolean;
   isDuplicate: boolean;
   isImage: boolean;
+  warning?: string;
   error?: string;
 }
 
@@ -50,21 +51,15 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
     Array.from(files).forEach(file => {
       const hasADAP = adapRegex.test(file.name);
       const isImage = file.type.startsWith('image/');
+      let warning = '';
 
+      // Em vez de bloquear com toast.error e return, definimos um aviso
       if (isADAPFolder && !hasADAP) {
-        toast.error(
-          `O arquivo "${file.name}" não parece ser uma prova (AD ou AP). Materiais de estudo devem ser colocados na pasta 'MATERIAIS'.`,
-          { duration: 6000 }
-        );
-        return;
+        warning = "⚠️ Notei que esse arquivo não tem nome de AP/AD. Por favor, garanta que está subindo o arquivo na pasta correta. Se for um resumo, coloque na aba MATERIAIS.";
       }
 
       if (isMaterialsFolder && hasADAP) {
-        toast.error(
-          `A pasta 'MATERIAIS' é para resumos e livros. Provas (AD ou AP) devem ser enviadas para suas respectivas pastas.`,
-          { duration: 6000 }
-        );
-        return;
+        warning = "⚠️ Este arquivo parece ser uma prova (AD/AP). A pasta 'MATERIAIS' é recomendada para resumos e livros.";
       }
 
       let suggestedName = formatFileName(disciplineName, file.name);
@@ -79,7 +74,8 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
         uploading: false,
         uploaded: false,
         isDuplicate: false,
-        isImage
+        isImage,
+        warning
       });
     });
 
@@ -318,7 +314,7 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
             {pendingFiles.map((file) => ( 
               <div 
                 key={file.id}
-                className={`p-3 rounded-lg border flex items-center justify-between ${
+                className={`p-3 rounded-lg border flex flex-col gap-2 ${
                   file.error
                     ? 'bg-red-50 border-red-200' 
                     : file.uploaded
@@ -328,57 +324,71 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
                     : 'bg-gray-50 border-gray-100'
                 }`}  
               >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {file.isImage ? (
-                    <ImageIcon className="w-4 h-4 shrink-0 text-purple-500" />
-                  ) : (
-                    <FileText className={`w-4 h-4 shrink-0 ${file.error ? 'text-red-400' : file.uploaded ? 'text-green-500' : file.isDuplicate ? 'text-amber-500' : 'text-blue-500'}`} />
-                  )}
-                  <div className="min-w-0">
-                    {!file.uploaded && !file.uploading ? (
-                      <div className="flex flex-col">
-                        <input
-                          type="text"
-                          value={file.name}
-                          onChange={(e) => {
-                            setPendingFiles(prev =>
-                              prev.map(f => 
-                                f.id === file.id 
-                                  ? { ...f, name: e.target.value } 
-                                  : f
-                              )
-                            );
-                          }}
-                          className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                          autoFocus
-                        />
-                        {file.isImage && (
-                          <span className="text-[9px] text-purple-600 font-bold uppercase mt-0.5">
-                            ✨ Será convertido para PDF automaticamente
-                          </span>
-                        )}
-                      </div>
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {file.isImage ? (
+                      <ImageIcon className="w-4 h-4 shrink-0 text-purple-500" />
                     ) : (
-                      <span className="text-sm font-medium text-gray-900 truncate block">{file.name}</span>
+                      <FileText className={`w-4 h-4 shrink-0 ${file.error ? 'text-red-400' : file.uploaded ? 'text-green-500' : file.isDuplicate ? 'text-amber-500' : 'text-blue-500'}`} />
                     )}
-                    {file.isDuplicate && (
-                      <span className="text-[10px] text-amber-600 font-medium">Arquivo duplicado</span>
-                    )}
-                    {file.error && (
-                      <span className="text-[10px] text-red-600 font-medium">{file.error}</span>
+                    <div className="min-w-0 flex-1">
+                      {!file.uploaded && !file.uploading ? (
+                        <div className="flex flex-col">
+                          <input
+                            type="text"
+                            value={file.name}
+                            onChange={(e) => {
+                              setPendingFiles(prev =>
+                                prev.map(f => 
+                                  f.id === file.id 
+                                    ? { ...f, name: e.target.value } 
+                                    : f
+                                )
+                              );
+                            }}
+                            className="w-full px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            autoFocus
+                          />
+                          {file.isImage && (
+                            <span className="text-[9px] text-purple-600 font-bold uppercase mt-0.5">
+                              ✨ Será convertido para PDF automaticamente
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm font-medium text-gray-900 truncate block">{file.name}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    {file.uploading && <Loader className="w-4 h-4 text-blue-500 animate-spin" />}
+                    {file.uploaded && <span className="text-xs text-green-600 font-medium">✓ Enviado</span>}
+                    {!file.uploaded && !file.uploading && (
+                      <button
+                        onClick={() => removeFile(file.id)}
+                        className="p-1 text-gray-400 hover:text-red-500 transition"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {file.uploading && <Loader className="w-4 h-4 text-blue-500 animate-spin" />}
-                  {file.uploaded && <span className="text-xs text-green-600 font-medium">✓ Enviado</span>}
-                  {!file.uploaded && !file.uploading && (
-                    <button
-                      onClick={() => removeFile(file.id)}
-                      className="p-1 text-gray-400 hover:text-red-500 transition"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+
+                {/* Alertas e Avisos */}
+                <div className="space-y-1">
+                  {file.warning && !file.uploaded && (
+                    <div className="flex items-start gap-1.5 px-2 py-1.5 bg-white/50 rounded border border-amber-100">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-amber-800 leading-tight font-medium">
+                        {file.warning}
+                      </p>
+                    </div>
+                  )}
+                  {file.isDuplicate && (
+                    <span className="text-[10px] text-amber-600 font-medium px-2">Arquivo duplicado</span>
+                  )}
+                  {file.error && (
+                    <span className="text-[10px] text-red-600 font-medium px-2">{file.error}</span>
                   )}
                 </div>
               </div>
