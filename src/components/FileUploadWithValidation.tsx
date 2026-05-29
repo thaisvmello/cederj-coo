@@ -49,11 +49,19 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
     const adapRegex = /\b(AD|AP)([0-9]|_|\s|$)/i;
 
     Array.from(files).forEach(file => {
+      // Bloquear arquivos de vídeo e áudio
+      if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
+        toast.error(
+          `O arquivo "${file.name}" não é permitido. Para vídeos, utilize a aba de Videoaulas ou Links Externos para compartilhar o link direto.`,
+          { duration: 6000 }
+        );
+        return;
+      }
+
       const hasADAP = adapRegex.test(file.name);
       const isImage = file.type.startsWith('image/');
       let warning = '';
 
-      // Em vez de bloquear com toast.error e return, definimos um aviso
       if (isADAPFolder && !hasADAP) {
         warning = "⚠️ Notei que esse arquivo não tem nome de AP/AD. Por favor, garanta que está subindo o arquivo na pasta correta. Se for um resumo, coloque na aba MATERIAIS.";
       }
