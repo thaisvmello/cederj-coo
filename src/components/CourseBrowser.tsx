@@ -49,7 +49,11 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
 
   const loadData = async () => {
     setLoading(true);
-    const { data: coursesData } = await supabase.from('courses').select('*').order('name');
+    const { data: coursesData } = await supabase
+      .from('courses')
+      .select('*')
+      .order('name');
+      
     if (coursesData) setCourses(coursesData);
 
     if (user) {
@@ -58,8 +62,8 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
     }
 
     // Update to get total count accurately
-    const { count } = await supabase.from('files').select('folder_id', { count: 'exact', head: true });
-    setTotalFiles(count || 0);
+    const { count: filesCount } = await supabase.from('files').select('folder_id', { count: 'exact', head: true });
+    setTotalFiles(filesCount || 0);
 
     const { data: filesData } = await supabase.from('files').select('folder_id');
     const { data: foldersData } = await supabase.from('folders').select('id, course_id');
