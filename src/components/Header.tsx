@@ -119,7 +119,7 @@ export function Header({
         <div className="bg-[#004157] text-gray-300 border-b border-[#002f3e] px-4 sm:px-6 lg:px-8 py-2 relative z-30">
           <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-visible">
             
-            {/* Dropdown Ferramentas */}
+            {/* Dropdown Utilidades */}
             <div className="relative" ref={toolsRef}>
               <button
                 onClick={() => {
@@ -131,7 +131,7 @@ export function Header({
                 }`}
               >
                 <Wrench className="w-3.5 h-3.5 text-blue-400" />
-                <span>Ferramentas</span>
+                <span>Utilidades</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${toolsOpen ? 'rotate-180' : ''}`} />
               </button>
 
