@@ -216,7 +216,7 @@ export function Header({
                   </a>
 
                   <a
-                    href="https://chat.whatsapp.com/FJ9rXB2NAorEpSk1gSgaxP?mode=ac_t"
+                    href="https://chat.whatsapp.com/Gajv4wrR5V72GLsJZMhNry"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setWhatsappOpen(false)}
