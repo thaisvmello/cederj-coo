@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Mail, Lock, Eye, EyeOff, Chrome, ArrowLeft, CheckCircle, HelpCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { LoginTutorialModal } from './LoginTutorialModal';
 
 export function Auth() {
   const { signIn, signUp, signInWithGoogle, resetPassword, updatePassword, isRecoveryMode } = useAuth();
@@ -12,6 +12,7 @@ export function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [showLoginTutorial, setShowLoginTutorial] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -210,14 +211,15 @@ export function Auth() {
           </div>
         </div>
 
-        {/* Link tutorial primeiro acesso */}
-        <Link
-          to="/tutorial"
-          className="flex items-center justify-center gap-2 p-2.5 bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold transition-all shadow-sm group text-center"
+        {/* Botão de Tutorial específico da página de Login */}
+        <button
+          type="button"
+          onClick={() => setShowLoginTutorial(true)}
+          className="w-full flex items-center justify-center gap-2 p-2.5 bg-blue-50/90 hover:bg-blue-100/90 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold transition-all shadow-sm group"
         >
           <HelpCircle className="w-4 h-4 text-blue-600 shrink-0 group-hover:scale-110 transition-transform" />
-          <span>Primeiro acesso ou dúvidas? Veja o tutorial aqui</span>
-        </Link>
+          <span>Primeiro acesso ou dúvidas no login? Veja o tutorial aqui</span>
+        </button>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -353,6 +355,16 @@ export function Auth() {
           </p>
         </div>
       </div>
+
+      {/* Modal Didático de Tutorial de Login */}
+      <LoginTutorialModal
+        isOpen={showLoginTutorial}
+        onClose={() => setShowLoginTutorial(false)}
+        onSelectCreateAccount={() => {
+          setIsSignUp(true);
+          setShowLoginTutorial(false);
+        }}
+      />
     </div>
   );
 }
