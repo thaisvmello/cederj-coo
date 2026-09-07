@@ -149,7 +149,7 @@ export function Header({
                   </button>
 
                   <a
-                    href="https://cecierj.edu.br/consorcio-cederj/calendario-academico/"
+                    href="/calendario-academico.pdf"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setToolsOpen(false)}
@@ -163,7 +163,7 @@ export function Header({
                   </a>
 
                   <a
-                    href="https://cecierj.edu.br/consorcio-cederj/estudando-no-cederj/calendario-de-provas/"
+                    href="/calendario-de-provas.pdf"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setToolsOpen(false)}
@@ -216,7 +216,7 @@ export function Header({
                   </a>
 
                   <a
-                    href="https://chat.whatsapp.com/Gajv4wrR5V72GLsJZMhNry"
+                    href="https://chat.whatsapp.com/FJ9rXB2NAorEpSk1gSgaxP?mode=ac_t"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setWhatsappOpen(false)}
