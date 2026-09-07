@@ -27,6 +27,7 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
   const [selectedFile, setSelectedFile] = useState<FileType | null>(null);
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [zipping, setZipping] = useState(false);
   
@@ -58,7 +59,7 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
       .from('files')
       .select('*')
       .eq('folder_id', folderId)
-      .order('name', { ascending: true }); // Alterado para ordenar por nome
+      .order('name', { ascending: true });
 
     if (error) {
       console.error('Error loading files:', error);
@@ -227,24 +228,58 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
   };
 
   const handleRename = async (fileId: string) => {
-    if (!isAdmin || !editingName.trim()) return;
+    if (!user) {
+      toast.error('Você precisa estar logado para renomear arquivos');
+      return;
+    }
+
+    if (!editingName.trim()) {
+      toast.error('O nome do arquivo não pode estar em branco');
+      return;
+    }
+
+    setIsRenaming(true);
 
     try {
+      // 1. Tentar atualização direta no Supabase
       const { error } = await supabase
         .from('files')
         .update({ name: editingName.trim() })
         .eq('id', fileId);
 
-      if (error) throw error;
+      if (error) {
+        // 2. Se RLS restringir atualização direta, utilizar Edge Function com service role
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Sessão expirada. Faça login novamente.');
+
+        const res = await fetch('https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/rename-file', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            fileId,
+            newName: editingName.trim()
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Erro ao renomear arquivo');
+        }
+      }
 
       setFiles(prev => prev.map(f => 
         f.id === fileId ? { ...f, name: editingName.trim() } : f
       ));
-      toast.success('Arquivo renomeado com sucesso');
+      toast.success('Arquivo renomeado com sucesso!');
       cancelRename();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao renomear arquivo:', error);
-      toast.error('Erro ao renomear arquivo');
+      toast.error(error.message || 'Erro ao renomear arquivo');
+    } finally {
+      setIsRenaming(false);
     }
   };
 
@@ -354,15 +389,30 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
                               type="text"
                               value={editingName}
                               onChange={(e) => setEditingName(e.target.value)}
-                              className="px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              disabled={isRenaming}
+                              className="px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full max-w-md"
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') handleRename(file.id);
                                 if (e.key === 'Escape') cancelRename();
                               }}
                             />
-                            <button onClick={() => handleRename(file.id)} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check className="w-4 h-4" /></button>
-                            <button onClick={cancelRename} className="p-1 text-gray-400 hover:bg-gray-100 rounded"><X className="w-4 h-4" /></button>
+                            <button 
+                              onClick={() => handleRename(file.id)} 
+                              disabled={isRenaming}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
+                              title="Salvar novo nome"
+                            >
+                              {isRenaming ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                            </button>
+                            <button 
+                              onClick={cancelRename} 
+                              disabled={isRenaming}
+                              className="p-1 text-gray-400 hover:bg-gray-100 rounded disabled:opacity-50"
+                              title="Cancelar"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 min-w-0">
@@ -396,18 +446,33 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
                             <Download className="w-4 h-4" />
                           </button>
                           
+                          {/* Botão de Renomear disponível diretamente para todos os usuários */}
+                          <button 
+                            onClick={() => startRename(file)} 
+                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition" 
+                            title="Renomear arquivo"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+
+                          {/* Exclusão direta apenas para admin, solicitação para os demais */}
                           {isAdmin ? (
-                            <>
-                              <button onClick={() => startRename(file)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition" title="Renomear"><Pencil className="w-4 h-4" /></button>
-                              <button onClick={() => handleDeleteFile(file.id)} disabled={deletingId === file.id} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50" title="Excluir">
-                                {deletingId === file.id ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                              </button>
-                            </>
+                            <button 
+                              onClick={() => handleDeleteFile(file.id)} 
+                              disabled={deletingId === file.id} 
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50" 
+                              title="Excluir arquivo"
+                            >
+                              {deletingId === file.id ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            </button>
                           ) : (
-                            <>
-                              <button onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'rename' })} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Solicitar renomeação"><Pencil className="w-4 h-4" /></button>
-                              <button onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' })} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Solicitar exclusão"><Trash2 className="w-4 h-4" /></button>
-                            </>
+                            <button 
+                              onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' })} 
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" 
+                              title="Solicitar exclusão"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           )}
                         </div>
                       </td>
