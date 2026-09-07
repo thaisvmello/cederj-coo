@@ -26,7 +26,7 @@ function AppContent() {
       />
       <Route path="/admin" element={user ? <AdminPanel /> : <Navigate to="/" />} />
       <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" />} />
-      <Route path="/tutorial" element={user ? <Tutorial /> : <Navigate to="/" />} />
+      <Route path="/tutorial" element={<Tutorial />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

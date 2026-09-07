@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, Lock, Eye, EyeOff, Chrome, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Chrome, ArrowLeft, CheckCircle, HelpCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 export function Auth() {
@@ -195,18 +196,28 @@ export function Auth() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
+      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md space-y-6">
+        <div className="text-center">
           <img 
             src="/acervo-login.png" 
             alt="Acervo Acadêmico" 
-            className="h-40 mx-auto mb-4 object-contain" 
+            className="h-36 mx-auto mb-3 object-contain" 
           />
           <div className="space-y-1">
-            <h2 className="text-gray-800 font-bold text-l3">Faça seu login para começar a colaborar com nosso acervo :) Bons estudos!
+            <h2 className="text-gray-800 font-bold text-sm leading-relaxed">
+              Faça seu login para começar a colaborar com nosso acervo :) Bons estudos!
             </h2>
           </div>
         </div>
+
+        {/* Link tutorial primeiro acesso */}
+        <Link
+          to="/tutorial"
+          className="flex items-center justify-center gap-2 p-2.5 bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold transition-all shadow-sm group text-center"
+        >
+          <HelpCircle className="w-4 h-4 text-blue-600 shrink-0 group-hover:scale-110 transition-transform" />
+          <span>Primeiro acesso ou dúvidas? Veja o tutorial aqui</span>
+        </Link>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -309,7 +320,7 @@ export function Auth() {
           </button>
         </form>
 
-        <div className="mt-6">
+        <div>
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300"></div>
@@ -330,7 +341,7 @@ export function Auth() {
           </button>
         </div>
 
-        <div className="mt-6 text-center">
+        <div className="text-center pt-2 border-t border-gray-100">
           <p className="text-gray-600 text-sm">
             {isSignUp ? 'Já tem uma conta?' : 'Não tem uma conta?'}{' '}
             <button
