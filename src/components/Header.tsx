@@ -20,6 +20,7 @@ export function Header({
   const location = useLocation();
   const isAdminPage = location.pathname === '/admin';
   const isProfilePage = location.pathname === '/profile';
+  const isTutorialPage = location.pathname === '/tutorial';
   const { user, signOut } = useAuth();
 
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -90,7 +91,7 @@ export function Header({
               </Link>
             )}
 
-            {!isAdminPage && !isProfilePage && showHomeButton && onGoHome && (
+            {!isAdminPage && !isProfilePage && !isTutorialPage && showHomeButton && onGoHome && (
               <button
                 onClick={onGoHome}
                 className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
@@ -119,7 +120,7 @@ export function Header({
         <div className="bg-[#004157] text-gray-300 border-b border-[#002f3e] px-4 sm:px-6 lg:px-8 py-2 relative z-30">
           <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-visible">
             
-            {/* Dropdown Utilidades */}
+            {/* Dropdown Ferramentas */}
             <div className="relative" ref={toolsRef}>
               <button
                 onClick={() => {
@@ -131,7 +132,7 @@ export function Header({
                 }`}
               >
                 <Wrench className="w-3.5 h-3.5 text-blue-400" />
-                <span>Utilidades</span>
+                <span>Ferramentas</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${toolsOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -235,15 +236,13 @@ export function Header({
             <span className="text-gray-600">|</span>
 
             {/* Link Tutorial */}
-            <a
-              href="https://drive.google.com/file/d/1X2_example_tutorial/view"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/tutorial"
               className="flex items-center gap-1.5 hover:text-white transition-colors py-1 text-amber-300 hover:text-amber-200"
             >
               <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
               <span>Tutorial: como usar o acervo</span>
-            </a>
+            </Link>
 
           </div>
         </div>

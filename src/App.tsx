@@ -3,6 +3,7 @@ import { Auth } from './components/Auth';
 import { Dashboard } from './components/Dashboard';
 import { AdminPanel } from './pages/AdminPanel';
 import { Profile } from './pages/Profile';
+import { Tutorial } from './pages/Tutorial';
 import { Toaster } from 'react-hot-toast';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
@@ -25,6 +26,7 @@ function AppContent() {
       />
       <Route path="/admin" element={user ? <AdminPanel /> : <Navigate to="/" />} />
       <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" />} />
+      <Route path="/tutorial" element={user ? <Tutorial /> : <Navigate to="/" />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
