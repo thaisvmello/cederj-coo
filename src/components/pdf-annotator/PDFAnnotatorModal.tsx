@@ -4,891 +4,128 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import * as fabric from 'fabric';
 import { 
-  X, 
-  ChevronLeft, 
-  ChevronRight, 
-  Pencil, 
-  MousePointer, 
-  Type, 
-  Image as ImageIcon, 
-  Trash2, 
-  Save, 
-  Download, 
-  Loader, 
-  ZoomIn, 
-  ZoomOut,
-  Palette,
-  Undo2,
-  Check,
-  Highlighter,
-  MessageSquare
+  X, ChevronLeft, ChevronRight, Pencil, MousePointer, Type, 
+  Image as ImageIcon, Trash2, Save, Download, Loader, 
+  ZoomIn, ZoomOut, Palette, Undo2, Check, Highlighter, MessageSquare
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-// Configuração do Worker do PDF.js via CDN compatível
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PDFAnnotatorModalProps {
   fileUrl: string;
   fileName: string;
-  documentId?: string; // ID para persistência no Supabase
+  documentId?: string;
   onClose: () => void;
 }
 
 type ToolMode = 'select' | 'draw' | 'highlighter' | 'text' | 'pin';
 
-interface ActivePinData {
-  id: string;
-  commentText: string;
-  screenX: number;
-  screenY: number;
-  fabricObject: fabric.FabricObject;
-}
-
 export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PDFAnnotatorModalProps) {
   const { user } = useAuth();
-
-  // Estados de navegação do documento
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [pageWidth, setPageWidth] = useState<number>(800);
   const [pageHeight, setPageHeight] = useState<number>(1100);
   const [scale, setScale] = useState<number>(1.1);
-  const [loadingPdf, setLoadingPdf] = useState<boolean>(true);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-
-  // Estados das ferramentas
   const [activeTool, setActiveTool] = useState<ToolMode>('select');
-  const [brushColor, setBrushColor] = useState<string>('#ef4444');
-  const [brushWidth, setBrushWidth] = useState<number>(3);
-  const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
-
-  // Estado do Popover de Comentário (Pin)
-  const [activePin, setActivePin] = useState<ActivePinData | null>(null);
-
-  // Cache das anotações em JSON indexado por número de página
-  const annotationsRef = useRef<Record<number, any>>({});
+  const [activePin, setActivePin] = useState<fabric.FabricObject | null>(null);
   
-  // Referências de DOM e Fabric
-  const containerRef = useRef<HTMLDivElement>(null);
-  const canvasElementRef = useRef<HTMLCanvasElement>(null);
+  const annotationsRef = useRef<Record<number, any>>({});
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const activeToolRef = useRef<ToolMode>('select');
-  activeToolRef.current = activeTool;
+  const canvasElementRef = useRef<HTMLCanvasElement>(null);
 
-  // Paleta de cores rápida para marcação do lápis
-  const colorOptions = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#000000'];
-
-  /* -------------------------------------------------------------
-     1. CARREGAR ANOTAÇÕES DO BANCO DE DADOS (SUPABASE)
-  ------------------------------------------------------------- */
-  useEffect(() => {
-    if (!user || !documentId) return;
-
-    const fetchSavedAnnotations = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('document_annotations')
-          .select('annotations')
-          .eq('document_id', documentId)
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.warn('[PDFAnnotator] Erro ao buscar anotações:', error);
-          return;
-        }
-
-        if (data?.annotations && typeof data.annotations === 'object') {
-          annotationsRef.current = data.annotations;
-          if (fabricCanvasRef.current && annotationsRef.current[pageNumber]) {
-            handleLoadAnnotations(annotationsRef.current[pageNumber]);
-          }
-        }
-      } catch (err) {
-        console.error('[PDFAnnotator] Falha ao recuperar anotações:', err);
-      }
-    };
-
-    fetchSavedAnnotations();
-  }, [documentId, user]);
-
-  /* -------------------------------------------------------------
-     2. PERSISTÊNCIA: EXPORTAR E IMPORTAR JSON DO CANVAS COM PROPRIEDADES CUSTOMIZADAS
-  ------------------------------------------------------------- */
-  const snapshotCurrentPage = useCallback(() => {
-    if (!fabricCanvasRef.current) return;
-    // Cast para any para permitir exportar propriedades customizadas sem conflito de tipagem
-    const json = (fabricCanvasRef.current as any).toJSON(['id', 'isPin', 'commentText', 'globalCompositeOperation']);
-    if (json.objects && json.objects.length > 0) {
-      annotationsRef.current[pageNumber] = json;
-    } else {
-      delete annotationsRef.current[pageNumber];
-    }
-  }, [pageNumber]);
-
-  const handleLoadAnnotations = useCallback((jsonPayload: any) => {
-    if (!fabricCanvasRef.current || !jsonPayload) return;
-    fabricCanvasRef.current.loadFromJSON(jsonPayload, () => {
-      fabricCanvasRef.current?.renderAll();
-    });
-  }, []);
-
-  const handleSaveAnnotations = async () => {
-    snapshotCurrentPage();
-
-    if (!user) {
-      toast.success('Anotações salvas localmente nesta sessão!');
-      return;
-    }
-
-    if (!documentId) {
-      toast.success('Anotações gravadas!');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const payload = annotationsRef.current;
-      const { error } = await supabase
-        .from('document_annotations')
-        .upsert(
-          {
-            user_id: user.id,
-            document_id: documentId,
-            annotations: payload,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,document_id' }
-        );
-
-      if (error) throw error;
-      toast.success('Anotações salvas na nuvem com sucesso!');
-    } catch (err: any) {
-      console.error('[PDFAnnotator] Erro ao salvar anotações:', err);
-      toast.error('Erro ao salvar no banco. Suas anotações continuam nesta sessão.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  /* -------------------------------------------------------------
-     3. HELPER: CRIAÇÃO DE PIN DE COMENTÁRIO
-  ------------------------------------------------------------- */
-  const createCommentPin = (x: number, y: number, initialText: string = '') => {
-    const pinId = `pin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-
-    // Círculo base do pino
-    const circle = new fabric.Circle({
-      radius: 14,
-      fill: '#f59e0b', // Amarelo/âmbar chamativo
-      stroke: '#ffffff',
-      strokeWidth: 2,
-      originX: 'center',
-      originY: 'center',
-      shadow: new fabric.Shadow({
-        color: 'rgba(0,0,0,0.3)',
-        blur: 6,
-        offsetX: 1,
-        offsetY: 2,
-      }),
-    });
-
-    // Ícone de texto centralizado (Balão de fala estilizado)
-    const icon = new fabric.IText('💬', {
-      fontSize: 14,
-      originX: 'center',
-      originY: 'center',
-      selectable: false,
-      evented: false,
-    });
-
-    const pinGroup = new fabric.Group([circle, icon], {
-      left: x,
-      top: y,
-      originX: 'center',
-      originY: 'center',
-      hasControls: false,
-      lockScalingX: true,
-      lockScalingY: true,
-      lockRotation: true,
-      hoverCursor: 'pointer',
-    });
-
-    // Propriedades customizadas para persistência e lógica de seleção
-    (pinGroup as any).id = pinId;
-    (pinGroup as any).isPin = true;
-    (pinGroup as any).commentText = initialText;
-
-    return pinGroup;
-  };
-
-  /* -------------------------------------------------------------
-     4. INICIALIZAÇÃO E SINCRONIZAÇÃO DO FABRIC.JS
-  ------------------------------------------------------------- */
   useEffect(() => {
     if (!canvasElementRef.current) return;
-
-    if (fabricCanvasRef.current) {
-      fabricCanvasRef.current.dispose();
-      fabricCanvasRef.current = null;
-    }
-
-    const actualWidth = pageWidth * scale;
-    const actualHeight = pageHeight * scale;
-
     const canvas = new fabric.Canvas(canvasElementRef.current, {
-      width: actualWidth,
-      height: actualHeight,
-      selection: true,
-      preserveObjectStacking: true,
-      fireRightClick: false,
-      stopContextMenu: true,
+      width: pageWidth * scale,
+      height: pageHeight * scale,
     });
-
     fabricCanvasRef.current = canvas;
 
-    // 4.1 Carregar anotações salvas na página atual
-    if (annotationsRef.current[pageNumber]) {
-      canvas.loadFromJSON(annotationsRef.current[pageNumber], () => {
-        canvas.renderAll();
-      });
-    }
-
-    // 4.2 Evento ao criar traços de desenho (Marca-texto e Lápis)
-    canvas.on('path:created', (e: any) => {
-      const path = e.path;
-      if (!path) return;
-      
-      if (activeToolRef.current === 'highlighter') {
-        // Marca-texto: modo multiply para não ocultar o texto preto do PDF
-        path.set({
-          globalCompositeOperation: 'multiply',
-          stroke: 'rgba(255, 235, 59, 0.45)',
-          strokeWidth: 22,
-          strokeLineCap: 'square',
-          strokeLineJoin: 'round',
-        });
-        canvas.renderAll();
-      }
-    });
-
-    // 4.3 Clique no canvas para adicionar PIN
-    canvas.on('mouse:down', (options: any) => {
-      if (activeToolRef.current === 'pin') {
-        // Obter coordenadas relativas ao canvas
-        const pointer = canvas.getScenePoint(options.e);
-        const pin = createCommentPin(pointer.x, pointer.y, '');
+    canvas.on('mouse:down', (e) => {
+      // Lógica de Pin: Criar ou Selecionar
+      if (activeTool === 'pin' && !e.target) {
+        const pointer = canvas.getScenePoint(e.e);
+        const pin = createPin(pointer.x, pointer.y);
         canvas.add(pin);
-        canvas.setActiveObject(pin);
-        canvas.renderAll();
-
-        // Mudar de volta para modo de seleção e abrir popover imediatamente
-        handleSelectTool('select');
-        
-        // Coordenadas absolutas na tela
-        const clientX = options.e.clientX || (options.e.touches && options.e.touches[0]?.clientX) || 200;
-        const clientY = options.e.clientY || (options.e.touches && options.e.touches[0]?.clientY) || 200;
-        
-        setActivePin({
-          id: (pin as any).id,
-          commentText: '',
-          screenX: Math.min(window.innerWidth - 300, Math.max(20, clientX)),
-          screenY: Math.min(window.innerHeight - 250, Math.max(80, clientY + 15)),
-          fabricObject: pin,
-        });
-      }
-    });
-
-    // 4.4 Listener ao selecionar um objeto do canvas (verifica se é PIN)
-    const handleObjectSelected = (e: any) => {
-      const selected = e.selected?.[0] || canvas.getActiveObject();
-      if (selected && (selected as any).isPin) {
-        // Calcular posição do pino na viewport
-        const bound = (selected as any).getBoundingRect();
-        const canvasRect = canvasElementRef.current?.getBoundingClientRect();
-        
-        let screenX = 200;
-        let screenY = 200;
-        
-        if (canvasRect) {
-          screenX = canvasRect.left + bound.left + bound.width / 2;
-          screenY = canvasRect.top + bound.top + bound.height + 10;
-        }
-
-        setActivePin({
-          id: (selected as any).id,
-          commentText: (selected as any).commentText || '',
-          screenX: Math.min(window.innerWidth - 320, Math.max(16, screenX - 140)),
-          screenY: Math.min(window.innerHeight - 260, Math.max(80, screenY)),
-          fabricObject: selected,
-        });
+        setActivePin(pin);
+      } else if (e.target && (e.target as any).isPin) {
+        setActivePin(e.target);
       } else {
         setActivePin(null);
       }
-    };
-
-    canvas.on('selection:created', handleObjectSelected);
-    canvas.on('selection:updated', handleObjectSelected);
-    canvas.on('selection:cleared', () => {
-      setActivePin(null);
     });
 
-    // Aplicar a ferramenta inicial
-    applyToolMode(activeTool, canvas);
+    return () => { canvas.dispose(); };
+  }, [pageNumber, scale]);
 
-    return () => {
-      canvas.dispose();
-      fabricCanvasRef.current = null;
-    };
-  }, [pageNumber, pageWidth, pageHeight, scale]);
+  const createPin = (x: number, y: number) => {
+    const circle = new fabric.Circle({ radius: 14, fill: '#f59e0b', stroke: '#fff', strokeWidth: 2 });
+    const icon = new fabric.IText('💬', { fontSize: 14, top: 7, left: 7, selectable: false });
+    const pin = new fabric.Group([circle, icon], { left: x, top: y, originX: 'center', originY: 'center' });
+    (pin as any).isPin = true;
+    (pin as any).commentText = '';
+    return pin;
+  };
 
-  /* -------------------------------------------------------------
-     5. CONTROLE DE MODOS DE FERRAMENTA
-  ------------------------------------------------------------- */
-  const applyToolMode = (tool: ToolMode, canvasInstance?: fabric.Canvas | null) => {
-    const canvas = canvasInstance || fabricCanvasRef.current;
+  const applyTool = (tool: ToolMode) => {
+    const canvas = fabricCanvasRef.current;
     if (!canvas) return;
-
-    if (tool === 'draw') {
-      canvas.isDrawingMode = true;
-      if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.color = brushColor;
-        canvas.freeDrawingBrush.width = brushWidth;
-      }
-      canvas.selection = false;
-    } else if (tool === 'highlighter') {
-      canvas.isDrawingMode = true;
-      if (canvas.freeDrawingBrush) {
-        // Amarelo translúcido para marca-texto
-        canvas.freeDrawingBrush.color = 'rgba(255, 235, 59, 0.45)';
-        canvas.freeDrawingBrush.width = 22;
-      }
-      canvas.selection = false;
-    } else {
-      canvas.isDrawingMode = false;
-      canvas.selection = tool === 'select';
+    
+    canvas.isDrawingMode = tool === 'draw' || tool === 'highlighter';
+    if (canvas.isDrawingMode) {
+      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+      canvas.freeDrawingBrush.width = tool === 'highlighter' ? 20 : 3;
+      canvas.freeDrawingBrush.color = tool === 'highlighter' ? 'rgba(255, 255, 0, 0.4)' : '#ef4444';
+      if (tool === 'highlighter') (canvas.freeDrawingBrush as any).globalCompositeOperation = 'multiply';
     }
-  };
-
-  const handleSelectTool = (tool: ToolMode) => {
     setActiveTool(tool);
-    applyToolMode(tool);
-    if (tool !== 'select') {
-      setActivePin(null);
-    }
-    if (tool === 'pin') {
-      toast('Clique em qualquer local do documento para inserir o comentário.', {
-        icon: '💬',
-        duration: 3000,
-      });
-    }
   };
 
-  const handleChangeColor = (color: string) => {
-    setBrushColor(color);
-    if (activeTool === 'draw' && fabricCanvasRef.current?.freeDrawingBrush) {
-      fabricCanvasRef.current.freeDrawingBrush.color = color;
-    }
-    const activeObj = fabricCanvasRef.current?.getActiveObject();
-    if (activeObj && activeObj.type === 'i-text') {
-      (activeObj as fabric.IText).set('fill', color);
-      fabricCanvasRef.current?.renderAll();
-    }
-    setShowColorPicker(false);
-  };
-
-  const handleChangeBrushWidth = (width: number) => {
-    setBrushWidth(width);
-    if (activeTool === 'draw' && fabricCanvasRef.current?.freeDrawingBrush) {
-      fabricCanvasRef.current.freeDrawingBrush.width = width;
-    }
-  };
-
-  const handleAddText = () => {
-    if (!fabricCanvasRef.current) return;
-    handleSelectTool('select');
-
-    const text = new fabric.IText('Digite aqui sua nota...', {
-      left: 100,
-      top: 100,
-      fontFamily: 'sans-serif',
-      fontSize: 18,
-      fill: brushColor,
-      backgroundColor: 'rgba(255, 255, 255, 0.85)',
-      padding: 6,
-      cornerColor: '#3b82f6',
-      cornerSize: 8,
-      transparentCorners: false,
+  const saveToSupabase = async () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !user || !documentId) return;
+    const json = canvas.toJSON(['id', 'isPin', 'commentText', 'globalCompositeOperation']);
+    annotationsRef.current[pageNumber] = json;
+    
+    await supabase.from('document_annotations').upsert({
+      user_id: user.id, document_id: documentId, annotations: annotationsRef.current
     });
-
-    fabricCanvasRef.current.add(text);
-    fabricCanvasRef.current.setActiveObject(text);
-    text.enterEditing();
-    fabricCanvasRef.current.renderAll();
+    toast.success('Salvo!');
   };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !fabricCanvasRef.current) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const dataUrl = event.target?.result as string;
-      try {
-        const img = await fabric.Image.fromURL(dataUrl);
-        const maxWidth = (pageWidth * scale) * 0.4;
-        if (img.width && img.width > maxWidth) {
-          img.scaleToWidth(maxWidth);
-        }
-        img.set({
-          left: 100,
-          top: 150,
-          cornerColor: '#3b82f6',
-          cornerSize: 8,
-          transparentCorners: false,
-        });
-
-        fabricCanvasRef.current?.add(img);
-        fabricCanvasRef.current?.setActiveObject(img);
-        fabricCanvasRef.current?.renderAll();
-        handleSelectTool('select');
-      } catch (err) {
-        console.error('[PDFAnnotator] Erro ao carregar imagem:', err);
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const handleClearPage = () => {
-    if (!fabricCanvasRef.current) return;
-    if (confirm('Deseja limpar todas as anotações desta página?')) {
-      fabricCanvasRef.current.clear();
-      delete annotationsRef.current[pageNumber];
-      fabricCanvasRef.current.renderAll();
-      setActivePin(null);
-      toast.success('Página limpa!');
-    }
-  };
-
-  const handleUndo = () => {
-    if (!fabricCanvasRef.current) return;
-    const objects = fabricCanvasRef.current.getObjects();
-    if (objects.length > 0) {
-      const last = objects[objects.length - 1];
-      if (activePin?.fabricObject === last) {
-        setActivePin(null);
-      }
-      fabricCanvasRef.current.remove(last);
-      fabricCanvasRef.current.renderAll();
-    }
-  };
-
-  /* -------------------------------------------------------------
-     6. GERENCIADOR DO POPOVER DE PIN (SALVAR TEXTO / EXCLUIR PIN)
-  ------------------------------------------------------------- */
-  const handleUpdatePinText = (text: string) => {
-    if (!activePin) return;
-    (activePin.fabricObject as any).commentText = text;
-    setActivePin(prev => prev ? { ...prev, commentText: text } : null);
-  };
-
-  const handleDeletePin = () => {
-    if (!activePin || !fabricCanvasRef.current) return;
-    fabricCanvasRef.current.remove(activePin.fabricObject);
-    fabricCanvasRef.current.renderAll();
-    setActivePin(null);
-    toast.success('Comentário removido');
-  };
-
-  /* -------------------------------------------------------------
-     7. PAGINAÇÃO E CARREGAMENTO DO PDF
-  ------------------------------------------------------------- */
-  const changePage = (offset: number) => {
-    const newPage = pageNumber + offset;
-    if (newPage >= 1 && newPage <= numPages) {
-      snapshotCurrentPage();
-      setActivePin(null);
-      setPageNumber(newPage);
-    }
-  };
-
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setLoadingPdf(false);
-  };
-
-  const onPageLoadSuccess = (page: any) => {
-    const viewport = page.getViewport({ scale: 1.0 });
-    setPageWidth(viewport.width);
-    setPageHeight(viewport.height);
-  };
-
-  const handleDownloadOriginal = () => {
-    const a = document.createElement('a');
-    a.href = fileUrl;
-    a.download = fileName;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  const actualWidth = pageWidth * scale;
-  const actualHeight = pageHeight * scale;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex flex-col h-screen overflow-hidden select-none animate-in fade-in duration-200">
-      
-      {/* =========================================================
-          BARRA SUPERIOR (HEADER)
-      ========================================================= */}
-      <header className="h-16 bg-[#002f3e] text-white px-4 flex items-center justify-between border-b border-white/10 shrink-0 z-20">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2 bg-blue-500/20 text-blue-400 rounded-xl shrink-0">
-            <Pencil className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="font-bold text-sm sm:text-base text-white truncate max-w-[200px] sm:max-w-md">
-              {fileName}
-            </h2>
-            <p className="text-[10px] text-gray-400 hidden sm:block">
-              Leitura e anotações em tempo real
-            </p>
-          </div>
-        </div>
-
-        {/* Paginador Central Superior */}
-        <div className="flex items-center gap-1.5 bg-black/30 border border-white/10 px-2 py-1 rounded-xl">
-          <button
-            onClick={() => changePage(-1)}
-            disabled={pageNumber <= 1}
-            className="p-1 text-gray-300 hover:text-white disabled:opacity-30 transition rounded-lg hover:bg-white/10"
-            title="Página Anterior"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-bold text-gray-200 px-1 min-w-[50px] text-center">
-            {pageNumber} / {numPages || '–'}
-          </span>
-          <button
-            onClick={() => changePage(1)}
-            disabled={pageNumber >= numPages}
-            className="p-1 text-gray-300 hover:text-white disabled:opacity-30 transition rounded-lg hover:bg-white/10"
-            title="Próxima Página"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Ações da Direita */}
-        <div className="flex items-center gap-2">
-          {/* Zoom */}
-          <div className="hidden md:flex items-center gap-1 bg-black/30 border border-white/10 rounded-xl p-0.5">
-            <button
-              onClick={() => setScale(s => Math.max(0.7, s - 0.15))}
-              className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition"
-              title="Diminuir Zoom"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <span className="text-[11px] font-bold text-gray-300 px-1">
-              {Math.round(scale * 100)}%
-            </span>
-            <button
-              onClick={() => setScale(s => Math.min(2.0, s + 0.15))}
-              className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition"
-              title="Aumentar Zoom"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-          </div>
-
-          <button
-            onClick={handleSaveAnnotations}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
-            title="Salvar Anotações"
-          >
-            {isSaving ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">Salvar</span>
-          </button>
-
-          <button
-            onClick={handleDownloadOriginal}
-            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition"
-            title="Baixar Arquivo"
-          >
-            <Download className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => {
-              snapshotCurrentPage();
-              onClose();
-            }}
-            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition ml-1"
-            title="Fechar Visualizador"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+      <header className="h-16 bg-gray-900 text-white flex items-center justify-between px-4">
+        <button onClick={onClose}><X /></button>
+        <button onClick={saveToSupabase} className="bg-emerald-600 px-4 py-2 rounded-lg">Salvar</button>
       </header>
 
-      {/* =========================================================
-          CORPO PRINCIPAL (ÁREA DE LEITURA & CANVAS)
-      ========================================================= */}
-      <div 
-        ref={containerRef}
-        className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start custom-scrollbar bg-neutral-900/60"
-      >
-        {loadingPdf && (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-white/70">
-            <Loader className="w-8 h-8 animate-spin text-blue-400" />
-            <p className="text-xs font-semibold uppercase tracking-wider">Carregando PDF...</p>
-          </div>
-        )}
-
-        <div 
-          className="relative shadow-2xl rounded-sm overflow-hidden bg-white my-auto"
-          style={{ 
-            width: actualWidth || 'auto', 
-            height: actualHeight || 'auto',
-            display: loadingPdf ? 'none' : 'block'
-          }}
-        >
-          {/* CAMADA 1: Renderização visual do PDF via react-pdf */}
-          <div className="absolute inset-0 z-0 pointer-events-none">
-            <Document
-              file={fileUrl}
-              onLoadSuccess={onDocumentLoadSuccess}
-              loading=""
-              className="flex justify-center"
-            >
-              <Page
-                pageNumber={pageNumber}
-                scale={scale}
-                renderAnnotationLayer={false}
-                renderTextLayer={false}
-                onLoadSuccess={onPageLoadSuccess}
-              />
-            </Document>
-          </div>
-
-          {/* CAMADA 2: Canvas transparente via Fabric.js */}
-          <div className="absolute inset-0 z-10 touch-none">
-            <canvas ref={canvasElementRef} />
-          </div>
-        </div>
+      <div className="flex-1 overflow-auto flex justify-center items-center">
+        <canvas ref={canvasElementRef} />
       </div>
 
-      {/* =========================================================
-          POPOVER FLUTUANTE DE COMENTÁRIO (PIN SELECIONADO)
-      ========================================================= */}
       {activePin && (
-        <div 
-          className="fixed z-[120] w-72 bg-white rounded-2xl shadow-2xl border border-gray-200 p-3.5 space-y-2.5 animate-in zoom-in-95 duration-150"
-          style={{ 
-            left: `${activePin.screenX}px`, 
-            top: `${activePin.screenY}px` 
-          }}
-        >
-          <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800">
-              <span className="p-1 bg-amber-100 text-amber-700 rounded-md">💬</span>
-              <span>Nota de Comentário</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handleDeletePin}
-                className="p-1 text-gray-400 hover:text-red-500 rounded-lg transition"
-                title="Excluir este comentário"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setActivePin(null)}
-                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg transition"
-                title="Fechar nota"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
+        <div className="fixed top-20 right-4 w-72 bg-white p-4 rounded-xl shadow-2xl">
           <textarea
-            autoFocus
-            rows={4}
-            value={activePin.commentText}
-            onChange={(e) => handleUpdatePinText(e.target.value)}
-            placeholder="Escreva sua dúvida, anotação ou resolução aqui..."
-            className="w-full text-xs text-gray-800 p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none resize-none leading-relaxed"
+            className="w-full h-32 border p-2"
+            value={(activePin as any).commentText}
+            onChange={(e) => {
+              (activePin as any).commentText = e.target.value;
+              fabricCanvasRef.current?.renderAll();
+            }}
           />
-
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-[10px] text-gray-400">Salvo automaticamente</span>
-            <button
-              onClick={() => setActivePin(null)}
-              className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-lg transition"
-            >
-              Concluído
-            </button>
-          </div>
         </div>
       )}
 
-      {/* =========================================================
-          BARRA DE FERRAMENTAS FLUTUANTE RESPONSIVA
-      ========================================================= */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-neutral-900/95 backdrop-blur-md text-white border border-white/20 rounded-2xl shadow-2xl px-3 py-2 flex items-center gap-1.5 sm:gap-2 max-w-[96vw] overflow-x-auto">
-        
-        {/* 1. Seletor */}
-        <button
-          onClick={() => handleSelectTool('select')}
-          className={`p-2.5 rounded-xl transition flex items-center justify-center shrink-0 ${
-            activeTool === 'select'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-gray-300 hover:text-white hover:bg-white/10'
-          }`}
-          title="Modo Seleção / Mover"
-        >
-          <MousePointer className="w-4 h-4" />
-        </button>
-
-        {/* 2. Marca-Texto (Highlighter) */}
-        <button
-          onClick={() => handleSelectTool('highlighter')}
-          className={`p-2.5 rounded-xl transition flex items-center justify-center shrink-0 relative ${
-            activeTool === 'highlighter'
-              ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300/40'
-              : 'text-gray-300 hover:text-white hover:bg-white/10'
-          }`}
-          title="Marca-Texto Amarelo (Multiply / Translúcido)"
-        >
-          <Highlighter className="w-4 h-4 text-amber-300" />
-        </button>
-
-        {/* 3. Lápis / Caneta livre */}
-        <button
-          onClick={() => handleSelectTool('draw')}
-          className={`p-2.5 rounded-xl transition flex items-center justify-center shrink-0 relative ${
-            activeTool === 'draw'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-gray-300 hover:text-white hover:bg-white/10'
-          }`}
-          title="Lápis / Caneta Livre"
-        >
-          <Pencil className="w-4 h-4" />
-          <span 
-            className="absolute bottom-1 right-1 w-2 h-2 rounded-full border border-neutral-900"
-            style={{ backgroundColor: brushColor }}
-          />
-        </button>
-
-        {/* 4. Cor e Espessura (Para Caneta e Texto) */}
-        <div className="relative shrink-0">
-          <button
-            onClick={() => setShowColorPicker(!showColorPicker)}
-            className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center"
-            title="Escolher Cor do Lápis"
-          >
-            <Palette className="w-4 h-4" />
-          </button>
-
-          {showColorPicker && (
-            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 bg-neutral-900 border border-white/20 p-3 rounded-2xl shadow-xl flex flex-col gap-3 z-50 animate-in fade-in zoom-in-95">
-              <div className="flex items-center gap-1.5">
-                {colorOptions.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => handleChangeColor(c)}
-                    className="w-6 h-6 rounded-full border-2 transition flex items-center justify-center"
-                    style={{ 
-                      backgroundColor: c, 
-                      borderColor: brushColor === c ? '#ffffff' : 'transparent' 
-                    }}
-                  >
-                    {brushColor === c && <Check className="w-3 h-3 text-white drop-shadow" />}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[10px] text-gray-400 font-bold block">Espessura: {brushWidth}px</span>
-                <input
-                  type="range"
-                  min="1"
-                  max="12"
-                  value={brushWidth}
-                  onChange={(e) => handleChangeBrushWidth(Number(e.target.value))}
-                  className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 5. Inserir Pin de Comentário Oculto */}
-        <button
-          onClick={() => handleSelectTool('pin')}
-          className={`p-2.5 rounded-xl transition flex items-center justify-center shrink-0 relative ${
-            activeTool === 'pin'
-              ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300/40'
-              : 'text-gray-300 hover:text-white hover:bg-white/10'
-          }`}
-          title="Inserir Comentário Oculto (Pin)"
-        >
-          <MessageSquare className="w-4 h-4" />
-        </button>
-
-        {/* 6. Inserir Caixa de Texto */}
-        <button
-          onClick={handleAddText}
-          className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center shrink-0"
-          title="Inserir Caixa de Texto no PDF"
-        >
-          <Type className="w-4 h-4" />
-        </button>
-
-        {/* 7. Inserir Imagem Local */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center shrink-0"
-          title="Inserir Imagem / Selo"
-        >
-          <ImageIcon className="w-4 h-4" />
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleImageUpload}
-        />
-
-        <div className="w-px h-5 bg-white/20 mx-1 shrink-0" />
-
-        {/* Desfazer */}
-        <button
-          onClick={handleUndo}
-          className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center shrink-0"
-          title="Desfazer Última Ação"
-        >
-          <Undo2 className="w-4 h-4" />
-        </button>
-
-        {/* Limpar Página */}
-        <button
-          onClick={handleClearPage}
-          className="p-2.5 text-gray-300 hover:text-red-400 hover:bg-white/10 rounded-xl transition flex items-center justify-center shrink-0"
-          title="Limpar Anotações desta Página"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+      <div className="fixed bottom-4 flex gap-2 bg-neutral-900 p-2 rounded-xl">
+        <button onClick={() => applyTool('select')}><MousePointer /></button>
+        <button onClick={() => applyTool('draw')}><Pencil /></button>
+        <button onClick={() => applyTool('highlighter')}><Highlighter /></button>
+        <button onClick={() => applyTool('pin')}><MessageSquare /></button>
       </div>
     </div>
   );
