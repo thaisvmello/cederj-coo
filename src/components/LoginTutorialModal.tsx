@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { X, Chrome, Mail, Lock, CheckCircle2, UserPlus, KeyRound, ArrowRight, HelpCircle } from 'lucide-react';
+import { useState } from 'react';
+import { X, Chrome, Mail, CheckCircle, UserPlus, KeyRound, ArrowRight, HelpCircle } from 'lucide-react';
 
 interface LoginTutorialModalProps {
   isOpen: boolean;
@@ -38,7 +38,7 @@ export function LoginTutorialModal({ isOpen, onClose, onSelectCreateAccount }: L
           </button>
         </div>
 
-        {/* Abas de Navegação em Grade Responsiva (sem rolagem horizontal) */}
+        {/* Abas de Navegação em Grade Responsiva */}
         <div className="p-3 border-b border-gray-100 bg-gray-50/80">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold">
             <button
@@ -91,9 +91,8 @@ export function LoginTutorialModal({ isOpen, onClose, onSelectCreateAccount }: L
           </div>
         </div>
 
-        {/* Conteúdo Didático com Prints / Ilustrações */}
+        {/* Conteúdo Didático */}
         <div className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1 text-sm text-gray-700 leading-relaxed custom-scrollbar">
-          {/* Aba 1: Google */}
           {activeTab === 'google' && (
             <div className="space-y-6 animate-in fade-in duration-150">
               <div className="bg-blue-50/80 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
@@ -116,7 +115,6 @@ export function LoginTutorialModal({ isOpen, onClose, onSelectCreateAccount }: L
                   </ol>
                 </div>
 
-                {/* Simulação Visual */}
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-3">
                   <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest text-center">Demonstração visual do botão</p>
                   <div className="max-w-xs mx-auto space-y-2">
@@ -133,7 +131,6 @@ export function LoginTutorialModal({ isOpen, onClose, onSelectCreateAccount }: L
             </div>
           )}
 
-          {/* Aba 2: Criar Nova Conta */}
           {activeTab === 'signup' && (
             <div className="space-y-6 animate-in fade-in duration-150">
               <div className="bg-emerald-50/80 border border-emerald-100 rounded-2xl p-4 flex items-start gap-3">
@@ -158,7 +155,6 @@ export function LoginTutorialModal({ isOpen, onClose, onSelectCreateAccount }: L
                   </ol>
                 </div>
 
-                {/* Simulação Visual */}
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-3">
                   <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest text-center">Formulário de Cadastro</p>
                   <div className="max-w-sm mx-auto bg-white border border-gray-200 rounded-xl p-4 space-y-2.5 text-xs shadow-sm">
@@ -177,7 +173,6 @@ export function LoginTutorialModal({ isOpen, onClose, onSelectCreateAccount }: L
             </div>
           )}
 
-          {/* Aba 3: Já Tenho Conta */}
           {activeTab === 'login' && (
             <div className="space-y-6 animate-in fade-in duration-150">
               <div className="bg-indigo-50/80 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3">
@@ -199,12 +194,11 @@ export function LoginTutorialModal({ isOpen, onClose, onSelectCreateAccount }: L
                     <li>Clique no botão azul <strong>"Entrar"</strong>.</li>
                   </ol>
                   <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800 flex items-center gap-2 mt-4">
-                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
                     <span>Sua sessão fica salva no navegador para acesso rápido diário.</span>
                   </div>
                 </div>
 
-                {/* Simulação Visual */}
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-3">
                   <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest text-center">Tela de Entrada</p>
                   <div className="max-w-sm mx-auto bg-white border border-gray-200 rounded-xl p-4 space-y-2.5 text-xs shadow-sm">
@@ -219,7 +213,6 @@ export function LoginTutorialModal({ isOpen, onClose, onSelectCreateAccount }: L
             </div>
           )}
 
-          {/* Aba 4: Esqueci a Senha */}
           {activeTab === 'recovery' && (
             <div className="space-y-6 animate-in fade-in duration-150">
               <div className="bg-amber-50/80 border border-amber-100 rounded-2xl p-4 flex items-start gap-3">
@@ -243,7 +236,6 @@ export function LoginTutorialModal({ isOpen, onClose, onSelectCreateAccount }: L
                   </ol>
                 </div>
 
-                {/* Simulação Visual */}
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-3">
                   <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest text-center">Recuperação de Acesso</p>
                   <div className="max-w-sm mx-auto bg-white border border-gray-200 rounded-xl p-4 space-y-2.5 text-xs shadow-sm">

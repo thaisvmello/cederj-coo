@@ -1,6 +1,5 @@
 "use client";
 
-import React from 'react';
 import type { File } from '../lib/types';
 import { PDFAnnotatorModal } from './pdf-annotator/PDFAnnotatorModal';
 

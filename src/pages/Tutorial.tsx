@@ -1,6 +1,5 @@
 "use client";
 
-import React from 'react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Link } from 'react-router-dom';
@@ -20,10 +19,8 @@ import {
   MessageSquare, 
   Link as LinkIcon, 
   ArrowLeft,
-  CheckCircle2,
+  CheckCircle,
   LogIn,
-  AlertTriangle,
-  FileText,
   Folder
 } from 'lucide-react';
 
@@ -114,7 +111,7 @@ export function Tutorial() {
             <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4 flex flex-col md:flex-row items-center gap-6">
               <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-2 text-blue-900 font-bold text-xs uppercase">
-                  <CheckCircle2 className="w-4 h-4 text-blue-600" /> Passos rápidos:
+                  <CheckCircle className="w-4 h-4 text-blue-600" /> Passos rápidos:
                 </div>
                 <ul className="text-xs text-blue-800 space-y-1.5 list-disc list-inside">
                   <li><strong>Conta Google:</strong> Clique no botão "Google" para login imediato sem precisar criar senha.</li>
@@ -124,7 +121,6 @@ export function Tutorial() {
                 </ul>
               </div>
 
-              {/* Simulação Visual de Login */}
               <div className="w-full md:w-64 bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-2.5 shrink-0 text-xs">
                 <div className="text-center font-bold text-gray-800 pb-1 border-b border-gray-100">Simulação de Tela</div>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 text-gray-400">seu.email@exemplo.com</div>
@@ -137,7 +133,7 @@ export function Tutorial() {
           </div>
         </section>
 
-        {/* 2. Página Inicial: Busca e Visualizações */}
+        {/* 2. Busca */}
         <section id="busca" className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
@@ -154,7 +150,6 @@ export function Tutorial() {
               Na tela inicial do acervo, você tem uma barra de busca em tempo real e pode alternar entre a exibição em <strong>Cards (Grade)</strong> e <strong>Árvore de Pastas (Lista)</strong>.
             </p>
 
-            {/* Simulação Visual da Barra de Busca e Modos */}
             <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/70 space-y-4">
               <div className="flex flex-col sm:flex-row items-center gap-3">
                 <div className="relative flex-1 w-full bg-white border border-gray-300 rounded-xl p-2.5 flex items-center gap-2 shadow-sm text-xs text-gray-500">
@@ -189,7 +184,7 @@ export function Tutorial() {
           </div>
         </section>
 
-        {/* 3. Favoritos & Solicitar Disciplina */}
+        {/* 3. Favoritos */}
         <section id="favoritos" className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-sm">
@@ -202,7 +197,6 @@ export function Tutorial() {
           </div>
 
           <div className="p-6 space-y-6 text-sm text-gray-700 leading-relaxed">
-            {/* Favoritos */}
             <div className="space-y-3">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <Star className="w-4 h-4 text-amber-500 fill-current" /> Como favoritar disciplinas em curso:
@@ -214,7 +208,6 @@ export function Tutorial() {
 
             <hr className="border-gray-100" />
 
-            {/* Solicitar Disciplina */}
             <div id="solicitar-disciplina" className="space-y-3">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <Plus className="w-4 h-4 text-amber-600" /> Como solicitar uma disciplina que não está na lista:
@@ -231,7 +224,7 @@ export function Tutorial() {
           </div>
         </section>
 
-        {/* 4. Navegando nas Disciplinas e Pastas */}
+        {/* 4. Pastas */}
         <section id="pastas" className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
@@ -284,7 +277,7 @@ export function Tutorial() {
           </div>
         </section>
 
-        {/* 5. Enviar, Visualizar e Baixar Arquivos */}
+        {/* 5. Arquivos */}
         <section id="arquivos" className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
@@ -297,7 +290,6 @@ export function Tutorial() {
           </div>
 
           <div className="p-6 space-y-6 text-sm text-gray-700 leading-relaxed">
-            {/* Como Enviar */}
             <div className="space-y-3">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <Upload className="w-4 h-4 text-emerald-600" /> Como enviar novos arquivos:
@@ -310,19 +302,18 @@ export function Tutorial() {
                   <strong>Conversão Automática de Imagem:</strong> Se você anexar fotos (JPG, PNG), a plataforma converte automaticamente em PDF!
                 </li>
                 <li>
-                  <strong>Padrão de Nomenclatura:</strong> O sistema sugere o nome ideal (Ex: <code className="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-gray-800">CONT_BASICA_AP1_2025_1.pdf</code>) para manter tudo padronizado.
+                  <strong>Padrão de Nomenclatura:</strong> O sistema sugere o nome ideal para manter tudo padronizado.
                 </li>
               </ol>
             </div>
 
-            {/* Visualizar e Baixar */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl space-y-2">
                 <div className="flex items-center gap-2 font-bold text-xs text-blue-900">
                   <Eye className="w-4 h-4 text-blue-600" /> Visualizar Arquivo (Olho)
                 </div>
                 <p className="text-xs text-gray-600">
-                  Clique no ícone de olho para abrir o leitor de PDF embutido sem sair da página.
+                  Clique no ícone de olho para abrir o leitor de PDF embutido com suporte a anotações em tempo real.
                 </p>
               </div>
 
@@ -338,7 +329,7 @@ export function Tutorial() {
           </div>
         </section>
 
-        {/* 6. Renomear e Excluir Arquivos */}
+        {/* 6. Renomear */}
         <section id="editar-arquivos" className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-sm">
@@ -373,7 +364,7 @@ export function Tutorial() {
           </div>
         </section>
 
-        {/* 7. Links Externos e Comentários */}
+        {/* 7. Links */}
         <section id="links" className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">

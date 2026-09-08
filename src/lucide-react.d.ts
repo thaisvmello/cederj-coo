@@ -43,6 +43,7 @@ declare module 'lucide-react' {
   export const AlertTriangle: Icon;
   export const AlertCircle: Icon;
   export const CheckCircle: Icon;
+  export const CheckCircle2: Icon;
   export const Clock: Icon;
   export const Archive: Icon;
   export const RefreshCw: Icon;
@@ -50,6 +51,7 @@ declare module 'lucide-react' {
   export const GraduationCap: Icon;
   export const Info: Icon;
   export const ArrowLeft: Icon;
+  export const ArrowRight: Icon;
   export const Settings: Icon;
   export const Reply: Icon;
   export const CornerDownRight: Icon;
@@ -63,4 +65,15 @@ declare module 'lucide-react' {
   export const Video: Icon;
   export const Link: Icon;
   export const Globe: Icon;
+  export const HelpCircle: Icon;
+  export const Wrench: Icon;
+  export const UserPlus: Icon;
+  export const KeyRound: Icon;
+  export const MousePointer: Icon;
+  export const Type: Icon;
+  export const ZoomIn: Icon;
+  export const ZoomOut: Icon;
+  export const Palette: Icon;
+  export const Undo2: Icon;
+  export const LogIn: Icon;
 }

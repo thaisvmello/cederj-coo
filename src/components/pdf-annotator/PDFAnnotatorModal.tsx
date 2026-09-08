@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import * as fabric from 'fabric';
 import { 
@@ -125,7 +125,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     });
   }, []);
 
-  // Salva no Supabase (ou dispara callback externo)
+  // Salva no Supabase
   const handleSaveAnnotations = async () => {
     snapshotCurrentPage();
 
@@ -287,10 +287,11 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     if (!file || !fabricCanvasRef.current) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const dataUrl = event.target?.result as string;
-      fabric.Image.fromURL(dataUrl, (img) => {
-        // Redimensiona proporcionalmente para caber bem no PDF
+      try {
+        // Fabric v6/v7 retorna Promise com a instância fabric.Image
+        const img = await fabric.Image.fromURL(dataUrl);
         const maxWidth = (pageWidth * scale) * 0.4;
         if (img.width && img.width > maxWidth) {
           img.scaleToWidth(maxWidth);
@@ -307,7 +308,9 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         fabricCanvasRef.current?.setActiveObject(img);
         fabricCanvasRef.current?.renderAll();
         handleSelectTool('select');
-      });
+      } catch (err) {
+        console.error('[PDFAnnotator] Erro ao carregar imagem:', err);
+      }
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -371,9 +374,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   return (
     <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex flex-col h-screen overflow-hidden select-none animate-in fade-in duration-200">
       
-      {/* =========================================================
-          BARRA SUPERIOR (HEADER)
-      ========================================================= */}
+      {/* BARRA SUPERIOR (HEADER) */}
       <header className="h-16 bg-[#002f3e] text-white px-4 flex items-center justify-between border-b border-white/10 shrink-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
           <div className="p-2 bg-blue-500/20 text-blue-400 rounded-xl shrink-0">
@@ -466,9 +467,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         </div>
       </header>
 
-      {/* =========================================================
-          CORPO PRINCIPAL (ÁREA DE LEITURA & CANVAS)
-      ========================================================= */}
+      {/* CORPO PRINCIPAL */}
       <div 
         ref={containerRef}
         className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start custom-scrollbar bg-neutral-900/60"
@@ -480,7 +479,6 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           </div>
         )}
 
-        {/* CONTAINER SOBREPOSTO COM AS DUAS CAMADAS */}
         <div 
           className="relative shadow-2xl rounded-sm overflow-hidden bg-white my-auto"
           style={{ 
@@ -489,7 +487,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
             display: loadingPdf ? 'none' : 'block'
           }}
         >
-          {/* CAMADA 1 (FUNDO): Renderização visual via react-pdf */}
+          {/* CAMADA 1: Renderização visual do PDF */}
           <div className="absolute inset-0 z-0 pointer-events-none">
             <Document
               file={fileUrl}
@@ -507,16 +505,14 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
             </Document>
           </div>
 
-          {/* CAMADA 2 (TOPO): Canvas Transparente interativo via Fabric.js */}
+          {/* CAMADA 2: Canvas transparente via Fabric.js */}
           <div className="absolute inset-0 z-10 touch-none">
             <canvas ref={canvasElementRef} />
           </div>
         </div>
       </div>
 
-      {/* =========================================================
-          BARRA DE FERRAMENTAS FLUTUANTE / RESPONSIVA
-      ========================================================= */}
+      {/* BARRA DE FERRAMENTAS FLUTUANTE */}
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-neutral-900/95 backdrop-blur-md text-white border border-white/20 rounded-2xl shadow-2xl px-3 py-2 flex items-center gap-1.5 sm:gap-2 max-w-[95vw] overflow-x-auto">
         
         {/* Seletor */}
@@ -532,7 +528,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           <MousePointer className="w-4 h-4" />
         </button>
 
-        {/* Lápis / Desenho livre */}
+        {/* Lápis */}
         <button
           onClick={() => handleSelectTool('draw')}
           className={`p-2.5 rounded-xl transition flex items-center justify-center relative ${
@@ -577,7 +573,6 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
                 ))}
               </div>
 
-              {/* Slider de espessura */}
               <div className="space-y-1">
                 <span className="text-[10px] text-gray-400 font-bold block">Espessura: {brushWidth}px</span>
                 <input
@@ -593,7 +588,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           )}
         </div>
 
-        {/* Inserir Texto */}
+        {/* Texto */}
         <button
           onClick={handleAddText}
           className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center"
@@ -602,7 +597,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           <Type className="w-4 h-4" />
         </button>
 
-        {/* Inserir Imagem */}
+        {/* Imagem */}
         <button
           onClick={() => fileInputRef.current?.click()}
           className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center"
