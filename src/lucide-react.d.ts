@@ -76,4 +76,6 @@ declare module 'lucide-react' {
   export const Palette: Icon;
   export const Undo2: Icon;
   export const LogIn: Icon;
+  export const Highlighter: Icon;
+  export const Pin: Icon;
 }

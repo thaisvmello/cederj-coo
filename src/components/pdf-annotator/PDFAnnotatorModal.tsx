@@ -19,7 +19,9 @@ import {
   ZoomOut,
   Palette,
   Undo2,
-  Check
+  Check,
+  Highlighter,
+  MessageSquare
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -35,7 +37,15 @@ interface PDFAnnotatorModalProps {
   onClose: () => void;
 }
 
-type ToolMode = 'select' | 'draw' | 'text';
+type ToolMode = 'select' | 'draw' | 'highlighter' | 'text' | 'pin';
+
+interface ActivePinData {
+  id: string;
+  commentText: string;
+  screenX: number;
+  screenY: number;
+  fabricObject: fabric.FabricObject;
+}
 
 export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PDFAnnotatorModalProps) {
   const { user } = useAuth();
@@ -55,6 +65,9 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   const [brushWidth, setBrushWidth] = useState<number>(3);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
 
+  // Estado do Popover de Comentário (Pin)
+  const [activePin, setActivePin] = useState<ActivePinData | null>(null);
+
   // Cache das anotações em JSON indexado por número de página
   const annotationsRef = useRef<Record<number, any>>({});
   
@@ -63,8 +76,10 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   const canvasElementRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeToolRef = useRef<ToolMode>('select');
+  activeToolRef.current = activeTool;
 
-  // Paleta de cores rápida para marcação
+  // Paleta de cores rápida para marcação do lápis
   const colorOptions = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#000000'];
 
   /* -------------------------------------------------------------
@@ -89,7 +104,6 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
 
         if (data?.annotations && typeof data.annotations === 'object') {
           annotationsRef.current = data.annotations;
-          // Se o canvas já estiver pronto na página atual, carregar
           if (fabricCanvasRef.current && annotationsRef.current[pageNumber]) {
             handleLoadAnnotations(annotationsRef.current[pageNumber]);
           }
@@ -103,13 +117,12 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   }, [documentId, user]);
 
   /* -------------------------------------------------------------
-     2. PERSISTÊNCIA: EXPORTAR E IMPORTAR JSON DO CANVAS
+     2. PERSISTÊNCIA: EXPORTAR E IMPORTAR JSON DO CANVAS COM PROPRIEDADES CUSTOMIZADAS
   ------------------------------------------------------------- */
-  // Salva o estado da página atual para o cache local
   const snapshotCurrentPage = useCallback(() => {
     if (!fabricCanvasRef.current) return;
-    const json = fabricCanvasRef.current.toJSON();
-    // Salvar somente se tiver objetos, senão limpa
+    // Crucial: incluir propriedades customizadas dos pins e do marca-texto
+    const json = fabricCanvasRef.current.toJSON(['id', 'isPin', 'commentText', 'globalCompositeOperation']);
     if (json.objects && json.objects.length > 0) {
       annotationsRef.current[pageNumber] = json;
     } else {
@@ -117,7 +130,6 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     }
   }, [pageNumber]);
 
-  // Carrega um payload JSON no Fabric Canvas
   const handleLoadAnnotations = useCallback((jsonPayload: any) => {
     if (!fabricCanvasRef.current || !jsonPayload) return;
     fabricCanvasRef.current.loadFromJSON(jsonPayload, () => {
@@ -125,7 +137,6 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     });
   }, []);
 
-  // Salva no Supabase
   const handleSaveAnnotations = async () => {
     snapshotCurrentPage();
 
@@ -165,12 +176,62 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   };
 
   /* -------------------------------------------------------------
-     3. INICIALIZAÇÃO E SINCRONIZAÇÃO DO FABRIC.JS
+     3. HELPER: CRIAÇÃO DE PIN DE COMENTÁRIO
+  ------------------------------------------------------------- */
+  const createCommentPin = (x: number, y: number, initialText: string = '') => {
+    const pinId = `pin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+    // Círculo base do pino
+    const circle = new fabric.Circle({
+      radius: 14,
+      fill: '#f59e0b', // Amarelo/âmbar chamativo
+      stroke: '#ffffff',
+      strokeWidth: 2,
+      originX: 'center',
+      originY: 'center',
+      shadow: new fabric.Shadow({
+        color: 'rgba(0,0,0,0.3)',
+        blur: 6,
+        offsetX: 1,
+        offsetY: 2,
+      }),
+    });
+
+    // Ícone de texto centralizado (Balão de fala estilizado)
+    const icon = new fabric.IText('💬', {
+      fontSize: 14,
+      originX: 'center',
+      originY: 'center',
+      selectable: false,
+      evented: false,
+    });
+
+    const pinGroup = new fabric.Group([circle, icon], {
+      left: x,
+      top: y,
+      originX: 'center',
+      originY: 'center',
+      hasControls: false,
+      lockScalingX: true,
+      lockScalingY: true,
+      lockRotation: true,
+      hoverCursor: 'pointer',
+    });
+
+    // Propriedades customizadas para persistência e lógica de seleção
+    (pinGroup as any).id = pinId;
+    (pinGroup as any).isPin = true;
+    (pinGroup as any).commentText = initialText;
+
+    return pinGroup;
+  };
+
+  /* -------------------------------------------------------------
+     4. INICIALIZAÇÃO E SINCRONIZAÇÃO DO FABRIC.JS
   ------------------------------------------------------------- */
   useEffect(() => {
     if (!canvasElementRef.current) return;
 
-    // Destruir instância prévia se existir
     if (fabricCanvasRef.current) {
       fabricCanvasRef.current.dispose();
       fabricCanvasRef.current = null;
@@ -179,7 +240,6 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     const actualWidth = pageWidth * scale;
     const actualHeight = pageHeight * scale;
 
-    // Criar o canvas interativo
     const canvas = new fabric.Canvas(canvasElementRef.current, {
       width: actualWidth,
       height: actualHeight,
@@ -191,20 +251,93 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
 
     fabricCanvasRef.current = canvas;
 
-    // Configurar pincel padrão
-    if (canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush.color = brushColor;
-      canvas.freeDrawingBrush.width = brushWidth;
-    }
-
-    // Carregar anotações salvas para a página atual
+    // 4.1 Carregar anotações salvas na página atual
     if (annotationsRef.current[pageNumber]) {
       canvas.loadFromJSON(annotationsRef.current[pageNumber], () => {
         canvas.renderAll();
       });
     }
 
-    // Ajustar ferramenta ativa
+    // 4.2 Evento ao criar traços de desenho (Marca-texto e Lápis)
+    canvas.on('path:created', (e: any) => {
+      const path = e.path;
+      if (!path) return;
+      
+      if (activeToolRef.current === 'highlighter') {
+        // Marca-texto: modo multiply para não ocultar o texto preto do PDF
+        path.set({
+          globalCompositeOperation: 'multiply',
+          stroke: 'rgba(255, 235, 59, 0.45)',
+          strokeWidth: 22,
+          strokeLineCap: 'square',
+          strokeLineJoin: 'round',
+        });
+        canvas.renderAll();
+      }
+    });
+
+    // 4.3 Clique no canvas para adicionar PIN
+    canvas.on('mouse:down', (options: any) => {
+      if (activeToolRef.current === 'pin') {
+        // Obter coordenadas relativas ao canvas
+        const pointer = canvas.getScenePoint(options.e);
+        const pin = createCommentPin(pointer.x, pointer.y, '');
+        canvas.add(pin);
+        canvas.setActiveObject(pin);
+        canvas.renderAll();
+
+        // Mudar de volta para modo de seleção e abrir popover imediatamente
+        handleSelectTool('select');
+        
+        // Coordenadas absolutas na tela
+        const clientX = options.e.clientX || (options.e.touches && options.e.touches[0]?.clientX) || 200;
+        const clientY = options.e.clientY || (options.e.touches && options.e.touches[0]?.clientY) || 200;
+        
+        setActivePin({
+          id: (pin as any).id,
+          commentText: '',
+          screenX: Math.min(window.innerWidth - 300, Math.max(20, clientX)),
+          screenY: Math.min(window.innerHeight - 250, Math.max(80, clientY + 15)),
+          fabricObject: pin,
+        });
+      }
+    });
+
+    // 4.4 Listener ao selecionar um objeto do canvas (verifica se é PIN)
+    const handleObjectSelected = (e: any) => {
+      const selected = e.selected?.[0] || canvas.getActiveObject();
+      if (selected && (selected as any).isPin) {
+        // Calcular posição do pino na viewport
+        const bound = (selected as any).getBoundingRect();
+        const canvasRect = canvasElementRef.current?.getBoundingClientRect();
+        
+        let screenX = 200;
+        let screenY = 200;
+        
+        if (canvasRect) {
+          screenX = canvasRect.left + bound.left + bound.width / 2;
+          screenY = canvasRect.top + bound.top + bound.height + 10;
+        }
+
+        setActivePin({
+          id: (selected as any).id,
+          commentText: (selected as any).commentText || '',
+          screenX: Math.min(window.innerWidth - 320, Math.max(16, screenX - 140)),
+          screenY: Math.min(window.innerHeight - 260, Math.max(80, screenY)),
+          fabricObject: selected,
+        });
+      } else {
+        setActivePin(null);
+      }
+    };
+
+    canvas.on('selection:created', handleObjectSelected);
+    canvas.on('selection:updated', handleObjectSelected);
+    canvas.on('selection:cleared', () => {
+      setActivePin(null);
+    });
+
+    // Aplicar a ferramenta inicial
     applyToolMode(activeTool, canvas);
 
     return () => {
@@ -214,7 +347,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   }, [pageNumber, pageWidth, pageHeight, scale]);
 
   /* -------------------------------------------------------------
-     4. CONTROLE DE FERRAMENTAS (SELETOR, LÁPIS, TEXTO)
+     5. CONTROLE DE MODOS DE FERRAMENTA
   ------------------------------------------------------------- */
   const applyToolMode = (tool: ToolMode, canvasInstance?: fabric.Canvas | null) => {
     const canvas = canvasInstance || fabricCanvasRef.current;
@@ -227,6 +360,14 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         canvas.freeDrawingBrush.width = brushWidth;
       }
       canvas.selection = false;
+    } else if (tool === 'highlighter') {
+      canvas.isDrawingMode = true;
+      if (canvas.freeDrawingBrush) {
+        // Amarelo translúcido para marca-texto
+        canvas.freeDrawingBrush.color = 'rgba(255, 235, 59, 0.45)';
+        canvas.freeDrawingBrush.width = 22;
+      }
+      canvas.selection = false;
     } else {
       canvas.isDrawingMode = false;
       canvas.selection = tool === 'select';
@@ -236,14 +377,22 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   const handleSelectTool = (tool: ToolMode) => {
     setActiveTool(tool);
     applyToolMode(tool);
+    if (tool !== 'select') {
+      setActivePin(null);
+    }
+    if (tool === 'pin') {
+      toast('Clique em qualquer local do documento para inserir o comentário.', {
+        icon: '💬',
+        duration: 3000,
+      });
+    }
   };
 
   const handleChangeColor = (color: string) => {
     setBrushColor(color);
-    if (fabricCanvasRef.current?.freeDrawingBrush) {
+    if (activeTool === 'draw' && fabricCanvasRef.current?.freeDrawingBrush) {
       fabricCanvasRef.current.freeDrawingBrush.color = color;
     }
-    // Se houver texto selecionado, muda a cor do texto também
     const activeObj = fabricCanvasRef.current?.getActiveObject();
     if (activeObj && activeObj.type === 'i-text') {
       (activeObj as fabric.IText).set('fill', color);
@@ -254,7 +403,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
 
   const handleChangeBrushWidth = (width: number) => {
     setBrushWidth(width);
-    if (fabricCanvasRef.current?.freeDrawingBrush) {
+    if (activeTool === 'draw' && fabricCanvasRef.current?.freeDrawingBrush) {
       fabricCanvasRef.current.freeDrawingBrush.width = width;
     }
   };
@@ -290,7 +439,6 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     reader.onload = async (event) => {
       const dataUrl = event.target?.result as string;
       try {
-        // Fabric v6/v7 retorna Promise com a instância fabric.Image
         const img = await fabric.Image.fromURL(dataUrl);
         const maxWidth = (pageWidth * scale) * 0.4;
         if (img.width && img.width > maxWidth) {
@@ -322,6 +470,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
       fabricCanvasRef.current.clear();
       delete annotationsRef.current[pageNumber];
       fabricCanvasRef.current.renderAll();
+      setActivePin(null);
       toast.success('Página limpa!');
     }
   };
@@ -330,18 +479,40 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     if (!fabricCanvasRef.current) return;
     const objects = fabricCanvasRef.current.getObjects();
     if (objects.length > 0) {
-      fabricCanvasRef.current.remove(objects[objects.length - 1]);
+      const last = objects[objects.length - 1];
+      if (activePin?.fabricObject === last) {
+        setActivePin(null);
+      }
+      fabricCanvasRef.current.remove(last);
       fabricCanvasRef.current.renderAll();
     }
   };
 
   /* -------------------------------------------------------------
-     5. PAGINAÇÃO E DIMENSIONAMENTO DO PDF
+     6. GERENCIADOR DO POPOVER DE PIN (SALVAR TEXTO / EXCLUIR PIN)
+  ------------------------------------------------------------- */
+  const handleUpdatePinText = (text: string) => {
+    if (!activePin) return;
+    (activePin.fabricObject as any).commentText = text;
+    setActivePin(prev => prev ? { ...prev, commentText: text } : null);
+  };
+
+  const handleDeletePin = () => {
+    if (!activePin || !fabricCanvasRef.current) return;
+    fabricCanvasRef.current.remove(activePin.fabricObject);
+    fabricCanvasRef.current.renderAll();
+    setActivePin(null);
+    toast.success('Comentário removido');
+  };
+
+  /* -------------------------------------------------------------
+     7. PAGINAÇÃO E CARREGAMENTO DO PDF
   ------------------------------------------------------------- */
   const changePage = (offset: number) => {
     const newPage = pageNumber + offset;
     if (newPage >= 1 && newPage <= numPages) {
       snapshotCurrentPage();
+      setActivePin(null);
       setPageNumber(newPage);
     }
   };
@@ -357,7 +528,6 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     setPageHeight(viewport.height);
   };
 
-  // Download do arquivo PDF original
   const handleDownloadOriginal = () => {
     const a = document.createElement('a');
     a.href = fileUrl;
@@ -374,14 +544,16 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   return (
     <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex flex-col h-screen overflow-hidden select-none animate-in fade-in duration-200">
       
-      {/* BARRA SUPERIOR (HEADER) */}
+      {/* =========================================================
+          BARRA SUPERIOR (HEADER)
+      ========================================================= */}
       <header className="h-16 bg-[#002f3e] text-white px-4 flex items-center justify-between border-b border-white/10 shrink-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
           <div className="p-2 bg-blue-500/20 text-blue-400 rounded-xl shrink-0">
             <Pencil className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="font-bold text-sm sm:text-base text-white truncate max-w-[220px] sm:max-w-md">
+            <h2 className="font-bold text-sm sm:text-base text-white truncate max-w-[200px] sm:max-w-md">
               {fileName}
             </h2>
             <p className="text-[10px] text-gray-400 hidden sm:block">
@@ -467,7 +639,9 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         </div>
       </header>
 
-      {/* CORPO PRINCIPAL */}
+      {/* =========================================================
+          CORPO PRINCIPAL (ÁREA DE LEITURA & CANVAS)
+      ========================================================= */}
       <div 
         ref={containerRef}
         className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start custom-scrollbar bg-neutral-900/60"
@@ -487,7 +661,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
             display: loadingPdf ? 'none' : 'block'
           }}
         >
-          {/* CAMADA 1: Renderização visual do PDF */}
+          {/* CAMADA 1: Renderização visual do PDF via react-pdf */}
           <div className="absolute inset-0 z-0 pointer-events-none">
             <Document
               file={fileUrl}
@@ -512,13 +686,70 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         </div>
       </div>
 
-      {/* BARRA DE FERRAMENTAS FLUTUANTE */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-neutral-900/95 backdrop-blur-md text-white border border-white/20 rounded-2xl shadow-2xl px-3 py-2 flex items-center gap-1.5 sm:gap-2 max-w-[95vw] overflow-x-auto">
+      {/* =========================================================
+          POPOVER FLUTUANTE DE COMENTÁRIO (PIN SELECIONADO)
+      ========================================================= */}
+      {activePin && (
+        <div 
+          className="fixed z-[120] w-72 bg-white rounded-2xl shadow-2xl border border-gray-200 p-3.5 space-y-2.5 animate-in zoom-in-95 duration-150"
+          style={{ 
+            left: `${activePin.screenX}px`, 
+            top: `${activePin.screenY}px` 
+          }}
+        >
+          <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800">
+              <span className="p-1 bg-amber-100 text-amber-700 rounded-md">💬</span>
+              <span>Nota de Comentário</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleDeletePin}
+                className="p-1 text-gray-400 hover:text-red-500 rounded-lg transition"
+                title="Excluir este comentário"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setActivePin(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg transition"
+                title="Fechar nota"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <textarea
+            autoFocus
+            rows={4}
+            value={activePin.commentText}
+            onChange={(e) => handleUpdatePinText(e.target.value)}
+            placeholder="Escreva sua dúvida, anotação ou resolução aqui..."
+            className="w-full text-xs text-gray-800 p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none resize-none leading-relaxed"
+          />
+
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-[10px] text-gray-400">Salvo automaticamente</span>
+            <button
+              onClick={() => setActivePin(null)}
+              className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-lg transition"
+            >
+              Concluído
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          BARRA DE FERRAMENTAS FLUTUANTE RESPONSIVA
+      ========================================================= */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-neutral-900/95 backdrop-blur-md text-white border border-white/20 rounded-2xl shadow-2xl px-3 py-2 flex items-center gap-1.5 sm:gap-2 max-w-[96vw] overflow-x-auto">
         
-        {/* Seletor */}
+        {/* 1. Seletor */}
         <button
           onClick={() => handleSelectTool('select')}
-          className={`p-2.5 rounded-xl transition flex items-center justify-center ${
+          className={`p-2.5 rounded-xl transition flex items-center justify-center shrink-0 ${
             activeTool === 'select'
               ? 'bg-blue-600 text-white shadow-md'
               : 'text-gray-300 hover:text-white hover:bg-white/10'
@@ -528,15 +759,28 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           <MousePointer className="w-4 h-4" />
         </button>
 
-        {/* Lápis */}
+        {/* 2. Marca-Texto (Highlighter) */}
+        <button
+          onClick={() => handleSelectTool('highlighter')}
+          className={`p-2.5 rounded-xl transition flex items-center justify-center shrink-0 relative ${
+            activeTool === 'highlighter'
+              ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300/40'
+              : 'text-gray-300 hover:text-white hover:bg-white/10'
+          }`}
+          title="Marca-Texto Amarelo (Multiply / Translúcido)"
+        >
+          <Highlighter className="w-4 h-4 text-amber-300" />
+        </button>
+
+        {/* 3. Lápis / Caneta livre */}
         <button
           onClick={() => handleSelectTool('draw')}
-          className={`p-2.5 rounded-xl transition flex items-center justify-center relative ${
+          className={`p-2.5 rounded-xl transition flex items-center justify-center shrink-0 relative ${
             activeTool === 'draw'
               ? 'bg-blue-600 text-white shadow-md'
               : 'text-gray-300 hover:text-white hover:bg-white/10'
           }`}
-          title="Lápis / Desenho Livre"
+          title="Lápis / Caneta Livre"
         >
           <Pencil className="w-4 h-4" />
           <span 
@@ -545,12 +789,12 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           />
         </button>
 
-        {/* Cor e Espessura */}
-        <div className="relative">
+        {/* 4. Cor e Espessura (Para Caneta e Texto) */}
+        <div className="relative shrink-0">
           <button
             onClick={() => setShowColorPicker(!showColorPicker)}
             className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center"
-            title="Escolher Cor"
+            title="Escolher Cor do Lápis"
           >
             <Palette className="w-4 h-4" />
           </button>
@@ -588,19 +832,32 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           )}
         </div>
 
-        {/* Texto */}
+        {/* 5. Inserir Pin de Comentário Oculto */}
+        <button
+          onClick={() => handleSelectTool('pin')}
+          className={`p-2.5 rounded-xl transition flex items-center justify-center shrink-0 relative ${
+            activeTool === 'pin'
+              ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300/40'
+              : 'text-gray-300 hover:text-white hover:bg-white/10'
+          }`}
+          title="Inserir Comentário Oculto (Pin)"
+        >
+          <MessageSquare className="w-4 h-4" />
+        </button>
+
+        {/* 6. Inserir Caixa de Texto */}
         <button
           onClick={handleAddText}
-          className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center"
-          title="Inserir Caixa de Texto"
+          className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center shrink-0"
+          title="Inserir Caixa de Texto no PDF"
         >
           <Type className="w-4 h-4" />
         </button>
 
-        {/* Imagem */}
+        {/* 7. Inserir Imagem Local */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center"
+          className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center shrink-0"
           title="Inserir Imagem / Selo"
         >
           <ImageIcon className="w-4 h-4" />
@@ -613,12 +870,12 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           onChange={handleImageUpload}
         />
 
-        <div className="w-px h-5 bg-white/20 mx-1" />
+        <div className="w-px h-5 bg-white/20 mx-1 shrink-0" />
 
         {/* Desfazer */}
         <button
           onClick={handleUndo}
-          className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center"
+          className="p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition flex items-center justify-center shrink-0"
           title="Desfazer Última Ação"
         >
           <Undo2 className="w-4 h-4" />
@@ -627,7 +884,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         {/* Limpar Página */}
         <button
           onClick={handleClearPage}
-          className="p-2.5 text-gray-300 hover:text-red-400 hover:bg-white/10 rounded-xl transition flex items-center justify-center"
+          className="p-2.5 text-gray-300 hover:text-red-400 hover:bg-white/10 rounded-xl transition flex items-center justify-center shrink-0"
           title="Limpar Anotações desta Página"
         >
           <Trash2 className="w-4 h-4" />
