@@ -65,7 +65,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   const [brushWidth, setBrushWidth] = useState<number>(3);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
 
-  // Estado do Popover de Comentário (Pin)
+  // Estado da Janela Flutuante de Comentário (Pin)
   const [activePin, setActivePin] = useState<ActivePinData | null>(null);
 
   // Cache das anotações em JSON indexado por número de página
@@ -117,11 +117,11 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   }, [documentId, user]);
 
   /* -------------------------------------------------------------
-     2. PERSISTÊNCIA: EXPORTAR E IMPORTAR JSON DO CANVAS COM PROPRIEDADES CUSTOMIZADAS
+     2. PERSISTÊNCIA: EXPORTAR E IMPORTAR JSON COM PROPRIEDADES DOS PINS
   ------------------------------------------------------------- */
   const snapshotCurrentPage = useCallback(() => {
     if (!fabricCanvasRef.current) return;
-    // Cast para any para permitir exportar propriedades customizadas sem conflito de tipagem
+    // Extração explícita de propriedades customizadas
     const json = (fabricCanvasRef.current as any).toJSON(['id', 'isPin', 'commentText', 'globalCompositeOperation']);
     if (json.objects && json.objects.length > 0) {
       annotationsRef.current[pageNumber] = json;
@@ -176,7 +176,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   };
 
   /* -------------------------------------------------------------
-     3. HELPER: CRIAÇÃO DE PIN DE COMENTÁRIO
+     3. HELPER: CRIAÇÃO DO PINO DE COMENTÁRIO
   ------------------------------------------------------------- */
   const createCommentPin = (x: number, y: number, initialText: string = '') => {
     const pinId = `pin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -184,7 +184,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     // Círculo base do pino
     const circle = new fabric.Circle({
       radius: 14,
-      fill: '#f59e0b', // Amarelo/âmbar chamativo
+      fill: '#f59e0b',
       stroke: '#ffffff',
       strokeWidth: 2,
       originX: 'center',
@@ -197,7 +197,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
       }),
     });
 
-    // Ícone de texto centralizado (Balão de fala estilizado)
+    // Ícone de texto centralizado (Balão de fala)
     const icon = new fabric.IText('💬', {
       fontSize: 14,
       originX: 'center',
@@ -216,9 +216,10 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
       lockScalingY: true,
       lockRotation: true,
       hoverCursor: 'pointer',
+      subTargetCheck: false,
     });
 
-    // Propriedades customizadas para persistência e lógica de seleção
+    // Declaração garantida das propriedades customizadas
     (pinGroup as any).id = pinId;
     (pinGroup as any).isPin = true;
     (pinGroup as any).commentText = initialText;
@@ -227,7 +228,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   };
 
   /* -------------------------------------------------------------
-     4. INICIALIZAÇÃO E SINCRONIZAÇÃO DO FABRIC.JS
+     4. INICIALIZAÇÃO E EVENTOS DO FABRIC.JS
   ------------------------------------------------------------- */
   useEffect(() => {
     if (!canvasElementRef.current) return;
@@ -258,7 +259,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
       });
     }
 
-    // 4.2 Evento ao criar traços de desenho (Marca-texto e Lápis)
+    // 4.2 Evento ao criar traços de desenho (Marca-texto)
     canvas.on('path:created', (e: any) => {
       const path = e.path;
       if (!path) return;
@@ -267,8 +268,8 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         // Marca-texto: modo multiply para não ocultar o texto preto do PDF
         path.set({
           globalCompositeOperation: 'multiply',
-          stroke: 'rgba(255, 235, 59, 0.45)',
-          strokeWidth: 22,
+          stroke: 'rgba(255, 255, 0, 0.4)',
+          strokeWidth: 20,
           strokeLineCap: 'square',
           strokeLineJoin: 'round',
         });
@@ -276,68 +277,64 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
       }
     });
 
-    // 4.3 Clique no canvas para adicionar PIN
+    // 4.3 Captura precisa de clique no mouse:down para Pins
     canvas.on('mouse:down', (options: any) => {
-      if (activeToolRef.current === 'pin') {
-        // Obter coordenadas relativas ao canvas
-        const pointer = canvas.getScenePoint(options.e);
-        const pin = createCommentPin(pointer.x, pointer.y, '');
-        canvas.add(pin);
-        canvas.setActiveObject(pin);
+      // Caso 1: Clicou em um pino existente no canvas
+      if (options.target && (options.target as any).isPin) {
+        const pinObj = options.target;
+        canvas.setActiveObject(pinObj);
         canvas.renderAll();
 
-        // Mudar de volta para modo de seleção e abrir popover imediatamente
-        handleSelectTool('select');
-        
-        // Coordenadas absolutas na tela
-        const clientX = options.e.clientX || (options.e.touches && options.e.touches[0]?.clientX) || 200;
-        const clientY = options.e.clientY || (options.e.touches && options.e.touches[0]?.clientY) || 200;
-        
-        setActivePin({
-          id: (pin as any).id,
-          commentText: '',
-          screenX: Math.min(window.innerWidth - 300, Math.max(20, clientX)),
-          screenY: Math.min(window.innerHeight - 250, Math.max(80, clientY + 15)),
-          fabricObject: pin,
-        });
-      }
-    });
-
-    // 4.4 Listener ao selecionar um objeto do canvas (verifica se é PIN)
-    const handleObjectSelected = (e: any) => {
-      const selected = e.selected?.[0] || canvas.getActiveObject();
-      if (selected && (selected as any).isPin) {
-        // Calcular posição do pino na viewport
-        const bound = (selected as any).getBoundingRect();
+        const bound = pinObj.getBoundingRect();
         const canvasRect = canvasElementRef.current?.getBoundingClientRect();
         
         let screenX = 200;
         let screenY = 200;
-        
         if (canvasRect) {
           screenX = canvasRect.left + bound.left + bound.width / 2;
           screenY = canvasRect.top + bound.top + bound.height + 10;
         }
 
         setActivePin({
-          id: (selected as any).id,
-          commentText: (selected as any).commentText || '',
+          id: (pinObj as any).id,
+          commentText: (pinObj as any).commentText || '',
           screenX: Math.min(window.innerWidth - 320, Math.max(16, screenX - 140)),
           screenY: Math.min(window.innerHeight - 260, Math.max(80, screenY)),
-          fabricObject: selected,
+          fabricObject: pinObj,
         });
-      } else {
+        return;
+      }
+
+      // Caso 2: Clicou para adicionar um novo pino
+      if (activeToolRef.current === 'pin') {
+        const pointer = canvas.getScenePoint(options.e);
+        const pin = createCommentPin(pointer.x, pointer.y, '');
+        canvas.add(pin);
+        canvas.setActiveObject(pin);
+        canvas.renderAll();
+
+        handleSelectTool('select');
+
+        const clientX = options.e.clientX || (options.e.touches && options.e.touches[0]?.clientX) || 200;
+        const clientY = options.e.clientY || (options.e.touches && options.e.touches[0]?.clientY) || 200;
+
+        setActivePin({
+          id: (pin as any).id,
+          commentText: '',
+          screenX: Math.min(window.innerWidth - 320, Math.max(16, clientX - 140)),
+          screenY: Math.min(window.innerHeight - 260, Math.max(80, clientY + 15)),
+          fabricObject: pin,
+        });
+        return;
+      }
+
+      // Caso 3: Clicou em área vazia no modo normal
+      if (!options.target && activePin) {
         setActivePin(null);
       }
-    };
-
-    canvas.on('selection:created', handleObjectSelected);
-    canvas.on('selection:updated', handleObjectSelected);
-    canvas.on('selection:cleared', () => {
-      setActivePin(null);
     });
 
-    // Aplicar a ferramenta inicial
+    // Aplicar a ferramenta inicial com setup de brush correto
     applyToolMode(activeTool, canvas);
 
     return () => {
@@ -347,26 +344,25 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   }, [pageNumber, pageWidth, pageHeight, scale]);
 
   /* -------------------------------------------------------------
-     5. CONTROLE DE MODOS DE FERRAMENTA
+     5. CONTROLE E SETUP DE FERRAMENTAS
   ------------------------------------------------------------- */
   const applyToolMode = (tool: ToolMode, canvasInstance?: fabric.Canvas | null) => {
     const canvas = canvasInstance || fabricCanvasRef.current;
     if (!canvas) return;
 
-    if (tool === 'draw') {
+    if (tool === 'highlighter') {
       canvas.isDrawingMode = true;
-      if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.color = brushColor;
-        canvas.freeDrawingBrush.width = brushWidth;
-      }
+      // Garante a existência de um PencilBrush novo para o marca-texto
+      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+      canvas.freeDrawingBrush.color = 'rgba(255, 255, 0, 0.4)';
+      canvas.freeDrawingBrush.width = 20;
       canvas.selection = false;
-    } else if (tool === 'highlighter') {
+    } else if (tool === 'draw') {
       canvas.isDrawingMode = true;
-      if (canvas.freeDrawingBrush) {
-        // Amarelo translúcido para marca-texto
-        canvas.freeDrawingBrush.color = 'rgba(255, 235, 59, 0.45)';
-        canvas.freeDrawingBrush.width = 22;
-      }
+      // Garante a existência de um PencilBrush novo para o lápis
+      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+      canvas.freeDrawingBrush.color = brushColor;
+      canvas.freeDrawingBrush.width = brushWidth;
       canvas.selection = false;
     } else {
       canvas.isDrawingMode = false;
@@ -381,7 +377,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
       setActivePin(null);
     }
     if (tool === 'pin') {
-      toast('Clique em qualquer local do documento para inserir o comentário.', {
+      toast('Clique no documento para posicionar o pino de comentário.', {
         icon: '💬',
         duration: 3000,
       });
@@ -489,11 +485,18 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   };
 
   /* -------------------------------------------------------------
-     6. GERENCIADOR DO POPOVER DE PIN (SALVAR TEXTO / EXCLUIR PIN)
+     6. GERENCIADOR DA JANELA DE PIN (ATUALIZAÇÃO DIRETA NO FABRIC)
   ------------------------------------------------------------- */
   const handleUpdatePinText = (text: string) => {
-    if (!activePin) return;
+    if (!activePin || !activePin.fabricObject) return;
+
+    // Atualização direta da propriedade do objeto Fabric
     (activePin.fabricObject as any).commentText = text;
+    (activePin.fabricObject as any).set?.('commentText', text);
+    activePin.fabricObject.setCoords();
+    fabricCanvasRef.current?.renderAll();
+
+    // Atualização do estado do React para sincronizar o input
     setActivePin(prev => prev ? { ...prev, commentText: text } : null);
   };
 
@@ -687,7 +690,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
       </div>
 
       {/* =========================================================
-          POPOVER FLUTUANTE DE COMENTÁRIO (PIN SELECIONADO)
+          JANELA FLUTUANTE DE COMENTÁRIO (POPOVER DO PINO ATIVO)
       ========================================================= */}
       {activePin && (
         <div 
@@ -730,7 +733,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           />
 
           <div className="flex items-center justify-between pt-1">
-            <span className="text-[10px] text-gray-400">Salvo automaticamente</span>
+            <span className="text-[10px] text-gray-400">Salvo no documento</span>
             <button
               onClick={() => setActivePin(null)}
               className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-lg transition"
@@ -840,7 +843,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
               ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300/40'
               : 'text-gray-300 hover:text-white hover:bg-white/10'
           }`}
-          title="Inserir Comentário Oculto (Pin)"
+          title="Adicionar Comentário (Pin)"
         >
           <MessageSquare className="w-4 h-4" />
         </button>
