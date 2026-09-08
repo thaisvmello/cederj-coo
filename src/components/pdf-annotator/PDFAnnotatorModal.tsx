@@ -58,6 +58,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   const [scale, setScale] = useState<number>(1.1);
   const [loadingPdf, setLoadingPdf] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [hasSelection, setHasSelection] = useState<boolean>(false);
 
   // Estados das ferramentas
   const [activeTool, setActiveTool] = useState<ToolMode>('select');
@@ -83,7 +84,44 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   const colorOptions = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#000000'];
 
   /* -------------------------------------------------------------
-     1. CARREGAR ANOTAÇÕES DO BANCO DE DADOS (SUPABASE)
+     1. FUNÇÃO REVIVER & CARREGAMENTO DE JSON NO FABRIC COM RENDERALL
+  ------------------------------------------------------------- */
+  const reviverCallback = useCallback((serializedObj: any, fabricObj: any) => {
+    if (!serializedObj || !fabricObj) return;
+    if (serializedObj.id) fabricObj.id = serializedObj.id;
+    if (serializedObj.isPin) {
+      fabricObj.isPin = true;
+      fabricObj.hasControls = false;
+      fabricObj.lockScalingX = true;
+      fabricObj.lockScalingY = true;
+      fabricObj.lockRotation = true;
+      fabricObj.hoverCursor = 'pointer';
+    }
+    if (serializedObj.commentText !== undefined) {
+      fabricObj.commentText = serializedObj.commentText;
+    }
+    if (serializedObj.globalCompositeOperation) {
+      fabricObj.globalCompositeOperation = serializedObj.globalCompositeOperation;
+    }
+  }, []);
+
+  const handleLoadAnnotations = useCallback(async (jsonPayload: any) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !jsonPayload) return;
+
+    try {
+      // Carrega o JSON passando o reviver para restaurar id, isPin e commentText
+      await (canvas as any).loadFromJSON(jsonPayload, reviverCallback);
+      // Força a renderização imediata do canvas
+      canvas.requestRenderAll();
+      canvas.renderAll();
+    } catch (err) {
+      console.error('[PDFAnnotator] Erro ao aplicar anotações no canvas:', err);
+    }
+  }, [reviverCallback]);
+
+  /* -------------------------------------------------------------
+     2. CARREGAR ANOTAÇÕES DO BANCO DE DADOS (SUPABASE)
   ------------------------------------------------------------- */
   useEffect(() => {
     if (!user || !documentId) return;
@@ -105,7 +143,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         if (data?.annotations && typeof data.annotations === 'object') {
           annotationsRef.current = data.annotations;
           if (fabricCanvasRef.current && annotationsRef.current[pageNumber]) {
-            handleLoadAnnotations(annotationsRef.current[pageNumber]);
+            await handleLoadAnnotations(annotationsRef.current[pageNumber]);
           }
         }
       } catch (err) {
@@ -114,14 +152,13 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     };
 
     fetchSavedAnnotations();
-  }, [documentId, user]);
+  }, [documentId, user, pageNumber, handleLoadAnnotations]);
 
   /* -------------------------------------------------------------
-     2. PERSISTÊNCIA: EXPORTAR E IMPORTAR JSON COM PROPRIEDADES DOS PINS
+     3. PERSISTÊNCIA: EXPORTAR E SALVAR ANOTAÇÕES
   ------------------------------------------------------------- */
   const snapshotCurrentPage = useCallback(() => {
     if (!fabricCanvasRef.current) return;
-    // Extração explícita de propriedades customizadas
     const json = (fabricCanvasRef.current as any).toJSON(['id', 'isPin', 'commentText', 'globalCompositeOperation']);
     if (json.objects && json.objects.length > 0) {
       annotationsRef.current[pageNumber] = json;
@@ -130,23 +167,11 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     }
   }, [pageNumber]);
 
-  const handleLoadAnnotations = useCallback((jsonPayload: any) => {
-    if (!fabricCanvasRef.current || !jsonPayload) return;
-    fabricCanvasRef.current.loadFromJSON(jsonPayload, () => {
-      fabricCanvasRef.current?.renderAll();
-    });
-  }, []);
-
-  const handleSaveAnnotations = async () => {
+  const handleSaveAnnotations = useCallback(async (silent = false) => {
     snapshotCurrentPage();
 
-    if (!user) {
-      toast.success('Anotações salvas localmente nesta sessão!');
-      return;
-    }
-
-    if (!documentId) {
-      toast.success('Anotações gravadas!');
+    if (!user || !documentId) {
+      if (!silent) toast.success('Anotações salvas localmente nesta sessão!');
       return;
     }
 
@@ -166,17 +191,63 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         );
 
       if (error) throw error;
-      toast.success('Anotações salvas na nuvem com sucesso!');
+      if (!silent) toast.success('Anotações salvas com sucesso!');
     } catch (err: any) {
       console.error('[PDFAnnotator] Erro ao salvar anotações:', err);
-      toast.error('Erro ao salvar no banco. Suas anotações continuam nesta sessão.');
+      if (!silent) toast.error('Erro ao salvar no banco.');
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [snapshotCurrentPage, user, documentId]);
 
   /* -------------------------------------------------------------
-     3. HELPER: CRIAÇÃO DO PINO DE COMENTÁRIO
+     4. EXCLUSÃO INDIVIDUAL DE ITENS SELECIONADOS
+  ------------------------------------------------------------- */
+  const handleDeleteSelected = useCallback(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    const activeObjects = canvas.getActiveObjects();
+    if (activeObjects && activeObjects.length > 0) {
+      activeObjects.forEach((obj) => {
+        if (activePin?.fabricObject === obj) {
+          setActivePin(null);
+        }
+        canvas.remove(obj);
+      });
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
+      setHasSelection(false);
+      handleSaveAnnotations(true);
+      toast.success('Item excluído!');
+    } else {
+      toast('Selecione um elemento para excluir.', { icon: 'ℹ️' });
+    }
+  }, [activePin, handleSaveAnnotations]);
+
+  // Listener de teclado para tecla Delete / Backspace
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Não acionar se o usuário estiver digitando em um input ou textarea
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable)) {
+        return;
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (fabricCanvasRef.current?.getActiveObjects().length) {
+          e.preventDefault();
+          handleDeleteSelected();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleDeleteSelected]);
+
+  /* -------------------------------------------------------------
+     5. HELPER: CRIAÇÃO DO PINO DE COMENTÁRIO
   ------------------------------------------------------------- */
   const createCommentPin = (x: number, y: number, initialText: string = '') => {
     const pinId = `pin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -190,14 +261,14 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
       originX: 'center',
       originY: 'center',
       shadow: new fabric.Shadow({
-        color: 'rgba(0,0,0,0.3)',
+        color: 'rgba(0,0,0,0.35)',
         blur: 6,
         offsetX: 1,
         offsetY: 2,
       }),
     });
 
-    // Ícone de texto centralizado (Balão de fala)
+    // Ícone de texto centralizado
     const icon = new fabric.IText('💬', {
       fontSize: 14,
       originX: 'center',
@@ -219,7 +290,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
       subTargetCheck: false,
     });
 
-    // Declaração garantida das propriedades customizadas
+    // Declarar explicitamente as propriedades customizadas
     (pinGroup as any).id = pinId;
     (pinGroup as any).isPin = true;
     (pinGroup as any).commentText = initialText;
@@ -228,7 +299,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   };
 
   /* -------------------------------------------------------------
-     4. INICIALIZAÇÃO E EVENTOS DO FABRIC.JS
+     6. INICIALIZAÇÃO E EVENTOS DO FABRIC.JS
   ------------------------------------------------------------- */
   useEffect(() => {
     if (!canvasElementRef.current) return;
@@ -252,20 +323,19 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
 
     fabricCanvasRef.current = canvas;
 
-    // 4.1 Carregar anotações salvas na página atual
+    // 6.1 Carregar anotações salvas na página atual e forçar renderAll
     if (annotationsRef.current[pageNumber]) {
-      canvas.loadFromJSON(annotationsRef.current[pageNumber], () => {
-        canvas.renderAll();
-      });
+      handleLoadAnnotations(annotationsRef.current[pageNumber]);
+    } else {
+      canvas.requestRenderAll();
     }
 
-    // 4.2 Evento ao criar traços de desenho (Marca-texto)
+    // 6.2 Evento ao criar traços de desenho (Marca-texto)
     canvas.on('path:created', (e: any) => {
       const path = e.path;
       if (!path) return;
       
       if (activeToolRef.current === 'highlighter') {
-        // Marca-texto: modo multiply para não ocultar o texto preto do PDF
         path.set({
           globalCompositeOperation: 'multiply',
           stroke: 'rgba(255, 255, 0, 0.4)',
@@ -273,35 +343,39 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           strokeLineCap: 'square',
           strokeLineJoin: 'round',
         });
-        canvas.renderAll();
+        canvas.requestRenderAll();
       }
     });
 
-    // 4.3 Captura precisa de clique no mouse:down para Pins
+    // 6.3 Função auxiliar para abrir o popover do pino
+    const openPinPopover = (pinObj: any) => {
+      const bound = pinObj.getBoundingRect();
+      const canvasRect = canvasElementRef.current?.getBoundingClientRect();
+      
+      let screenX = 200;
+      let screenY = 200;
+      if (canvasRect) {
+        screenX = canvasRect.left + bound.left + bound.width / 2;
+        screenY = canvasRect.top + bound.top + bound.height + 10;
+      }
+
+      setActivePin({
+        id: pinObj.id || `pin_${Date.now()}`,
+        commentText: pinObj.commentText || '',
+        screenX: Math.min(window.innerWidth - 320, Math.max(16, screenX - 140)),
+        screenY: Math.min(window.innerHeight - 260, Math.max(80, screenY)),
+        fabricObject: pinObj,
+      });
+    };
+
+    // 6.4 Evento mouse:down para captura imediata de cliques e criação de pins
     canvas.on('mouse:down', (options: any) => {
       // Caso 1: Clicou em um pino existente no canvas
       if (options.target && (options.target as any).isPin) {
         const pinObj = options.target;
         canvas.setActiveObject(pinObj);
-        canvas.renderAll();
-
-        const bound = pinObj.getBoundingRect();
-        const canvasRect = canvasElementRef.current?.getBoundingClientRect();
-        
-        let screenX = 200;
-        let screenY = 200;
-        if (canvasRect) {
-          screenX = canvasRect.left + bound.left + bound.width / 2;
-          screenY = canvasRect.top + bound.top + bound.height + 10;
-        }
-
-        setActivePin({
-          id: (pinObj as any).id,
-          commentText: (pinObj as any).commentText || '',
-          screenX: Math.min(window.innerWidth - 320, Math.max(16, screenX - 140)),
-          screenY: Math.min(window.innerHeight - 260, Math.max(80, screenY)),
-          fabricObject: pinObj,
-        });
+        canvas.requestRenderAll();
+        openPinPopover(pinObj);
         return;
       }
 
@@ -311,7 +385,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         const pin = createCommentPin(pointer.x, pointer.y, '');
         canvas.add(pin);
         canvas.setActiveObject(pin);
-        canvas.renderAll();
+        canvas.requestRenderAll();
 
         handleSelectTool('select');
 
@@ -334,17 +408,36 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
       }
     });
 
-    // Aplicar a ferramenta inicial com setup de brush correto
+    // 6.5 Eventos de seleção para atualizar estado do pino e botão de exclusão
+    const handleSelectionChanged = (e: any) => {
+      const selected = e.selected?.[0] || canvas.getActiveObject();
+      setHasSelection(!!selected);
+
+      if (selected && (selected as any).isPin) {
+        openPinPopover(selected);
+      } else {
+        setActivePin(null);
+      }
+    };
+
+    canvas.on('selection:created', handleSelectionChanged);
+    canvas.on('selection:updated', handleSelectionChanged);
+    canvas.on('selection:cleared', () => {
+      setHasSelection(false);
+      setActivePin(null);
+    });
+
+    // Configuração inicial da ferramenta
     applyToolMode(activeTool, canvas);
 
     return () => {
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
-  }, [pageNumber, pageWidth, pageHeight, scale]);
+  }, [pageNumber, pageWidth, pageHeight, scale, handleLoadAnnotations]);
 
   /* -------------------------------------------------------------
-     5. CONTROLE E SETUP DE FERRAMENTAS
+     7. CONTROLE E SETUP DE FERRAMENTAS
   ------------------------------------------------------------- */
   const applyToolMode = (tool: ToolMode, canvasInstance?: fabric.Canvas | null) => {
     const canvas = canvasInstance || fabricCanvasRef.current;
@@ -352,14 +445,12 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
 
     if (tool === 'highlighter') {
       canvas.isDrawingMode = true;
-      // Garante a existência de um PencilBrush novo para o marca-texto
       canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
       canvas.freeDrawingBrush.color = 'rgba(255, 255, 0, 0.4)';
       canvas.freeDrawingBrush.width = 20;
       canvas.selection = false;
     } else if (tool === 'draw') {
       canvas.isDrawingMode = true;
-      // Garante a existência de um PencilBrush novo para o lápis
       canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
       canvas.freeDrawingBrush.color = brushColor;
       canvas.freeDrawingBrush.width = brushWidth;
@@ -392,7 +483,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     const activeObj = fabricCanvasRef.current?.getActiveObject();
     if (activeObj && activeObj.type === 'i-text') {
       (activeObj as fabric.IText).set('fill', color);
-      fabricCanvasRef.current?.renderAll();
+      fabricCanvasRef.current?.requestRenderAll();
     }
     setShowColorPicker(false);
   };
@@ -424,7 +515,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     fabricCanvasRef.current.add(text);
     fabricCanvasRef.current.setActiveObject(text);
     text.enterEditing();
-    fabricCanvasRef.current.renderAll();
+    fabricCanvasRef.current.requestRenderAll();
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -450,7 +541,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
 
         fabricCanvasRef.current?.add(img);
         fabricCanvasRef.current?.setActiveObject(img);
-        fabricCanvasRef.current?.renderAll();
+        fabricCanvasRef.current?.requestRenderAll();
         handleSelectTool('select');
       } catch (err) {
         console.error('[PDFAnnotator] Erro ao carregar imagem:', err);
@@ -465,8 +556,10 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
     if (confirm('Deseja limpar todas as anotações desta página?')) {
       fabricCanvasRef.current.clear();
       delete annotationsRef.current[pageNumber];
-      fabricCanvasRef.current.renderAll();
+      fabricCanvasRef.current.requestRenderAll();
       setActivePin(null);
+      setHasSelection(false);
+      handleSaveAnnotations(true);
       toast.success('Página limpa!');
     }
   };
@@ -480,42 +573,47 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
         setActivePin(null);
       }
       fabricCanvasRef.current.remove(last);
-      fabricCanvasRef.current.renderAll();
+      fabricCanvasRef.current.requestRenderAll();
     }
   };
 
   /* -------------------------------------------------------------
-     6. GERENCIADOR DA JANELA DE PIN (ATUALIZAÇÃO DIRETA NO FABRIC)
+     8. GERENCIADOR DA JANELA DE PIN (VINCULAÇÃO DIRETA AO OBJETO FABRIC)
   ------------------------------------------------------------- */
   const handleUpdatePinText = (text: string) => {
     if (!activePin || !activePin.fabricObject) return;
 
-    // Atualização direta da propriedade do objeto Fabric
-    (activePin.fabricObject as any).commentText = text;
-    (activePin.fabricObject as any).set?.('commentText', text);
-    activePin.fabricObject.setCoords();
-    fabricCanvasRef.current?.renderAll();
+    const obj = activePin.fabricObject;
+    // Injeção explícita no objeto Fabric
+    (obj as any).commentText = text;
+    (obj as any).set?.('commentText', text);
+    obj.setCoords();
+    fabricCanvasRef.current?.requestRenderAll();
 
-    // Atualização do estado do React para sincronizar o input
+    // Atualização de estado local no React
     setActivePin(prev => prev ? { ...prev, commentText: text } : null);
   };
 
   const handleDeletePin = () => {
     if (!activePin || !fabricCanvasRef.current) return;
     fabricCanvasRef.current.remove(activePin.fabricObject);
-    fabricCanvasRef.current.renderAll();
+    fabricCanvasRef.current.discardActiveObject();
+    fabricCanvasRef.current.requestRenderAll();
     setActivePin(null);
+    setHasSelection(false);
+    handleSaveAnnotations(true);
     toast.success('Comentário removido');
   };
 
   /* -------------------------------------------------------------
-     7. PAGINAÇÃO E CARREGAMENTO DO PDF
+     9. PAGINAÇÃO E CARREGAMENTO DO PDF
   ------------------------------------------------------------- */
   const changePage = (offset: number) => {
     const newPage = pageNumber + offset;
     if (newPage >= 1 && newPage <= numPages) {
       snapshotCurrentPage();
       setActivePin(null);
+      setHasSelection(false);
       setPageNumber(newPage);
     }
   };
@@ -612,7 +710,7 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           </div>
 
           <button
-            onClick={handleSaveAnnotations}
+            onClick={() => handleSaveAnnotations(false)}
             disabled={isSaving}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
             title="Salvar Anotações"
@@ -735,7 +833,10 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           <div className="flex items-center justify-between pt-1">
             <span className="text-[10px] text-gray-400">Salvo no documento</span>
             <button
-              onClick={() => setActivePin(null)}
+              onClick={() => {
+                setActivePin(null);
+                handleSaveAnnotations(true);
+              }}
               className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-lg transition"
             >
               Concluído
@@ -884,13 +985,27 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
           <Undo2 className="w-4 h-4" />
         </button>
 
-        {/* Limpar Página */}
+        {/* Excluir Selecionado */}
         <button
-          onClick={handleClearPage}
-          className="p-2.5 text-gray-300 hover:text-red-400 hover:bg-white/10 rounded-xl transition flex items-center justify-center shrink-0"
-          title="Limpar Anotações desta Página"
+          onClick={handleDeleteSelected}
+          disabled={!hasSelection}
+          className={`p-2.5 rounded-xl transition flex items-center justify-center shrink-0 ${
+            hasSelection
+              ? 'text-red-400 hover:text-red-300 hover:bg-red-500/20 bg-red-500/10'
+              : 'text-gray-500 opacity-40 cursor-not-allowed'
+          }`}
+          title="Excluir Elemento Selecionado (Del / Backspace)"
         >
           <Trash2 className="w-4 h-4" />
+        </button>
+
+        {/* Limpar Página Inteira */}
+        <button
+          onClick={handleClearPage}
+          className="p-2.5 text-gray-300 hover:text-red-400 hover:bg-white/10 rounded-xl transition flex items-center justify-center shrink-0 text-xs font-bold"
+          title="Limpar Todas as Anotações Desta Página"
+        >
+          Limpar Página
         </button>
       </div>
     </div>
