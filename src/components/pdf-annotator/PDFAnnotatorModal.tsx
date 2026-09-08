@@ -121,8 +121,8 @@ export function PDFAnnotatorModal({ fileUrl, fileName, documentId, onClose }: PD
   ------------------------------------------------------------- */
   const snapshotCurrentPage = useCallback(() => {
     if (!fabricCanvasRef.current) return;
-    // Crucial: incluir propriedades customizadas dos pins e do marca-texto
-    const json = fabricCanvasRef.current.toJSON(['id', 'isPin', 'commentText', 'globalCompositeOperation']);
+    // Cast para any para permitir exportar propriedades customizadas sem conflito de tipagem
+    const json = (fabricCanvasRef.current as any).toJSON(['id', 'isPin', 'commentText', 'globalCompositeOperation']);
     if (json.objects && json.objects.length > 0) {
       annotationsRef.current[pageNumber] = json;
     } else {
