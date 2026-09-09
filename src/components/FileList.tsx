@@ -241,14 +241,12 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
     setIsRenaming(true);
 
     try {
-      // 1. Tentar atualização direta no Supabase
       const { error } = await supabase
         .from('files')
         .update({ name: editingName.trim() })
         .eq('id', fileId);
 
       if (error) {
-        // 2. Se RLS restringir atualização direta, utilizar Edge Function com service role
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error('Sessão expirada. Faça login novamente.');
 
@@ -285,211 +283,223 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-8 flex items-center justify-center">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 flex items-center justify-center">
         <Loader className="w-6 h-6 text-blue-600 animate-spin" />
       </div>
     );
   }
 
   return (
-    <>
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+    <div className="w-full max-w-full space-y-4">
+      {/* Barra de Ações do Topo */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-sm">
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
+            id="select-all"
             checked={selectedFileIds.length === files.length && files.length > 0}
             onChange={handleSelectAll}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
           />
-          <label className="text-sm text-gray-700">
-            Selecionar todos <span className="text-gray-400">{`(${selectedFileIds.length}/${files.length})`}</span>
+          <label htmlFor="select-all" className="text-xs sm:text-sm font-semibold text-gray-700 cursor-pointer select-none">
+            Selecionar todos <span className="text-gray-400 font-normal">({selectedFileIds.length}/{files.length})</span>
           </label>
         </div>
-        
-        <div className="flex-1" />
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedFileIds.length > 0 && (
             <button
               onClick={handleBatchDownload}
               disabled={loading}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+              className="flex-1 sm:flex-none px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition disabled:opacity-50 shadow-sm"
             >
-              Baixar Selecionados
+              Baixar Selecionados ({selectedFileIds.length})
             </button>
           )}
           
           <button 
             onClick={onToggleUpload}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm ${
               isUploadOpen 
                 ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
                 : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
             }`}
           >
-            <Upload className="w-4 h-4" />
-            Enviar Arquivo
+            <Upload className="w-3.5 h-3.5" />
+            <span>Enviar Arquivo</span>
           </button>
 
           <button
             onClick={handleDownloadAllAsZip}
             disabled={zipping || files.length === 0}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-50 flex items-center gap-2"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-50 shadow-sm"
           >
             {zipping ? (
               <>
-                <Loader className="w-4 h-4 animate-spin" />
-                Compactando...
+                <Loader className="w-3.5 h-3.5 animate-spin" />
+                <span>Compactando...</span>
               </>
             ) : (
               <>
-                <Archive className="w-4 h-4" />
-                Baixar Tudo (ZIP)
+                <Archive className="w-3.5 h-3.5" />
+                <span>Baixar Tudo (ZIP)</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Lista de Arquivos 100% Fluida e Responsiva */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
         {files.length === 0 ? (
-          <div className="p-12 text-center">
-            <FileText className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-            <p className="text-gray-500 text-sm">Nenhum arquivo nesta pasta</p>
+          <div className="p-10 text-center space-y-2">
+            <FileText className="w-10 h-10 text-gray-300 mx-auto" />
+            <p className="text-gray-500 text-sm font-medium">Nenhum arquivo nesta pasta</p>
+            <p className="text-xs text-gray-400">Clique em "Enviar Arquivo" acima para adicionar material.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="px-6 py-3 text-left w-10"></th>
-                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Arquivo</th>
-                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tamanho</th>
-                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {files.map((file) => {
-                  const isDuplicate = duplicateNames.has(file.name);
-                  
-                  return (
-                    <tr key={file.id} className="hover:bg-gray-50/50 transition group">
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedFileIds.includes(file.id)}
-                          onChange={() => toggleSelect(file.id)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-                        />
-                      </td>
-                      <td className="px-6 py-4">
-                        {editingFileId === file.id ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              disabled={isRenaming}
-                              className="px-2 py-1 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full max-w-md"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleRename(file.id);
-                                if (e.key === 'Escape') cancelRename();
-                              }}
-                            />
-                            <button 
-                              onClick={() => handleRename(file.id)} 
-                              disabled={isRenaming}
-                              className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
-                              title="Salvar novo nome"
-                            >
-                              {isRenaming ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                            </button>
-                            <button 
-                              onClick={cancelRename} 
-                              disabled={isRenaming}
-                              className="p-1 text-gray-400 hover:bg-gray-100 rounded disabled:opacity-50"
-                              title="Cancelar"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 min-w-0">
-                            <FileText className={`w-4 h-4 shrink-0 ${isDuplicate ? 'text-orange-600' : 'text-blue-400'}`} />
-                            <span className={`text-sm font-medium truncate block ${isDuplicate ? 'text-orange-700 flex items-center gap-1.5' : 'text-gray-700'}`}>
-                              {isDuplicate && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
-                              {file.name}
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-xs text-gray-400 font-medium">{(file.file_size / 1024).toFixed(2)} KB</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          {file.file_type === 'application/pdf' && (
-                            <button
-                              onClick={() => handleViewFile(file)}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                              title="Visualizar"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                          )}
-                          <button
-                            onClick={(e) => handleDownload(e, file)}
-                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
-                            title="Baixar"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                          
-                          {/* Botão de Renomear disponível diretamente para todos os usuários */}
-                          <button 
-                            onClick={() => startRename(file)} 
-                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition" 
-                            title="Renomear arquivo"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
+          files.map((file) => {
+            const isDuplicate = duplicateNames.has(file.name);
+            const isSelected = selectedFileIds.includes(file.id);
 
-                          {/* Exclusão direta apenas para admin, solicitação para os demais */}
-                          {isAdmin ? (
-                            <button 
-                              onClick={() => handleDeleteFile(file.id)} 
-                              disabled={deletingId === file.id} 
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50" 
-                              title="Excluir arquivo"
-                            >
-                              {deletingId === file.id ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                            </button>
-                          ) : (
-                            <button 
-                              onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' })} 
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" 
-                              title="Solicitar exclusão"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
+            return (
+              <div 
+                key={file.id} 
+                className={`p-3.5 sm:p-4 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                  isSelected ? 'bg-blue-50/40' : 'hover:bg-gray-50/60'
+                }`}
+              >
+                {/* Lado Esquerdo: Checkbox + Ícone + Nome do Arquivo */}
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleSelect(file.id)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer mt-1 shrink-0"
+                  />
+
+                  <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0 mt-0.5">
+                    <FileText className={`w-4 h-4 ${isDuplicate ? 'text-orange-500' : 'text-blue-500'}`} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    {editingFileId === file.id ? (
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          disabled={isRenaming}
+                          className="px-3 py-1.5 border border-blue-300 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full bg-white shadow-inner"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleRename(file.id);
+                            if (e.key === 'Escape') cancelRename();
+                          }}
+                        />
+                        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                          <button 
+                            onClick={() => handleRename(file.id)} 
+                            disabled={isRenaming}
+                            className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg disabled:opacity-50 transition"
+                            title="Salvar novo nome"
+                          >
+                            {isRenaming ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          </button>
+                          <button 
+                            onClick={cancelRename} 
+                            disabled={isRenaming}
+                            className="p-1.5 bg-gray-100 text-gray-500 hover:bg-gray-200 rounded-lg disabled:opacity-50 transition"
+                            title="Cancelar"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p 
+                          className={`text-xs sm:text-sm font-semibold break-words leading-snug ${
+                            isDuplicate ? 'text-orange-700 flex items-center gap-1.5' : 'text-gray-900'
+                          }`}
+                        >
+                          {isDuplicate && <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-orange-500" />}
+                          <span>{file.name}</span>
+                        </p>
+                        <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                          <span>{(file.file_size / 1024).toFixed(1)} KB</span>
+                          <span>•</span>
+                          <span className="uppercase">{file.file_type.split('/')[1] || 'DOC'}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Lado Direito: Ações (Sempre alinhadas e adaptadas para mobile) */}
+                <div className="flex items-center justify-end gap-1 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                  {file.file_type === 'application/pdf' && (
+                    <button
+                      onClick={() => handleViewFile(file)}
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition flex items-center gap-1"
+                      title="Visualizar e Anotar"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span className="text-[11px] font-bold sm:hidden">Ver</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={(e) => handleDownload(e, file)}
+                    className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition flex items-center gap-1"
+                    title="Baixar Arquivo"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="text-[11px] font-bold sm:hidden">Baixar</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => startRename(file)} 
+                    className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition flex items-center gap-1" 
+                    title="Renomear arquivo"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    <span className="text-[11px] font-bold sm:hidden">Renomear</span>
+                  </button>
+
+                  {isAdmin ? (
+                    <button 
+                      onClick={() => handleDeleteFile(file.id)} 
+                      disabled={deletingId === file.id} 
+                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition disabled:opacity-50" 
+                      title="Excluir arquivo"
+                    >
+                      {deletingId === file.id ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' })} 
+                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition" 
+                      title="Solicitar exclusão"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
 
       {showViewer && selectedFile && (
-        <PDFViewer file={selectedFile} onClose={() => {
-          setShowViewer(false);
-          setSelectedFile(null);
-        }} />
+        <PDFViewer 
+          file={selectedFile} 
+          onClose={() => {
+            setShowViewer(false);
+            setSelectedFile(null);
+          }} 
+        />
       )}
 
       {actionModal && (
@@ -501,6 +511,6 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
           onSuccess={() => {}}
         />
       )}
-    </>
+    </div>
   );
 }
