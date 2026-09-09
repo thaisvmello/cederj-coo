@@ -78,4 +78,5 @@ declare module 'lucide-react' {
   export const LogIn: Icon;
   export const Highlighter: Icon;
   export const Pin: Icon;
+  export const MoreVertical: Icon;
 }
