@@ -1,15 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Download, FileText, Eye, Loader, Trash2, Pencil, X, Check, Archive, Upload, AlertTriangle } from 'lucide-react';
+import { 
+  Download, 
+  FileText, 
+  Eye, 
+  Loader, 
+  Trash2, 
+  Pencil, 
+  X, 
+  Check, 
+  Upload, 
+  AlertTriangle,
+  MoreVertical
+} from 'lucide-react';
 import type { File as FileType } from '../lib/types';
 import { PDFViewer } from './PDFViewer';
 import { FileActionModal } from './FileActionModal';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
-import JSZip from 'jszip';
 
 interface FileListProps {
   folderId: string;
@@ -19,7 +30,7 @@ interface FileListProps {
   isUploadOpen?: boolean;
 }
 
-export function FileList({ folderId, courseName, folderName, onToggleUpload, isUploadOpen }: FileListProps) {
+export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListProps) {
   const [files, setFiles] = useState<FileType[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
@@ -29,7 +40,10 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
   const [editingName, setEditingName] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [zipping, setZipping] = useState(false);
+  
+  // Menu de 3 pontos individual para cada arquivo
+  const [activeMenuFileId, setActiveMenuFileId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   
   const [actionModal, setActionModal] = useState<{
     fileId: string;
@@ -39,6 +53,17 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
 
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+
+  // Fecha o menu de 3 pontos ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActiveMenuFileId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Identificar nomes duplicados na pasta atual
   const duplicateNames = useMemo(() => {
@@ -100,6 +125,7 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
   const handleDownload = (e: React.MouseEvent, file: FileType) => {
     e.stopPropagation();
     downloadFile(file);
+    setActiveMenuFileId(null);
   };
 
   const handleViewFile = (file: FileType) => {
@@ -128,77 +154,11 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
     setSelectedFileIds([]);
   };
 
-  const handleDownloadAllAsZip = async () => {
-    if (files.length === 0) return;
-    
-    setZipping(true);
-    const toastId = toast.loading('Preparando arquivo ZIP...');
-    
-    try {
-      const zip = new JSZip();
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (const file of files) {
-        try {
-          const response = await fetch(file.file_path);
-          if (!response.ok) throw new Error(`Failed to fetch ${file.name}`);
-          const blob = await response.blob();
-          zip.file(file.name, blob);
-          successCount++;
-        } catch (err) {
-          console.error(`Error adding ${file.name} to zip:`, err);
-          errorCount++;
-        }
-      }
-
-      if (successCount === 0) {
-        toast.error('Nenhum arquivo pôde ser baixado', { id: toastId });
-        setZipping(false);
-        return;
-      }
-
-      toast.loading('Gerando arquivo ZIP...', { id: toastId });
-      
-      const zipBlob = await zip.generateAsync({ 
-        type: 'blob',
-        compression: 'DEFLATE',
-        compressionOptions: { level: 6 }
-      });
-      
-      const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      
-      const zipName = `${courseName || 'ACERVO'}_${folderName || 'ARQUIVOS'}`
-        .toUpperCase()
-        .replace(/\s+/g, '_')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
-        
-      a.download = `${zipName}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      if (errorCount > 0) {
-        toast.success(`${successCount} arquivos baixados, ${errorCount} com erro`, { id: toastId });
-      } else {
-        toast.success(`${successCount} arquivos baixados com sucesso!`, { id: toastId });
-      }
-    } catch (error) {
-      console.error('Error creating zip:', error);
-      toast.error('Erro ao criar arquivo ZIP', { id: toastId });
-    } finally {
-      setZipping(false);
-    }
-  };
-
   const handleDeleteFile = async (fileId: string) => {
     if (!isAdmin) return;
     
     setDeletingId(fileId);
+    setActiveMenuFileId(null);
     try {
       const { error } = await supabase
         .from('files')
@@ -220,6 +180,7 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
   const startRename = (file: FileType) => {
     setEditingFileId(file.id);
     setEditingName(file.name);
+    setActiveMenuFileId(null);
   };
 
   const cancelRename = () => {
@@ -290,208 +251,197 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
   }
 
   return (
-    <div className="w-full max-w-full space-y-4">
-      {/* Barra de Ações do Topo */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-sm">
-        <div className="flex items-center gap-2">
+    <div className="w-full max-w-full space-y-3">
+      {/* 1. Barra Fina de Seleção em Massa & Ações */}
+      <div className="flex items-center justify-between gap-2 bg-white px-3.5 py-2 rounded-2xl border border-gray-200 shadow-sm text-xs">
+        <div className="flex items-center gap-2 min-w-0">
           <input
             type="checkbox"
             id="select-all"
             checked={selectedFileIds.length === files.length && files.length > 0}
             onChange={handleSelectAll}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer shrink-0"
           />
-          <label htmlFor="select-all" className="text-xs sm:text-sm font-semibold text-gray-700 cursor-pointer select-none">
+          <label htmlFor="select-all" className="font-semibold text-gray-700 cursor-pointer truncate">
             Selecionar todos <span className="text-gray-400 font-normal">({selectedFileIds.length}/{files.length})</span>
           </label>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           {selectedFileIds.length > 0 && (
             <button
               onClick={handleBatchDownload}
               disabled={loading}
-              className="flex-1 sm:flex-none px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition disabled:opacity-50 shadow-sm"
+              className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition disabled:opacity-50"
             >
-              Baixar Selecionados ({selectedFileIds.length})
+              Baixar ({selectedFileIds.length})
             </button>
           )}
-          
+
           <button 
             onClick={onToggleUpload}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm ${
+            className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold transition ${
               isUploadOpen 
                 ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
                 : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
             }`}
           >
             <Upload className="w-3.5 h-3.5" />
-            <span>Enviar Arquivo</span>
-          </button>
-
-          <button
-            onClick={handleDownloadAllAsZip}
-            disabled={zipping || files.length === 0}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-50 shadow-sm"
-          >
-            {zipping ? (
-              <>
-                <Loader className="w-3.5 h-3.5 animate-spin" />
-                <span>Compactando...</span>
-              </>
-            ) : (
-              <>
-                <Archive className="w-3.5 h-3.5" />
-                <span>Baixar Tudo (ZIP)</span>
-              </>
-            )}
+            <span>Enviar</span>
           </button>
         </div>
       </div>
 
-      {/* Lista de Arquivos com Layout em Bloco Flexível anti-overflow */}
+      {/* 2. Lista de Arquivos com Botão "Ver" sempre visível e menu ⋮ */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
         {files.length === 0 ? (
-          <div className="p-10 text-center space-y-2">
-            <FileText className="w-10 h-10 text-gray-300 mx-auto" />
-            <p className="text-gray-500 text-sm font-medium">Nenhum arquivo nesta pasta</p>
-            <p className="text-xs text-gray-400">Clique em "Enviar Arquivo" acima para adicionar material.</p>
+          <div className="p-8 text-center space-y-2">
+            <FileText className="w-8 h-8 text-gray-300 mx-auto" />
+            <p className="text-gray-500 text-xs sm:text-sm font-medium">Nenhum arquivo nesta pasta</p>
+            <p className="text-[11px] text-gray-400">Toque em "Enviar" acima para colaborar com este acervo.</p>
           </div>
         ) : (
           files.map((file) => {
             const isDuplicate = duplicateNames.has(file.name);
             const isSelected = selectedFileIds.includes(file.id);
+            const isMenuOpen = activeMenuFileId === file.id;
 
             return (
               <div 
                 key={file.id} 
-                className={`p-3.5 sm:p-4 transition flex flex-col gap-3 ${
+                className={`p-3 transition flex items-center justify-between gap-2.5 ${
                   isSelected ? 'bg-blue-50/40' : 'hover:bg-gray-50/60'
                 }`}
               >
-                {/* Linha 1: Seleção + Ícone + Nome do Arquivo Expandido com quebra de linha */}
-                <div className="flex items-start gap-3 w-full min-w-0">
+                {/* Checkbox + Ícone + Nome e Metadados Truncados */}
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleSelect(file.id)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer mt-1 shrink-0"
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer shrink-0"
                   />
 
-                  <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0 mt-0.5">
+                  <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 shrink-0">
                     <FileText className={`w-4 h-4 ${isDuplicate ? 'text-orange-500' : 'text-blue-500'}`} />
                   </div>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     {editingFileId === file.id ? (
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
+                      <div className="flex items-center gap-1.5 w-full">
                         <input
                           type="text"
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
                           disabled={isRenaming}
-                          className="px-3 py-1.5 border border-blue-300 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full bg-white shadow-inner"
+                          className="px-2 py-1 border border-blue-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none w-full bg-white"
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleRename(file.id);
                             if (e.key === 'Escape') cancelRename();
                           }}
                         />
-                        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-                          <button 
-                            onClick={() => handleRename(file.id)} 
-                            disabled={isRenaming}
-                            className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg disabled:opacity-50 transition"
-                            title="Salvar novo nome"
-                          >
-                            {isRenaming ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                          </button>
-                          <button 
-                            onClick={cancelRename} 
-                            disabled={isRenaming}
-                            className="p-1.5 bg-gray-100 text-gray-500 hover:bg-gray-200 rounded-lg disabled:opacity-50 transition"
-                            title="Cancelar"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
+                        <button 
+                          onClick={() => handleRename(file.id)} 
+                          disabled={isRenaming}
+                          className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                        >
+                          {isRenaming ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                        </button>
+                        <button 
+                          onClick={cancelRename} 
+                          disabled={isRenaming}
+                          className="p-1 text-gray-400 hover:bg-gray-100 rounded"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     ) : (
-                      <div className="space-y-1">
+                      <div className="min-w-0">
                         <p 
-                          className={`text-xs sm:text-sm font-semibold [overflow-wrap:anywhere] break-all leading-snug ${
-                            isDuplicate ? 'text-orange-700 flex items-start gap-1.5' : 'text-gray-900'
+                          className={`text-xs sm:text-sm font-semibold truncate leading-tight ${
+                            isDuplicate ? 'text-orange-700 flex items-center gap-1' : 'text-gray-900'
                           }`}
+                          title={file.name}
                         >
-                          {isDuplicate && <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-orange-500 mt-0.5" />}
-                          <span>{file.name}</span>
+                          {isDuplicate && <AlertTriangle className="w-3 h-3 text-orange-500 shrink-0 inline" />}
+                          <span className="truncate">{file.name}</span>
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-medium truncate mt-0.5">
+                          {(file.file_size / 1024).toFixed(1)} KB • {file.file_type.split('/')[1]?.toUpperCase() || 'PDF'}
                         </p>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Linha 2: Metadados (Tamanho / Tipo) + Barra de Ações Completa em Linha/Wrap */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-100/80 sm:pl-9">
-                  {/* Tamanho e Extensão */}
-                  <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-medium">
-                    <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase">
-                      {file.file_type.split('/')[1] || 'DOC'}
-                    </span>
-                    <span>•</span>
-                    <span>{(file.file_size / 1024).toFixed(1)} KB</span>
-                  </div>
-
-                  {/* Ações (Botões visíveis e compactos sem estourar o container) */}
-                  <div className="flex items-center flex-wrap gap-1.5">
-                    {file.file_type === 'application/pdf' && (
-                      <button
-                        onClick={() => handleViewFile(file)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
-                        title="Visualizar e Anotar"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Ver</span>
-                      </button>
-                    )}
-
+                {/* Ações: Botão 'Ver' SEMPRE visível + Menu '⋮' com Baixar/Renomear/Excluir */}
+                <div className="flex items-center gap-1 shrink-0 relative">
+                  {/* Botão Ver (Sempre Visível para PDFs e documentos) */}
+                  {file.file_type === 'application/pdf' && (
                     <button
-                      onClick={(e) => handleDownload(e, file)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition"
-                      title="Baixar Arquivo"
+                      onClick={() => handleViewFile(file)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold transition shadow-xs"
+                      title="Visualizar e Anotar"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Baixar</span>
+                      <Eye className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Ver</span>
                     </button>
-                    
-                    <button 
-                      onClick={() => startRename(file)} 
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition" 
-                      title="Renomear arquivo"
+                  )}
+
+                  {/* Menu de 3 Pontos para ações secundárias */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setActiveMenuFileId(isMenuOpen ? null : file.id)}
+                      className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-700 transition"
+                      title="Mais Ações"
                     >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span>Renomear</span>
+                      <MoreVertical className="w-4 h-4" />
                     </button>
 
-                    {isAdmin ? (
-                      <button 
-                        onClick={() => handleDeleteFile(file.id)} 
-                        disabled={deletingId === file.id} 
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition disabled:opacity-50" 
-                        title="Excluir arquivo"
+                    {isMenuOpen && (
+                      <div 
+                        ref={menuRef}
+                        className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-xl shadow-xl py-1 z-30 text-xs font-medium animate-in zoom-in-95 duration-100"
                       >
-                        {deletingId === file.id ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                        <span>Excluir</span>
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' })} 
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition" 
-                        title="Solicitar exclusão"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Excluir</span>
-                      </button>
+                        <button
+                          onClick={(e) => handleDownload(e, file)}
+                          className="w-full px-3 py-2 text-left hover:bg-emerald-50 text-emerald-700 flex items-center gap-2"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Baixar</span>
+                        </button>
+
+                        <button
+                          onClick={() => startRename(file)}
+                          className="w-full px-3 py-2 text-left hover:bg-amber-50 text-amber-700 flex items-center gap-2"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Renomear</span>
+                        </button>
+
+                        {isAdmin ? (
+                          <button
+                            onClick={() => handleDeleteFile(file.id)}
+                            disabled={deletingId === file.id}
+                            className="w-full px-3 py-2 text-left hover:bg-red-50 text-red-700 flex items-center gap-2 border-t border-gray-100"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Excluir</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setActiveMenuFileId(null);
+                              setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' });
+                            }}
+                            className="w-full px-3 py-2 text-left hover:bg-red-50 text-red-700 flex items-center gap-2 border-t border-gray-100"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Solicitar Exclusão</span>
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
