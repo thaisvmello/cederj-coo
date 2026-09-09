@@ -349,7 +349,7 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
         </div>
       </div>
 
-      {/* Lista de Arquivos 100% Fluida e Responsiva */}
+      {/* Lista de Arquivos com Layout em Bloco Flexível anti-overflow */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
         {files.length === 0 ? (
           <div className="p-10 text-center space-y-2">
@@ -365,12 +365,12 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
             return (
               <div 
                 key={file.id} 
-                className={`p-3.5 sm:p-4 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                className={`p-3.5 sm:p-4 transition flex flex-col gap-3 ${
                   isSelected ? 'bg-blue-50/40' : 'hover:bg-gray-50/60'
                 }`}
               >
-                {/* Lado Esquerdo: Checkbox + Ícone + Nome do Arquivo */}
-                <div className="flex items-start gap-3 min-w-0 flex-1">
+                {/* Linha 1: Seleção + Ícone + Nome do Arquivo Expandido com quebra de linha */}
+                <div className="flex items-start gap-3 w-full min-w-0">
                   <input
                     type="checkbox"
                     checked={isSelected}
@@ -382,7 +382,7 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
                     <FileText className={`w-4 h-4 ${isDuplicate ? 'text-orange-500' : 'text-blue-500'}`} />
                   </div>
 
-                  <div className="min-w-0 flex-1">
+                  <div className="flex-1 min-w-0">
                     {editingFileId === file.id ? (
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
                         <input
@@ -419,72 +419,81 @@ export function FileList({ folderId, courseName, folderName, onToggleUpload, isU
                     ) : (
                       <div className="space-y-1">
                         <p 
-                          className={`text-xs sm:text-sm font-semibold break-words leading-snug ${
-                            isDuplicate ? 'text-orange-700 flex items-center gap-1.5' : 'text-gray-900'
+                          className={`text-xs sm:text-sm font-semibold [overflow-wrap:anywhere] break-all leading-snug ${
+                            isDuplicate ? 'text-orange-700 flex items-start gap-1.5' : 'text-gray-900'
                           }`}
                         >
-                          {isDuplicate && <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-orange-500" />}
+                          {isDuplicate && <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-orange-500 mt-0.5" />}
                           <span>{file.name}</span>
                         </p>
-                        <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
-                          <span>{(file.file_size / 1024).toFixed(1)} KB</span>
-                          <span>•</span>
-                          <span className="uppercase">{file.file_type.split('/')[1] || 'DOC'}</span>
-                        </div>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Lado Direito: Ações (Sempre alinhadas e adaptadas para mobile) */}
-                <div className="flex items-center justify-end gap-1 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
-                  {file.file_type === 'application/pdf' && (
+                {/* Linha 2: Metadados (Tamanho / Tipo) + Barra de Ações Completa em Linha/Wrap */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-100/80 sm:pl-9">
+                  {/* Tamanho e Extensão */}
+                  <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-medium">
+                    <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase">
+                      {file.file_type.split('/')[1] || 'DOC'}
+                    </span>
+                    <span>•</span>
+                    <span>{(file.file_size / 1024).toFixed(1)} KB</span>
+                  </div>
+
+                  {/* Ações (Botões visíveis e compactos sem estourar o container) */}
+                  <div className="flex items-center flex-wrap gap-1.5">
+                    {file.file_type === 'application/pdf' && (
+                      <button
+                        onClick={() => handleViewFile(file)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
+                        title="Visualizar e Anotar"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Ver</span>
+                      </button>
+                    )}
+
                     <button
-                      onClick={() => handleViewFile(file)}
-                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition flex items-center gap-1"
-                      title="Visualizar e Anotar"
+                      onClick={(e) => handleDownload(e, file)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition"
+                      title="Baixar Arquivo"
                     >
-                      <Eye className="w-4 h-4" />
-                      <span className="text-[11px] font-bold sm:hidden">Ver</span>
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Baixar</span>
                     </button>
-                  )}
-
-                  <button
-                    onClick={(e) => handleDownload(e, file)}
-                    className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition flex items-center gap-1"
-                    title="Baixar Arquivo"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="text-[11px] font-bold sm:hidden">Baixar</span>
-                  </button>
-                  
-                  <button 
-                    onClick={() => startRename(file)} 
-                    className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition flex items-center gap-1" 
-                    title="Renomear arquivo"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    <span className="text-[11px] font-bold sm:hidden">Renomear</span>
-                  </button>
-
-                  {isAdmin ? (
+                    
                     <button 
-                      onClick={() => handleDeleteFile(file.id)} 
-                      disabled={deletingId === file.id} 
-                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition disabled:opacity-50" 
-                      title="Excluir arquivo"
+                      onClick={() => startRename(file)} 
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition" 
+                      title="Renomear arquivo"
                     >
-                      {deletingId === file.id ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Renomear</span>
                     </button>
-                  ) : (
-                    <button 
-                      onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' })} 
-                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition" 
-                      title="Solicitar exclusão"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+
+                    {isAdmin ? (
+                      <button 
+                        onClick={() => handleDeleteFile(file.id)} 
+                        disabled={deletingId === file.id} 
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition disabled:opacity-50" 
+                        title="Excluir arquivo"
+                      >
+                        {deletingId === file.id ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        <span>Excluir</span>
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => setActionModal({ fileId: file.id, fileName: file.name, type: 'delete' })} 
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition" 
+                        title="Solicitar exclusão"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Excluir</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
