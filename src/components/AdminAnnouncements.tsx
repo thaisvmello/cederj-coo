@@ -122,7 +122,7 @@ export const AdminAnnouncements = () => {
           <div className="p-2 bg-blue-50 rounded-lg">
             <Plus className="w-5 h-5 text-blue-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Anúncios Globais</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">Anúncios Globais</h2>
         </div>
         <button
           onClick={() => setShowCreate(true)}

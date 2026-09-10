@@ -21,7 +21,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col overflow-x-hidden" style={{ maxWidth: '100vw' }}>
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col overflow-x-hidden w-full max-w-[100vw]">
       <Header 
         showHomeButton={isInSubPage || currentPage !== 'home'} 
         onGoHome={handleGoHome}

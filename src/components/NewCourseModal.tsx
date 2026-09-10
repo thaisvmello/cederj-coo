@@ -124,8 +124,8 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
               <FolderPlus className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Solicitar Nova Disciplina</h2>
-              <p className="text-xs text-gray-500">Requer aprovação do administrador</p>
+              <h2 className="text-base md:text-xl font-bold text-gray-900">Solicitar Nova Disciplina</h2>
+              <p className="text-[10px] sm:text-xs text-gray-500">Requer aprovação do administrador</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
@@ -223,14 +223,14 @@ export function NewCourseModal({ onClose, onSuccess }: NewCourseModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition"
+              className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-6 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               {loading ? 'Enviando...' : 'Enviar Solicitação'}

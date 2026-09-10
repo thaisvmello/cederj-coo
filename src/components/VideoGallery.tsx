@@ -127,17 +127,17 @@ export function VideoGallery({ courseId }: { courseId: string }) {
         {/* Botão de adição liberado para todos os usuários logados */}
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition shadow-md shadow-blue-100"
+          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl text-[10px] sm:text-xs font-bold hover:bg-blue-700 transition shadow-md shadow-blue-100"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           Colar Link de Vídeo
         </button>
       </div>
 
       {videos.length === 0 ? (
         <div className="text-center py-16 bg-white border-2 border-dashed border-gray-200 rounded-2xl">
-          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Video className="w-8 h-8 text-gray-300" />
+          <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Video className="w-6 h-6 md:w-8 md:h-8 text-gray-300" />
           </div>
           <p className="text-sm text-gray-500 font-medium">Nenhuma videoaula enviada ainda.</p>
           <button
@@ -193,13 +193,13 @@ export function VideoGallery({ courseId }: { courseId: string }) {
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Plus className="w-5 h-5 text-blue-600" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900">Adicionar Vídeo</h2>
+            <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Plus className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
               </div>
+              <h2 className="text-base md:text-xl font-bold text-gray-900">Adicionar Vídeo</h2>
+            </div>
               <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600 transition">
                 <X className="w-6 h-6" />
               </button>

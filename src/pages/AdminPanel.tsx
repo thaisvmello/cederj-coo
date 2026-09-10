@@ -54,9 +54,9 @@ export function AdminPanel() {
             <Shield className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-              Painel de Controle
-            </h2>
+            <h2 className="text-xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+                Painel de Controle
+              </h2>
             <p className="text-sm text-gray-500 font-medium">
               Gerencie solicitações e modere o conteúdo do acervo
             </p>

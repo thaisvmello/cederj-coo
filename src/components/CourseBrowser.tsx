@@ -124,9 +124,9 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-lg">
-              <BookOpen className="w-6 h-6 text-blue-600" />
+              <BookOpen className="w-6 h-6 md:w-7 md:h-7 text-blue-600" />
             </div>
-            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo de Provas e Materiais</h2>
+            <h2 className="text-xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo de Provas e Materiais</h2>
           </div>
           <p className="text-sm text-gray-500 font-medium"></p>
                     {/* Stats Counter */}
@@ -154,21 +154,21 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
             placeholder="Buscar disciplina..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition shadow-sm"
+            className="w-full pl-12 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition shadow-sm text-sm"
           />
         </div>
 
         <div className="flex items-center gap-2 bg-white p-1 border border-gray-200 rounded-xl shadow-sm">
           <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-            <LayoutGrid className="w-5 h-5" />
-          </button>
-          <button onClick={() => setViewMode('tree')} className={`p-2 rounded-lg transition-all ${viewMode === 'tree' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-            <List className="w-5 h-5" />
-          </button>
+              <LayoutGrid className="w-5 h-5 md:w-6 md:h-6" />
+            </button>
+            <button onClick={() => setViewMode('tree')} className={`p-2 rounded-lg transition-all ${viewMode === 'tree' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
+              <List className="w-5 h-5 md:w-6 md:h-6" />
+            </button>
         </div>
 
-        <button onClick={() => setShowNewModal(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition shadow-sm">
-          <Plus className="w-5 h-5" />
+        <button onClick={() => setShowNewModal(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition shadow-sm">
+          <Plus className="w-5 h-5 md:w-6 md:h-6" />
           Solicitar Disciplina
         </button>
       </div>
