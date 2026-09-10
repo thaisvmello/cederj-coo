@@ -21,7 +21,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col overflow-x-hidden" style={{ maxWidth: '100vw' }}>
       <Header 
         showHomeButton={isInSubPage || currentPage !== 'home'} 
         onGoHome={handleGoHome}
@@ -29,7 +29,7 @@ export function Dashboard() {
         currentPage={currentPage}
       />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8">
         {currentPage === 'calculator' ? (
           <Calculator />
         ) : (
