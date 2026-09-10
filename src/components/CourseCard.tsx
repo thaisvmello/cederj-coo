@@ -25,10 +25,10 @@ export function CourseCard({ course, fileCount, isFavorite, onClick, onToggleFav
   const isMandatory = course.subject_type?.toLowerCase().includes('obrigatória') || course.is_mandatory;
 
   return (
-    <div
-    onClick={onClick}
-    className="group bg-white rounded-2xl border border-gray-200 p-3 sm:p-5 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer relative flex flex-col h-full"
-  >
+    <div 
+      onClick={onClick}
+      className="group bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer relative flex flex-col h-full"
+    >
       <button
         onClick={onToggleFavorite}
         className={`absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 sm:p-2 rounded-full transition-all z-10 ${

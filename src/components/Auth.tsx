@@ -64,9 +64,9 @@ export function Auth() {
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Lock className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
+              <Lock className="w-8 h-8 text-blue-600" />
             </div>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Nova Senha</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Nova Senha</h2>
             <p className="text-sm text-gray-500">
               Digite sua nova senha abaixo para recuperar o acesso.
             </p>
@@ -152,7 +152,7 @@ export function Auth() {
           </button>
 
           <div className="text-center mb-8">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Recuperar Senha</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Recuperar Senha</h2>
             <p className="text-sm text-gray-500">
               Informe seu e-mail para receber um link de redefinição de senha.
             </p>

@@ -102,10 +102,10 @@ export function Calculator() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-blue-50 rounded-lg">
-          <CalcIcon className="w-6 h-6 md:w-7 md:h-7 text-blue-600" />
+          <CalcIcon className="w-6 h-6 text-blue-600" />
         </div>
         <div>
-          <h2 className="text-xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Calculadora de Notas CEDERJ</h2>
+          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Calculadora de Notas CEDERJ</h2>
           <p className="text-sm text-gray-500">Calcule suas notas e veja sua situação acadêmica</p>
         </div>
       </div>
@@ -131,7 +131,7 @@ export function Calculator() {
                   step="0.1"
                   value={ad1}
                   onChange={(e) => setAd1(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-medium focus:ring-2 focus:ring-blue-500 outline-none transition"
                   placeholder="0.0"
                 />
               </div>
@@ -146,7 +146,7 @@ export function Calculator() {
                   step="0.1"
                   value={ap1}
                   onChange={(e) => setAp1(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-medium focus:ring-2 focus:ring-blue-500 outline-none transition"
                   placeholder="0.0"
                 />
               </div>
@@ -178,7 +178,7 @@ export function Calculator() {
                   step="0.1"
                   value={ad2}
                   onChange={(e) => setAd2(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500 outline-none transition"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-medium focus:ring-2 focus:ring-emerald-500 outline-none transition"
                   placeholder="0.0"
                 />
               </div>
@@ -193,7 +193,7 @@ export function Calculator() {
                   step="0.1"
                   value={ap2}
                   onChange={(e) => setAp2(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500 outline-none transition"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-medium focus:ring-2 focus:ring-emerald-500 outline-none transition"
                   placeholder="0.0"
                 />
               </div>
@@ -224,7 +224,7 @@ export function Calculator() {
                 step="0.1"
                 value={ap3}
                 onChange={(e) => setAp3(e.target.value)}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-base font-medium focus:ring-2 focus:ring-amber-500 outline-none transition"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg font-medium focus:ring-2 focus:ring-amber-500 outline-none transition"
                 placeholder="0.0"
               />
               <p className="text-xs text-gray-500 mt-2">Preencha apenas se precisar fazer a prova final</p>
@@ -234,7 +234,7 @@ export function Calculator() {
           {/* Botão Limpar */}
           <button
             onClick={reset}
-            className="w-full px-6 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition flex items-center justify-center gap-2"
+            className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition flex items-center justify-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
             Limpar Tudo
@@ -262,7 +262,7 @@ export function Calculator() {
           {results.situacao && (
             <div className={`rounded-xl border-2 p-6 shadow-sm ${getSituacaoStyle()}`}>
               <h3 className="font-bold mb-2">📋 Situação</h3>
-              <p className="text-2xl md:text-3xl font-extrabold">{results.situacao}</p>
+              <p className="text-3xl font-extrabold">{results.situacao}</p>
             </div>
           )}
 
