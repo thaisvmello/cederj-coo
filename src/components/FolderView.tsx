@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { 
-  ChevronLeft, 
-  Folder, 
-  FolderPlus, 
-  Pencil, 
-  Archive, 
-  Loader, 
-  Video, 
-  ChevronDown, 
-  MoreVertical,
-  BookOpen
+import {
+  ChevronLeft,
+  Folder,
+  FolderPlus,
+  Pencil,
+  Archive,
+  Loader,
+  Video,
+  ChevronDown,
+  MoreVertical
 } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';
 import { FileList } from './FileList';
