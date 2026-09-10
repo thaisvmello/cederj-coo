@@ -188,23 +188,23 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
     <div className="w-full max-w-full space-y-4 animate-in fade-in duration-200">
       
       {/* 1. Header Compacto (Voltar + Nome Truncado + Menu ⋮) */}
-      <div className="flex items-center justify-between gap-2 bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-sm">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+      <div className="flex items-center justify-between gap-2 bg-white px-3 py-2.5 rounded-2xl border border-gray-200 shadow-sm">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <button
             onClick={onBack}
-            className="p-1.5 hover:bg-gray-100 rounded-xl transition text-gray-600 hover:text-gray-900 shrink-0"
-            title="Voltar para a lista de disciplinas"
+            className="p-1.5 hover:bg-gray-100 rounded-xl transition text-gray-600 shrink-0"
+            title="Voltar"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           
           <div className="min-w-0 flex-1">
-            <h1 className="text-sm sm:text-base font-extrabold text-gray-900 truncate leading-tight">
+            <h1 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate leading-tight">
               {course.name}
             </h1>
             {course.code && (
-              <p className="text-[10px] sm:text-xs font-semibold text-gray-400 uppercase tracking-wider truncate">
-                {course.code} {course.period ? `• ${course.period}º Período` : ''}
+              <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase truncate">
+                {course.code}
               </p>
             )}
           </div>
@@ -214,10 +214,10 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
         <div className="relative shrink-0" ref={headerMenuRef}>
           <button
             onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
-            className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-500 hover:text-gray-800"
+            className="p-1.5 hover:bg-gray-100 rounded-xl transition text-gray-500 hover:text-gray-800"
             title="Mais Opções"
           >
-            <MoreVertical className="w-4 h-4" />
+            <MoreVertical className="w-5 h-5" />
           </button>
 
           {isHeaderMenuOpen && (
