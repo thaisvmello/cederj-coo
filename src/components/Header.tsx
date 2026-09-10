@@ -44,24 +44,24 @@ export function Header({
   }, []);
 
   return (
-    <header className="w-full z-40">
+    <header className="w-full z-40 overflow-x-hidden">
       {/* Main Header */}
-      <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" onClick={onGoHome} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+      <div className="bg-[#00394a] text-white px-4 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <Link to="/" onClick={onGoHome} className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-shrink-0">
             <img
               src="/57002beae21c30a2d583825b8ea17010.png"
               alt="Logo Acervo Acadêmico"
-              className="h-14 w-auto object-contain"
+              className="h-10 sm:h-14 w-auto object-contain"
             />
-            <div className="border-l border-white/20 pl-4">
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
+            <div className="border-l border-white/20 pl-3">
+              <h1 className="text-lg sm:text-2xl font-bold leading-tight tracking-tight whitespace-nowrap">
                 Acervo Acadêmico
               </h1>
             </div>
           </Link>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <div className="text-right hidden sm:block">
               <Link to="/profile" className="group">
                 <div className="flex items-center gap-2 justify-end mb-0.5">
@@ -80,11 +80,12 @@ export function Header({
             {isAdmin && (
               <Link
                 to={isAdminPage ? '/' : '/admin'}
-                className={`p-2.5 rounded-full transition-all border border-transparent ${
+                className={`p-2 rounded-full transition-all border border-transparent ${
                   isAdminPage
                     ? 'bg-purple-600 text-white hover:bg-purple-700'
                     : 'text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/10'
                 }`}
+                style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 title={isAdminPage ? 'Voltar ao Início' : 'Painel do Administrador'}
               >
                 {isAdminPage ? <Home className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
@@ -94,7 +95,8 @@ export function Header({
             {!isAdminPage && !isProfilePage && !isTutorialPage && showHomeButton && onGoHome && (
               <button
                 onClick={onGoHome}
-                className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
+                className="p-2 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
+                style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 title="Voltar ao Início"
               >
                 <Home className="w-5 h-5" />
@@ -102,11 +104,14 @@ export function Header({
             )}
 
             {/* Notification Bell */}
-            <NotificationBell />
+            <div style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <NotificationBell />
+            </div>
 
             <button
               onClick={() => signOut()}
-              className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
+              className="p-2 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
+              style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               title="Sair"
             >
               <LogOut className="w-5 h-5" />
@@ -117,17 +122,17 @@ export function Header({
 
       {/* Secondary Nav */}
       {!isAdminPage && !isProfilePage && (
-        <div className="bg-[#004157] text-gray-300 border-b border-[#002f3e] px-4 sm:px-6 lg:px-8 py-2 relative z-30">
-          <div className="max-w-7xl mx-auto flex items-center gap-6 text-sm font-medium overflow-visible">
+        <div className="bg-[#004157] text-gray-300 border-b border-[#002f3e] px-4 py-2 relative z-30">
+          <div className="max-w-7xl mx-auto flex items-center gap-4 text-xs sm:text-sm font-medium overflow-x-auto whitespace-nowrap scrollbar-hide py-1">
             
             {/* Dropdown Ferramentas */}
-            <div className="relative" ref={toolsRef}>
+            <div className="relative flex-shrink-0" ref={toolsRef}>
               <button
                 onClick={() => {
                   setToolsOpen(!toolsOpen);
                   setWhatsappOpen(false);
                 }}
-                className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${
+                className={`flex items-center gap-1.5 hover:text-white transition-colors ${
                   toolsOpen || currentPage === 'calculator' ? 'text-white' : ''
                 }`}
               >
@@ -180,16 +185,16 @@ export function Header({
               )}
             </div>
 
-            <span className="text-gray-600">|</span>
+            <span className="text-gray-600 flex-shrink-0">|</span>
 
             {/* Dropdown WhatsApp */}
-            <div className="relative" ref={whatsappRef}>
+            <div className="relative flex-shrink-0" ref={whatsappRef}>
               <button
                 onClick={() => {
                   setWhatsappOpen(!whatsappOpen);
                   setToolsOpen(false);
                 }}
-                className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${
+                className={`flex items-center gap-1.5 hover:text-white transition-colors ${
                   whatsappOpen ? 'text-white' : ''
                 }`}
               >
@@ -233,15 +238,16 @@ export function Header({
               )}
             </div>
 
-            <span className="text-gray-600">|</span>
+            <span className="text-gray-600 flex-shrink-0">|</span>
 
             {/* Link Tutorial */}
             <Link
               to="/tutorial"
-              className="flex items-center gap-1.5 hover:text-white transition-colors py-1 text-amber-300 hover:text-amber-200"
+              className="flex items-center gap-1.5 hover:text-white transition-colors text-amber-300 hover:text-amber-200 flex-shrink-0"
             >
-              <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
-              <span>Tutorial: como usar o acervo</span>
+              <HelpCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+              <span className="hidden sm:inline">Tutorial: como usar o acervo</span>
+              <span className="sm:hidden">Tutorial</span>
             </Link>
 
           </div>
