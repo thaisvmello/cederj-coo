@@ -45,7 +45,7 @@ export function AdminPanel() {
     { id: 'comments', label: 'Comentários', icon: MessageSquare },
     { id: 'maintenance', label: 'Manutenção', icon: Settings },
     { id: 'announcements', label: 'Anúncios', icon: Shield },
-    { id: 'feedback', label: 'Feedback', icon: AlertTriangle },
+    { id: 'feedback', label: 'Erros e Sugestões', icon: AlertTriangle },
   ];
 
   return (

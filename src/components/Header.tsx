@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home, Settings, ChevronDown, Calendar, FileText, HelpCircle, ExternalLink, Wrench } from 'lucide-react';
+import { LogOut, Calculator, Shield, Home, Settings, ChevronDown, Calendar, FileText, HelpCircle, ExternalLink, Wrench, MessageSquarePlus } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,7 @@ export function Header({
   const isAdminPage = location.pathname === '/admin';
   const isProfilePage = location.pathname === '/profile';
   const isTutorialPage = location.pathname === '/tutorial';
+  const isFeedbackPage = location.pathname === '/feedback';
   const { user, signOut } = useAuth();
 
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -91,7 +92,7 @@ export function Header({
               </Link>
             )}
 
-            {!isAdminPage && !isProfilePage && !isTutorialPage && showHomeButton && onGoHome && (
+            {!isAdminPage && !isProfilePage && !isTutorialPage && !isFeedbackPage && showHomeButton && onGoHome && (
               <button
                 onClick={onGoHome}
                 className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
@@ -235,16 +236,6 @@ export function Header({
 
             <span className="text-gray-600">|</span>
 
-            {/* Link Feedback */}
-            <Link
-              to="/feedback"
-              className="flex items-center gap-1.5 hover:text-white transition-colors py-1 text-blue-300 hover:text-blue-200"
-            >
-              <span>Feedback</span>
-            </Link>
-
-            <span className="text-gray-600">|</span>
-
             {/* Link Tutorial */}
             <Link
               to="/tutorial"
@@ -252,6 +243,17 @@ export function Header({
             >
               <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
               <span>Tutorial: como usar o acervo</span>
+            </Link>
+
+            <span className="text-gray-600">|</span>
+
+            {/* Link Erros/Sugestões */}
+            <Link
+              to="/feedback"
+              className="flex items-center gap-1.5 hover:text-white transition-colors py-1 text-rose-300 hover:text-rose-200"
+            >
+              <MessageSquarePlus className="w-3.5 h-3.5 text-rose-400" />
+              <span>Erros/Sugestões</span>
             </Link>
 
           </div>
