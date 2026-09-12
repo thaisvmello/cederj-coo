@@ -10,7 +10,7 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  XCircle as XCircleIcon,
+  X,
 } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import type { FeedbackReport, FeedbackComment } from '../lib/types';
@@ -109,7 +109,7 @@ export function AdminFeedback() {
       case 'open': return <AlertCircle className="w-4 h-4 text-red-500" />;
       case 'in_progress': return <Clock className="w-4 h-4 text-amber-500" />;
       case 'resolved': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'closed': return <XCircle className="w-4 h-4 text-gray-500" />;
+      case 'closed': return <X className="w-4 h-4 text-gray-500" />;
       default: return null;
     }
   };

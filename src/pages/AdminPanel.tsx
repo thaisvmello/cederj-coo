@@ -7,7 +7,7 @@ import {
   MessageSquare,
   FileText,
   Settings,
-  Flag,
+  Flag as FlagIcon,
 } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { Navigate } from 'react-router-dom';
