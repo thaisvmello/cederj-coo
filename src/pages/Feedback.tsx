@@ -127,7 +127,7 @@ export function Feedback() {
             disabled={loading}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
           >
-            {loading ? <Loader2 className="animate-spin" /> : 'Enviar'}
+            {loading ? <Loader className="animate-spin" /> : 'Enviar'}
           </button>
         </form>
       </div>
