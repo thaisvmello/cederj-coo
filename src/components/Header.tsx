@@ -235,6 +235,16 @@ export function Header({
 
             <span className="text-gray-600">|</span>
 
+            {/* Link Feedback */}
+            <Link
+              to="/feedback"
+              className="flex items-center gap-1.5 hover:text-white transition-colors py-1 text-blue-300 hover:text-blue-200"
+            >
+              <span>Feedback</span>
+            </Link>
+
+            <span className="text-gray-600">|</span>
+
             {/* Link Tutorial */}
             <Link
               to="/tutorial"
