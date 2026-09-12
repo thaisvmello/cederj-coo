@@ -1,11 +1,6 @@
 import { useState, useRef } from 'react';
-import { supabase } from '../integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, X } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Loader2, Upload } from 'lucide-react';
 
 export function Feedback() {
   const [title, setTitle] = useState('');
@@ -14,7 +9,6 @@ export function Feedback() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -58,13 +52,13 @@ export function Feedback() {
 
       if (error) throw error;
 
-      toast({ title: 'Feedback enviado com sucesso!' });
+      alert('Feedback enviado com sucesso!');
       setTitle('');
       setDescription('');
       setFiles([]);
     } catch (error) {
       console.error(error);
-      toast({ title: 'Erro ao enviar feedback', variant: 'destructive' });
+      alert('Erro ao enviar feedback');
     } finally {
       setLoading(false);
     }
@@ -72,12 +66,11 @@ export function Feedback() {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>Reportar Erro ou Dar Sugestão</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h1 className="text-2xl font-bold mb-4">Reportar Erro ou Dar Sugestão</h1>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Tipo de Feedback</label>
             <select 
               value={type} 
               onChange={(e) => setType(e.target.value as 'bug' | 'suggestion')}
@@ -86,40 +79,58 @@ export function Feedback() {
               <option value="suggestion">Sugestão</option>
               <option value="bug">Erro (Bug)</option>
             </select>
-            <Input 
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Título</label>
+            <input 
+              type="text"
               placeholder="Título" 
               value={title} 
               onChange={(e) => setTitle(e.target.value)} 
+              className="w-full p-2 border rounded"
               required 
             />
-            <Textarea 
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Descrição</label>
+            <textarea 
               placeholder="Descreva o problema ou sugestão detalhadamente..." 
               value={description} 
               onChange={(e) => setDescription(e.target.value)} 
+              className="w-full p-2 border rounded h-32"
               required 
             />
-            <div>
-              <Button type="button" onClick={() => fileInputRef.current?.click()} variant="outline">
-                <Upload className="mr-2 h-4 w-4" /> Anexar Imagens
-              </Button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                multiple 
-                accept="image/*" 
-                className="hidden" 
-              />
-              <div className="mt-2 text-sm text-gray-500">
-                {files.map(f => <div key={f.name}>{f.name}</div>)}
-              </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Anexos</label>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              multiple 
+              accept="image/*" 
+              className="hidden" 
+            />
+            <button 
+              type="button" 
+              onClick={() => fileInputRef.current?.click()}
+              className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 flex items-center"
+            >
+              <Upload className="mr-2 h-4 w-4" /> Anexar Imagens
+            </button>
+            <div className="mt-2 text-sm text-gray-500">
+              {files.map(f => <div key={f.name}>{f.name}</div>)}
             </div>
-            <Button disabled={loading} className="w-full">
-              {loading ? <Loader2 className="animate-spin" /> : 'Enviar'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+          >
+            {loading ? <Loader2 className="animate-spin" /> : 'Enviar'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
