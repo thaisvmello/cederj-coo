@@ -9,13 +9,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   MessageSquare, 
   AlertTriangle, 
-  Sparkles, 
+  Star, 
   Upload, 
   X, 
   Send, 
   Loader, 
   ArrowLeft, 
-  CheckCircle2, 
+  CheckCircle, 
   AlertCircle, 
   Info,
   LogIn,
@@ -220,7 +220,7 @@ export function Feedback() {
         {isSubmitted ? (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 sm:p-12 text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-50/50">
-              <CheckCircle2 className="w-8 h-8" />
+              <CheckCircle className="w-8 h-8" />
             </div>
 
             <div className="space-y-2 max-w-md mx-auto">
@@ -300,8 +300,8 @@ export function Feedback() {
                         : 'border-gray-200 hover:bg-gray-50 bg-white'
                     }`}
                   >
-                    <div className={`p-2 rounded-lg shrink-0 ${type === 'suggestion' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                      <Sparkles className="w-5 h-5" />
+                    <div className={`p-2 rounded-lg shrink-0 ${type === 'suggestion' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                      <Star className="w-5 h-5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
