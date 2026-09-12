@@ -262,7 +262,7 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
       </div>
 
       {/* 2. Botões de Ação Rápidos Compactos (Lado a Lado) */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2">
         <button
           onClick={handleDownloadFullCourse}
           disabled={zipping || folders.length === 0}
@@ -279,14 +279,6 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
               <span>Baixar Tudo (ZIP)</span>
             </>
           )}
-        </button>
-
-        <button
-          onClick={() => setShowRequestModal(true)}
-          className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-xl text-xs font-bold transition shadow-sm"
-        >
-          <FolderPlus className="w-3.5 h-3.5 text-amber-600" />
-          <span>Solicitar Pasta</span>
         </button>
       </div>
 
