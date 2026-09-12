@@ -7,6 +7,7 @@ import {
   MessageSquare,
   FileText,
   Settings,
+  Flag,
 } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { Navigate } from 'react-router-dom';
@@ -16,6 +17,7 @@ import { AdminFileActions } from '../components/AdminFileActions';
 import { AdminCommentsManager } from '../components/AdminCommentsManager';
 import { AdminBulkRename } from '../components/AdminBulkRename';
 import { AdminAnnouncements } from '../components/AdminAnnouncements';
+import { AdminFeedback } from '../components/AdminFeedback';
 import { useState } from 'react';
 import { Header } from '../components/Header';
 
@@ -26,7 +28,8 @@ type AdminTab =
   | 'files'
   | 'comments'
   | 'maintenance'
-  | 'announcements';
+  | 'announcements'
+  | 'feedback';
 
 export function AdminPanel() {
   const { isAdmin } = useAdmin();
@@ -42,6 +45,7 @@ export function AdminPanel() {
     { id: 'comments', label: 'Comentários', icon: MessageSquare },
     { id: 'maintenance', label: 'Manutenção', icon: Settings },
     { id: 'announcements', label: 'Anúncios', icon: Shield },
+    { id: 'feedback', label: 'Feedback', icon: Flag },
   ];
 
   return (
@@ -100,6 +104,7 @@ export function AdminPanel() {
             {activeTab === 'comments' && <AdminCommentsManager />}
             {activeTab === 'maintenance' && <AdminBulkRename />}
             {activeTab === 'announcements' && <AdminAnnouncements />}
+            {activeTab === 'feedback' && <AdminFeedback />}
           </div>
         </div>
       </main>

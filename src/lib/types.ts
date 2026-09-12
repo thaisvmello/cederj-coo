@@ -151,3 +151,30 @@ export interface FolderRequest {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
 }
+
+export interface FeedbackReport {
+  id: string;
+  user_id: string;
+  type: 'bug' | 'suggestion';
+  title: string;
+  description: string;
+  category: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  attachments: string[];
+  created_at: string;
+  updated_at: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+}
+
+export interface FeedbackComment {
+  id: string;
+  report_id: string;
+  user_id: string;
+  content: string;
+  attachments: string[];
+  created_at: string;
+  first_name?: string;
+  last_name?: string;
+}
