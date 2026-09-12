@@ -194,7 +194,8 @@ export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListPro
       return;
     }
 
-    if (!editingName.trim()) {
+    const trimmedName = editingName.trim();
+    if (!trimmedName) {
       toast.error('O nome do arquivo não pode estar em branco');
       return;
     }
@@ -202,35 +203,33 @@ export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListPro
     setIsRenaming(true);
 
     try {
-      const { error } = await supabase
+      // 1. Tentar atualizar diretamente no Supabase
+      const { data, error } = await supabase
         .from('files')
-        .update({ name: editingName.trim() })
-        .eq('id', fileId);
+        .update({ name: trimmedName })
+        .eq('id', fileId)
+        .select();
 
-      if (error) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('Sessão expirada. Faça login novamente.');
-
-        const res = await fetch('https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/rename-file', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
+      // Se falhou ou RLS bloqueou silenciosamente (data vazio), chamar Edge Function rename-file
+      if (error || !data || data.length === 0) {
+        const { data: funcData, error: funcError } = await supabase.functions.invoke('rename-file', {
+          body: {
             fileId,
-            newName: editingName.trim()
-          })
+            newName: trimmedName
+          }
         });
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'Erro ao renomear arquivo');
+        if (funcError) {
+          throw new Error(funcError.message || (error ? error.message : 'Erro ao renomear arquivo'));
+        }
+
+        if (funcData && funcData.error) {
+          throw new Error(funcData.error);
         }
       }
 
       setFiles(prev => prev.map(f => 
-        f.id === fileId ? { ...f, name: editingName.trim() } : f
+        f.id === fileId ? { ...f, name: trimmedName } : f
       ));
       toast.success('Arquivo renomeado com sucesso!');
       cancelRename();
@@ -388,6 +387,15 @@ export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListPro
                       <span>Ver</span>
                     </button>
                   )}
+
+                  {/* Botão de Renomear Rápido (desktop) */}
+                  <button
+                    onClick={() => startRename(file)}
+                    className="hidden sm:flex items-center p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                    title="Renomear Arquivo"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
 
                   {/* Menu de 3 Pontos para ações secundárias */}
                   <div className="relative">
