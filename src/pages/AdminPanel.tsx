@@ -7,7 +7,7 @@ import {
   MessageSquare,
   FileText,
   Settings,
-  Flag as FlagIcon,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { Navigate } from 'react-router-dom';
@@ -45,7 +45,7 @@ export function AdminPanel() {
     { id: 'comments', label: 'Comentários', icon: MessageSquare },
     { id: 'maintenance', label: 'Manutenção', icon: Settings },
     { id: 'announcements', label: 'Anúncios', icon: Shield },
-    { id: 'feedback', label: 'Feedback', icon: Flag },
+    { id: 'feedback', label: 'Feedback', icon: AlertTriangle },
   ];
 
   return (

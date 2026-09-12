@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader, Upload } from 'lucide-react';
 
 export function Feedback() {
   const [title, setTitle] = useState('');
