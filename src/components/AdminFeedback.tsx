@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  Flag,
-  Loader2,
+  AlertTriangle,
+  Loader,
   RefreshCw,
   Image as ImageIcon,
-  FileText,
   ChevronDown,
   ChevronRight,
   CheckCircle,
   Clock,
   AlertCircle,
-  XCircle,
+  XCircle as XCircleIcon,
 } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import type { FeedbackReport, FeedbackComment } from '../lib/types';
@@ -122,7 +121,7 @@ export function AdminFeedback() {
       <div className="p-4 border-b border-gray-100 bg-gray-50/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Flag className="w-5 h-5 text-purple-600" />
+                        <AlertTriangle className="w-5 h-5 text-purple-600" />
                         <h3 className="font-bold text-gray-800">Feedback & Sugestões</h3>
                         <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full">
                           {reports.length}
@@ -137,12 +136,12 @@ export function AdminFeedback() {
       <div className="divide-y divide-gray-100 max-h-[700px] overflow-y-auto custom-scrollbar">
         {loading ? (
           <div className="p-12 flex flex-col items-center justify-center gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+            <Loader className="w-8 h-8 animate-spin text-purple-600" />
             <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Carregando feedback...</p>
           </div>
         ) : reports.length === 0 ? (
           <div className="p-12 text-center">
-            <Flag className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+            <AlertTriangle className="w-12 h-12 text-gray-200 mx-auto mb-3" />
             <p className="text-gray-500 text-sm">Nenhum feedback para avaliar.</p>
           </div>
         ) : (
