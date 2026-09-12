@@ -7,9 +7,9 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  MessageSquarePlus, 
-  Bug, 
-  Lightbulb, 
+  MessageSquare, 
+  AlertTriangle, 
+  Sparkles, 
   Upload, 
   X, 
   Send, 
@@ -17,10 +17,9 @@ import {
   ArrowLeft, 
   CheckCircle2, 
   AlertCircle, 
-  ImageIcon, 
   Info,
   LogIn,
-  RotateCcw
+  RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -180,7 +179,7 @@ export function Feedback() {
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
-                <MessageSquarePlus className="w-6 h-6" />
+                <MessageSquare className="w-6 h-6" />
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
                 Erros e Sugestões
@@ -239,7 +238,7 @@ export function Feedback() {
                 onClick={handleResetForm}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RefreshCw className="w-4 h-4" />
                 Enviar Outro Relato
               </button>
 
@@ -273,7 +272,7 @@ export function Feedback() {
                     }`}
                   >
                     <div className={`p-2 rounded-lg shrink-0 ${type === 'bug' ? 'bg-rose-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                      <Bug className="w-5 h-5" />
+                      <AlertTriangle className="w-5 h-5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -302,7 +301,7 @@ export function Feedback() {
                     }`}
                   >
                     <div className={`p-2 rounded-lg shrink-0 ${type === 'suggestion' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                      <Lightbulb className="w-5 h-5" />
+                      <Sparkles className="w-5 h-5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">

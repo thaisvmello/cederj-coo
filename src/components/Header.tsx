@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home, Settings, ChevronDown, Calendar, FileText, HelpCircle, ExternalLink, Wrench, MessageSquarePlus } from 'lucide-react';
+import { LogOut, Calculator, Shield, Home, Settings, ChevronDown, Calendar, FileText, HelpCircle, ExternalLink, Wrench, MessageSquare } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../contexts/AuthContext';
@@ -252,7 +252,7 @@ export function Header({
               to="/feedback"
               className="flex items-center gap-1.5 hover:text-white transition-colors py-1 text-rose-300 hover:text-rose-200"
             >
-              <MessageSquarePlus className="w-3.5 h-3.5 text-rose-400" />
+              <MessageSquare className="w-3.5 h-3.5 text-rose-400" />
               <span>Erros/Sugestões</span>
             </Link>
 
