@@ -6,15 +6,17 @@ import { useAuth } from '../contexts/AuthContext';
 
 type GroupingCriteria = 'period' | 'type' | 'none';
 
-export function CourseTreeView({ 
-  courses, 
-  favorites, 
-  fileCounts, 
-  onSelectFolder, 
-  onToggleFavorite 
+export function CourseTreeView({
+  courses,
+  favorites,
+  favoriteCourses,
+  fileCounts,
+  onSelectFolder,
+  onToggleFavorite
 }: {
   courses: Course[];
   favorites: string[];
+  favoriteCourses: Course[];
   fileCounts: { [key: string]: number };
   onSelectFolder: (course: Course, folder: FolderType) => void;
   onToggleFavorite: (e: React.MouseEvent, courseId: string) => void;
@@ -163,7 +165,62 @@ export function CourseTreeView({
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-        {sortedGroupKeys.map((group) => (
+              {/* Seção de Disciplinas em Course (quando sem agrupamento) */}
+              {grouping === 'none' && (
+                <>
+                  {favoriteCourses.length > 0 && (
+                    <div className="border-b-2 border-amber-200 bg-amber-50/30">
+                      <div className="flex items-center gap-2 p-4">
+                        <Star className="w-4 h-4 text-amber-400 fill-current" />
+                        <h3 className="text-sm font-bold text-amber-900">Disciplinas em Course</h3>
+                        <span className="text-xs text-amber-600 font-medium">
+                          ({favoriteCourses.length})
+                        </span>
+                      </div>
+                      <div className="divide-y divide-amber-100">
+                        {favoriteCourses.map((course: Course) => {
+                          const isExpanded = expandedCourses.includes(course.id);
+                          return (
+                            <div key={course.id} className="bg-amber-50/50">
+                              <div
+                                className={`flex items-center justify-between p-4 pl-6 hover:bg-amber-100 cursor-pointer group transition-all`}
+                                onClick={() => toggleCourse(course.id)}
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                                  <Folder className="w-4 h-4 flex-shrink-0 text-amber-500" />
+                                  <div className="min-w-0">
+                                    <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600">{course.name}</h4>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-[10px] text-gray-400 font-medium uppercase">{course.code || 'S/ COD'}</span>
+                                      <span className="text-[10px] text-gray-300">•</span>
+                                      <span className="text-[10px] text-gray-400">{fileCounts[course.id] || 0} arquivos</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <button onClick={(e) => onToggleFavorite(e, course.id)} className="p-2 rounded-full text-amber-400">
+                                  <Star className="w-4 h-4 fill-current" />
+                                </button>
+                              </div>
+                              {isExpanded && (
+                                <div className="bg-amber-50/30 pb-2">
+                                  {loadingFolders.includes(course.id) ? (
+                                    <div className="pl-10 py-3 flex items-center gap-2 text-xs text-gray-400">
+                                      <Loader className="w-3 h-3 animate-spin" /> Carregando pastas...
+                                    </div>
+                                  ) : renderFolders(course)}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+      
+              {sortedGroupKeys.map((group) => (
           <div key={group} className="border-b border-gray-100 last:border-0">
             {grouping !== 'none' && (
               <button

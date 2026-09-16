@@ -95,19 +95,19 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
   });
 
   const favoriteCourses = filteredCourses.filter(c => favorites.includes(c.id));
-  const otherCourses = filteredCourses.filter(c => !favorites.includes(c.id));
-
-  const handleToggleFavorite = async (e: React.MouseEvent, courseId: string) => {
-    e.stopPropagation();
-    if (!user) return;
-    const isFav = favorites.includes(courseId);
-    if (isFav) {
-      await supabase.from('course_favorites').delete().eq('user_id', user.id).eq('course_id', courseId);
-    } else {
-      await supabase.from('course_favorites').insert({ user_id: user.id, course_id: courseId });
-    }
-    loadData();
-  };
+    const otherCourses = filteredCourses.filter(c => !favorites.includes(c.id));
+  
+    const handleToggleFavorite = async (e: React.MouseEvent, courseId: string) => {
+      e.stopPropagation();
+      if (!user) return;
+      const isFav = favorites.includes(courseId);
+      if (isFav) {
+        await supabase.from('course_favorites').delete().eq('user_id', user.id).eq('course_id', courseId);
+      } else {
+        await supabase.from('course_favorites').insert({ user_id: user.id, course_id: courseId });
+      }
+      loadData();
+    };
 
   const handleBackToCourses = () => {
     setSelectedCourse(null);
@@ -204,14 +204,15 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
         </div>
       ) : (
         <div className="space-y-6">
-          <CourseTreeView
-            courses={filteredCourses}
-            favorites={favorites}
-            fileCounts={fileCounts}
-            onSelectFolder={(course, folder) => setSelectedFolder({ course, folder })}
-            onToggleFavorite={handleToggleFavorite}
-          />
-        </div>
+                  <CourseTreeView
+                    courses={filteredCourses}
+                    favorites={favorites}
+                    favoriteCourses={favoriteCourses}
+                    fileCounts={fileCounts}
+                    onSelectFolder={(course, folder) => setSelectedFolder({ course, folder })}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                </div>
       )}
 
       {selectedFolder && (

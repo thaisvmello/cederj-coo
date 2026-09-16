@@ -46,75 +46,75 @@ export function Header({
 
   return (
     <header className="w-full z-40">
-      {/* Main Header */}
-      <div className="bg-[#00394a] text-white px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" onClick={onGoHome} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
-            <img
-              src="/57002beae21c30a2d583825b8ea17010.png"
-              alt="Logo Acervo Acadêmico"
-              className="h-14 w-auto object-contain"
-            />
-            <div className="border-l border-white/20 pl-4">
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
-                Acervo Acadêmico
-              </h1>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <Link to="/profile" className="group">
-                <div className="flex items-center gap-2 justify-end mb-0.5">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider group-hover:text-blue-400 transition-colors">Usuário</p>
-                  {isAdmin && (
-                    <span className="inline-flex items-center gap-1 text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-medium">
-                      <Shield className="w-3 h-3" />
-                      Admin
-                    </span>
-                  )}
+          {/* Main Header */}
+          <div className="bg-[#00394a] text-white px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+              <Link to="/" onClick={onGoHome} className="flex items-center gap-2 sm:gap-3 lg:gap-4 hover:opacity-80 transition-opacity shrink-0">
+                <img
+                  src="/57002beae21c30a2d583825b8ea17010.png"
+                  alt="Logo Acervo Acadêmico"
+                  className="h-10 sm:h-12 lg:h-14 w-auto object-contain"
+                />
+                <div className="border-l border-white/20 pl-2 sm:pl-3 lg:pl-4 min-w-0">
+                  <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold leading-tight tracking-tight truncate">
+                    Acervo Acadêmico
+                  </h1>
                 </div>
-                <p className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">{user?.email || ''}</p>
               </Link>
+    
+              <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 shrink-0">
+                <div className="text-right hidden md:block">
+                  <Link to="/profile" className="group">
+                    <div className="flex items-center gap-2 justify-end mb-0.5">
+                      <p className="text-[10px] sm:text-xs font-medium text-gray-400 uppercase tracking-wider group-hover:text-blue-400 transition-colors">Usuário</p>
+                      {isAdmin && (
+                        <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] bg-purple-500/20 text-purple-300 px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
+                          <Shield className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                          Admin
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs sm:text-sm font-bold text-white group-hover:text-blue-300 transition-colors truncate max-w-[150px] sm:max-w-[200px]">{user?.email || ''}</p>
+                  </Link>
+                </div>
+    
+                {isAdmin && (
+                  <Link
+                    to={isAdminPage ? '/' : '/admin'}
+                    className={`p-1.5 sm:p-2 lg:p-2.5 rounded-full transition-all border border-transparent ${
+                      isAdminPage
+                        ? 'bg-purple-600 text-white hover:bg-purple-700'
+                        : 'text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/10'
+                    }`}
+                    title={isAdminPage ? 'Voltar ao Início' : 'Painel do Administrador'}
+                  >
+                    {isAdminPage ? <Home className="w-4 h-4 sm:w-5 sm:h-5" /> : <Settings className="w-4 h-4 sm:w-5 sm:h-5" />}
+                  </Link>
+                )}
+    
+                {!isAdminPage && !isProfilePage && !isTutorialPage && !isFeedbackPage && showHomeButton && onGoHome && (
+                  <button
+                    onClick={onGoHome}
+                    className="p-1.5 sm:p-2 lg:p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
+                    title="Voltar ao Início"
+                  >
+                    <Home className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                )}
+    
+                {/* Notification Bell */}
+                <NotificationBell />
+    
+                <button
+                  onClick={() => signOut()}
+                  className="p-1.5 sm:p-2 lg:p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
+                  title="Sair"
+                >
+                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </div>
             </div>
-
-            {isAdmin && (
-              <Link
-                to={isAdminPage ? '/' : '/admin'}
-                className={`p-2.5 rounded-full transition-all border border-transparent ${
-                  isAdminPage
-                    ? 'bg-purple-600 text-white hover:bg-purple-700'
-                    : 'text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/10'
-                }`}
-                title={isAdminPage ? 'Voltar ao Início' : 'Painel do Administrador'}
-              >
-                {isAdminPage ? <Home className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
-              </Link>
-            )}
-
-            {!isAdminPage && !isProfilePage && !isTutorialPage && !isFeedbackPage && showHomeButton && onGoHome && (
-              <button
-                onClick={onGoHome}
-                className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
-                title="Voltar ao Início"
-              >
-                <Home className="w-5 h-5" />
-              </button>
-            )}
-
-            {/* Notification Bell */}
-            <NotificationBell />
-
-            <button
-              onClick={() => signOut()}
-              className="p-2.5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white border border-transparent hover:border-white/10"
-              title="Sair"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
           </div>
-        </div>
-      </div>
 
       {/* Secondary Nav */}
       {!isAdminPage && !isProfilePage && (
