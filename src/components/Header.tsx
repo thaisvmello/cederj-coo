@@ -118,8 +118,8 @@ export function Header({
 
       {/* Secondary Nav */}
       {!isAdminPage && !isProfilePage && (
-        <div className="bg-[#004157] text-gray-300 border-b border-[#002f3e] px-3 sm:px-6 lg:px-8 py-2 relative z-30">
-          <div className="max-w-7xl mx-auto flex items-center gap-3 sm:gap-6 text-xs sm:text-sm font-medium overflow-x-auto no-scrollbar whitespace-nowrap">
+        <div className="bg-[#004157] text-gray-300 border-b border-[#002f3e] px-2 sm:px-6 py-2 relative z-30">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-2 sm:gap-6 text-[10px] sm:text-xs md:text-sm font-medium">
             
             {/* Dropdown Ferramentas */}
             <div className="relative" ref={toolsRef}>
@@ -181,7 +181,7 @@ export function Header({
               )}
             </div>
 
-            <span className="text-gray-600 shrink-0">|</span>
+            <span className="text-gray-600 shrink-0 hidden sm:block">|</span>
 
             {/* Dropdown WhatsApp */}
             <div className="relative" ref={whatsappRef}>
@@ -234,7 +234,7 @@ export function Header({
               )}
             </div>
 
-            <span className="text-gray-600 shrink-0">|</span>
+            <span className="text-gray-600 shrink-0 hidden sm:block">|</span>
 
             {/* Link Tutorial */}
             <Link
@@ -245,7 +245,7 @@ export function Header({
               <span>Tutorial</span>
             </Link>
 
-            <span className="text-gray-600 shrink-0">|</span>
+            <span className="text-gray-600 shrink-0 hidden sm:block">|</span>
 
             {/* Link Erros/Sugestões */}
             <Link

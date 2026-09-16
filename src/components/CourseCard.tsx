@@ -27,7 +27,7 @@ export function CourseCard({ course, fileCount, isFavorite, onClick, onToggleFav
   return (
     <div
       onClick={onClick}
-      className="group bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer relative flex flex-col h-full min-h-[180px] sm:min-h-[200px]"
+      className="group bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer relative flex flex-col h-full"
     >
       <button
         onClick={onToggleFavorite}
@@ -40,20 +40,20 @@ export function CourseCard({ course, fileCount, isFavorite, onClick, onToggleFav
         <Star className={`w-4 h-4 sm:w-5 sm:h-5 ${isFavorite ? 'fill-current' : ''}`} />
       </button>
 
-      <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
+      <div className="flex items-start gap-3 sm:gap-4 mb-1.5 sm:mb-2.5">
         <div className={`p-2 sm:p-3 rounded-xl shrink-0 ${colorClass}`}>
           <Folder className="w-5 h-5 sm:w-6 sm:h-6" />
         </div>
         
         <div className="flex-1 min-w-0 pr-6 sm:pr-8">
-          <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-snug group-hover:text-blue-600 transition-colors [text-wrap:balance] line-clamp-3">
+          <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-[1.15] group-hover:text-blue-600 transition-colors [text-wrap:balance] line-clamp-3">
             {course.name}
           </h3>
         </div>
       </div>
 
-      <div className="mt-auto space-y-2 sm:space-y-3">
-        <div className="flex flex-wrap gap-1.5 sm:gap-2">
+      <div className="mt-auto space-y-1.5 sm:space-y-2.5">
+        <div className="flex flex-wrap gap-1 sm:gap-2">
           {course.code && (
             <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-1 bg-gray-100 text-gray-600 text-[9px] sm:text-[10px] font-bold rounded-md uppercase tracking-wider">
               <Hash className="w-3 h-3" />
