@@ -56,8 +56,15 @@ export function CourseTreeView({
   }, [user]);
 
   const groupedData = useMemo(() => {
-    if (grouping === 'none') return { 'Todas as Disciplinas': courses };
-    return courses.reduce((acc, course) => {
+    // When grouping is 'none', we show all courses but we'll exclude favorites from the main list 
+    // to avoid duplication if they are shown at the top.
+    const coursesToShow = grouping === 'none' 
+      ? courses.filter(c => !favorites.includes(c.id))
+      : courses;
+
+    if (grouping === 'none') return { 'Outras Disciplinas': coursesToShow };
+
+    return coursesToShow.reduce((acc, course) => {
       let key = '';
       if (grouping === 'period') {
         key = (course.period && course.period !== '-' ? `${course.period}º Período` : 'Sem Período');
@@ -69,7 +76,7 @@ export function CourseTreeView({
       acc[key].push(course);
       return acc;
     }, {} as { [key: string]: Course[] });
-  }, [courses, grouping]);
+  }, [courses, grouping, favorites]);
 
   const sortedGroupKeys = useMemo(() => {
     return Object.keys(groupedData).sort((a, b) => {
@@ -143,6 +150,43 @@ export function CourseTreeView({
     });
   };
 
+  const renderCourseItem = (course: Course, isFav: boolean) => {
+    const isExpanded = expandedCourses.includes(course.id);
+    return (
+      <div key={course.id} className={isFav ? "bg-amber-50/50" : "bg-white"}>
+        <div 
+          className={`flex items-center justify-between p-4 pl-6 hover:bg-gray-50 cursor-pointer group transition-all ${isFav ? 'hover:bg-amber-100' : ''}`}
+          onClick={() => toggleCourse(course.id)}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+            <Folder className={`w-4 h-4 flex-shrink-0 ${isFav ? 'text-amber-500' : 'text-blue-400'}`} />
+            <div className="min-w-0">
+              <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600">{course.name}</h4>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] text-gray-400 font-medium uppercase">{course.code || 'S/ COD'}</span>
+                <span className="text-[10px] text-gray-300">•</span>
+                <span className="text-[10px] text-gray-400">{fileCounts[course.id] || 0} arquivos</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={(e) => onToggleFavorite(e, course.id)} className={`p-2 rounded-full ${isFav ? 'text-amber-400' : 'text-gray-300 hover:text-amber-400'}`}>
+            <Star className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+        {isExpanded && (
+          <div className={`${isFav ? 'bg-amber-50/30' : 'bg-gray-50/30'} pb-2`}>
+            {loadingFolders.includes(course.id) ? (
+              <div className="pl-10 py-3 flex items-center gap-2 text-xs text-gray-400">
+                <Loader className="w-3 h-3 animate-spin" /> Carregando pastas...
+              </div>
+            ) : renderFolders(course)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
@@ -165,62 +209,24 @@ export function CourseTreeView({
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-              {/* Seção de Disciplinas em Course (quando sem agrupamento) */}
-              {grouping === 'none' && (
-                <>
-                  {favoriteCourses.length > 0 && (
-                    <div className="border-b-2 border-amber-200 bg-amber-50/30">
-                      <div className="flex items-center gap-2 p-4">
-                        <Star className="w-4 h-4 text-amber-400 fill-current" />
-                        <h3 className="text-sm font-bold text-amber-900">Disciplinas em Course</h3>
-                        <span className="text-xs text-amber-600 font-medium">
-                          ({favoriteCourses.length})
-                        </span>
-                      </div>
-                      <div className="divide-y divide-amber-100">
-                        {favoriteCourses.map((course: Course) => {
-                          const isExpanded = expandedCourses.includes(course.id);
-                          return (
-                            <div key={course.id} className="bg-amber-50/50">
-                              <div
-                                className={`flex items-center justify-between p-4 pl-6 hover:bg-amber-100 cursor-pointer group transition-all`}
-                                onClick={() => toggleCourse(course.id)}
-                              >
-                                <div className="flex items-center gap-3 min-w-0">
-                                  {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                                  <Folder className="w-4 h-4 flex-shrink-0 text-amber-500" />
-                                  <div className="min-w-0">
-                                    <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600">{course.name}</h4>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                      <span className="text-[10px] text-gray-400 font-medium uppercase">{course.code || 'S/ COD'}</span>
-                                      <span className="text-[10px] text-gray-300">•</span>
-                                      <span className="text-[10px] text-gray-400">{fileCounts[course.id] || 0} arquivos</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <button onClick={(e) => onToggleFavorite(e, course.id)} className="p-2 rounded-full text-amber-400">
-                                  <Star className="w-4 h-4 fill-current" />
-                                </button>
-                              </div>
-                              {isExpanded && (
-                                <div className="bg-amber-50/30 pb-2">
-                                  {loadingFolders.includes(course.id) ? (
-                                    <div className="pl-10 py-3 flex items-center gap-2 text-xs text-gray-400">
-                                      <Loader className="w-3 h-3 animate-spin" /> Carregando pastas...
-                                    </div>
-                                  ) : renderFolders(course)}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-      
-              {sortedGroupKeys.map((group) => (
+        {/* Seção de Disciplinas em Curso (Destaque para favoritos) */}
+        {favoriteCourses.length > 0 && (
+          <div className="border-b-2 border-amber-200 bg-amber-50/30">
+            <div className="flex items-center gap-2 p-4">
+              <Star className="w-4 h-4 text-amber-400 fill-current" />
+              <h3 className="text-sm font-bold text-amber-900">Disciplinas em Curso</h3>
+              <span className="text-xs text-amber-600 font-medium">
+                ({favoriteCourses.length})
+              </span>
+            </div>
+            <div className="divide-y divide-amber-100">
+              {favoriteCourses.map((course) => renderCourseItem(course, true))}
+            </div>
+          </div>
+        )}
+
+        {/* Listagem principal */}
+        {sortedGroupKeys.map((group) => (
           <div key={group} className="border-b border-gray-100 last:border-0">
             {grouping !== 'none' && (
               <button
@@ -245,43 +251,7 @@ export function CourseTreeView({
 
             {(expandedGroups.includes(group) || grouping === 'none') && (
               <div className="divide-y divide-gray-50">
-                {groupedData[group].map((course: Course) => {
-                  const isFav = favorites.includes(course.id);
-                  const isExpanded = expandedCourses.includes(course.id);
-                  return (
-                    <div key={course.id} className="bg-white">
-                      <div 
-                        className={`flex items-center justify-between p-4 pl-6 hover:bg-gray-50 cursor-pointer group transition-all`}
-                        onClick={() => toggleCourse(course.id)}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                          <Folder className={`w-4 h-4 flex-shrink-0 ${isFav ? 'text-amber-400' : 'text-blue-400'}`} />
-                          <div className="min-w-0">
-                            <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600">{course.name}</h4>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-gray-400 font-medium uppercase">{course.code || 'S/ COD'}</span>
-                              <span className="text-[10px] text-gray-300">•</span>
-                              <span className="text-[10px] text-gray-400">{fileCounts[course.id] || 0} arquivos</span>
-                            </div>
-                          </div>
-                        </div>
-                        <button onClick={(e) => onToggleFavorite(e, course.id)} className={`p-2 rounded-full ${isFav ? 'text-amber-400' : 'text-gray-300 hover:text-amber-400'}`}>
-                          <Star className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
-                        </button>
-                      </div>
-                      {isExpanded && (
-                        <div className="bg-gray-50/30 pb-2">
-                          {loadingFolders.includes(course.id) ? (
-                            <div className="pl-10 py-3 flex items-center gap-2 text-xs text-gray-400">
-                              <Loader className="w-3 h-3 animate-spin" /> Carregando pastas...
-                            </div>
-                          ) : renderFolders(course)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {groupedData[group].map((course: Course) => renderCourseItem(course, favorites.includes(course.id)))}
               </div>
             )}
           </div>
