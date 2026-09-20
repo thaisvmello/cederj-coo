@@ -47,22 +47,22 @@ export function Header({
   return (
     <header className="w-full z-40">
       {/* Main Header */}
-      <div className="bg-[#00394a] text-white px-2.5 sm:px-4 lg:px-6 py-2 sm:py-3.5">
+      <div className="bg-[#00394a] text-white px-3 sm:px-4 lg:px-6 py-2.5 sm:py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
-          <Link to="/" onClick={onGoHome} className="flex items-center gap-2 sm:gap-3 lg:gap-4 hover:opacity-80 transition-opacity min-w-0 flex-1">
+          <Link to="/" onClick={onGoHome} className="flex items-center gap-2 sm:gap-3 lg:gap-4 hover:opacity-80 transition-opacity min-w-0">
             <img
               src="/57002beae21c30a2d583825b8ea17010.png"
               alt="Logo Acervo Acadêmico"
-              className="h-7 sm:h-9 md:h-11 lg:h-12 w-auto object-contain shrink-0"
+              className="h-8 sm:h-9 md:h-11 lg:h-12 w-auto object-contain shrink-0"
             />
             <div className="border-l border-white/20 pl-2 sm:pl-3 lg:pl-4 min-w-0 flex items-center">
-            <h1 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-tight tracking-tight truncate">
-              Acervo Acadêmico
-            </h1>
-          </div>
+              <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-tight tracking-tight truncate">
+                Acervo Acadêmico
+              </h1>
+            </div>
           </Link>
 
-          <div className="flex items-center gap-0.5 sm:gap-1.5 md:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2.5 shrink-0">
             <div className="text-right hidden md:block">
               <Link to="/profile" className="group">
                 <div className="flex items-center gap-2 justify-end mb-0.5">
@@ -118,17 +118,17 @@ export function Header({
 
       {/* Secondary Nav */}
       {!isAdminPage && !isProfilePage && (
-        <div className="bg-[#004157] text-gray-300 border-b border-[#002f3e] px-2 sm:px-6 py-1.5 sm:py-2 relative z-30">
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center sm:justify-start gap-x-2 sm:gap-x-4 md:gap-x-5 gap-y-1.5 text-xs sm:text-sm font-medium">
+        <div className="bg-[#004157] text-gray-300 border-b border-[#002f3e] px-2 sm:px-6 py-1.5 relative z-30">
+          <div className="max-w-7xl mx-auto flex items-center justify-start sm:justify-start gap-1 sm:gap-3 overflow-x-auto no-scrollbar whitespace-nowrap text-xs sm:text-sm font-medium">
             
             {/* Dropdown Ferramentas */}
-            <div className="relative" ref={toolsRef}>
+            <div className="relative shrink-0" ref={toolsRef}>
               <button
                 onClick={() => {
                   setToolsOpen(!toolsOpen);
                   setWhatsappOpen(false);
                 }}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10 hover:text-white transition-colors shrink-0 whitespace-nowrap text-[11px] sm:text-xs md:text-sm ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10 hover:text-white transition-colors shrink-0 text-xs sm:text-sm ${
                   toolsOpen || currentPage === 'calculator' ? 'text-white bg-white/10' : ''
                 }`}
               >
@@ -138,7 +138,7 @@ export function Header({
               </button>
 
               {toolsOpen && (
-                <div className="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 text-gray-800 animate-in fade-in slide-in-from-top-2 duration-150 z-50">
+                <div className="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 text-gray-800 animate-in fade-in slide-in-from-top-2 duration-150 z-50 whitespace-normal">
                   <button
                     onClick={() => {
                       onNavigateToCalculator?.();
@@ -181,16 +181,16 @@ export function Header({
               )}
             </div>
 
-            <span className="text-white/20 shrink-0 select-none hidden sm:inline">|</span>
+            <span className="text-white/20 shrink-0 select-none">|</span>
 
             {/* Dropdown WhatsApp */}
-            <div className="relative" ref={whatsappRef}>
+            <div className="relative shrink-0" ref={whatsappRef}>
               <button
                 onClick={() => {
                   setWhatsappOpen(!whatsappOpen);
                   setToolsOpen(false);
                 }}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10 hover:text-white transition-colors shrink-0 whitespace-nowrap text-[11px] sm:text-xs md:text-sm ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10 hover:text-white transition-colors shrink-0 text-xs sm:text-sm ${
                   whatsappOpen ? 'text-white bg-white/10' : ''
                 }`}
               >
@@ -202,7 +202,7 @@ export function Header({
               </button>
 
               {whatsappOpen && (
-                <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 text-gray-800 animate-in fade-in slide-in-from-top-2 duration-150 z-50">
+                <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 text-gray-800 animate-in fade-in slide-in-from-top-2 duration-150 z-50 whitespace-normal">
                   <a
                     href="https://chat.whatsapp.com/LJ7stNpuLzf4DI2UqogMvb"
                     target="_blank"
@@ -211,10 +211,10 @@ export function Header({
                     className="w-full text-left px-4 py-2.5 hover:bg-green-50 hover:text-green-700 transition flex items-center justify-between text-xs font-semibold"
                   >
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      <span className="w-2 h-2 rounded-full bg-green-500 shrink-0"></span>
                       Grupo Geral - Contábeis CEDERJ
                     </span>
-                    <ExternalLink className="w-3 h-3 text-gray-400" />
+                    <ExternalLink className="w-3 h-3 text-gray-400 shrink-0" />
                   </a>
 
                   <a
@@ -225,32 +225,32 @@ export function Header({
                     className="w-full text-left px-4 py-2.5 hover:bg-green-50 hover:text-green-700 transition flex items-center justify-between text-xs font-semibold"
                   >
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      <span className="w-2 h-2 rounded-full bg-green-500 shrink-0"></span>
                       Comunidade de Disciplinas
                     </span>
-                    <ExternalLink className="w-3 h-3 text-gray-400" />
+                    <ExternalLink className="w-3 h-3 text-gray-400 shrink-0" />
                   </a>
                 </div>
               )}
             </div>
 
-            <span className="text-white/20 shrink-0 select-none hidden sm:inline">|</span>
+            <span className="text-white/20 shrink-0 select-none">|</span>
 
             {/* Link Tutorial */}
             <Link
               to="/tutorial"
-              className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10 text-amber-300 hover:text-amber-200 transition-colors shrink-0 whitespace-nowrap text-[11px] sm:text-xs md:text-sm"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10 text-amber-300 hover:text-amber-200 transition-colors shrink-0 text-xs sm:text-sm"
             >
               <HelpCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>Tutorial</span>
             </Link>
 
-            <span className="text-white/20 shrink-0 select-none hidden sm:inline">|</span>
+            <span className="text-white/20 shrink-0 select-none">|</span>
 
             {/* Link Erros/Sugestões */}
             <Link
               to="/feedback"
-              className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10 text-rose-300 hover:text-rose-200 transition-colors shrink-0 whitespace-nowrap text-[11px] sm:text-xs md:text-sm"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10 text-rose-300 hover:text-rose-200 transition-colors shrink-0 text-xs sm:text-sm"
             >
               <MessageSquare className="w-3.5 h-3.5 text-rose-400 shrink-0" />
               <span>Erros/Sugestões</span>
