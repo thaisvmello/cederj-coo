@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, FolderPlus, Send, Loader } from 'lucide-react';
+import { X, FolderPlus, Folder, Send, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -18,6 +18,8 @@ export function FolderRequestModal({ courseId, courseName, selectedFolderId, sel
   const [name, setName] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const isSubfolder = Boolean(selectedFolderId && selectedFolderName);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,22 +63,46 @@ export function FolderRequestModal({ courseId, courseName, selectedFolderId, sel
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-50 rounded-lg">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-amber-50 rounded-lg shrink-0">
               <FolderPlus className="w-5 h-5 text-amber-600" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Solicitar Nova Pasta</h2>
-              <p className="text-xs text-gray-500">{courseName} {selectedFolderName ? `/ ${selectedFolderName}` : ''}</p>
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold text-gray-900 truncate">
+                {isSubfolder ? 'Solicitar Nova Subpasta' : 'Solicitar Nova Pasta'}
+              </h2>
+              <p className="text-xs text-gray-500 truncate">{courseName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition shrink-0 ml-2">
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Card de Origem da Pasta */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-500 shrink-0">Disciplina:</span>
+              <span className="font-bold text-slate-800 truncate">{courseName}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-slate-500 shrink-0">Local de Criação:</span>
+              {isSubfolder ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-900 font-bold rounded-lg border border-amber-300">
+                  <Folder className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  Subpasta dentro de: <span className="underline">{selectedFolderName}</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-800 font-semibold rounded-lg border border-blue-200">
+                  <Folder className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  Pasta Principal (Raiz da disciplina)
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
             <p className="text-xs text-amber-800">
               <strong>Atenção:</strong> A criação de novas pastas requer aprovação do administrador. 
               Sua solicitação será analisada em breve.
