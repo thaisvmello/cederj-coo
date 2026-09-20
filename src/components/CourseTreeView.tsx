@@ -139,7 +139,7 @@ export function CourseTreeView({
           >
             <div className="flex items-center gap-2 min-w-0">
               {hasSubfolders ? (
-                isExpanded ? <ChevronDown className="w-3 h-3 text-gray-400" /> : <ChevronRight className="w-3 h-3 text-gray-400" />}
+                isExpanded ? <ChevronDown className="w-3 h-3 text-gray-400" /> : <ChevronRight className="w-3 h-3 text-gray-400" />
               ) : (
                 <div className="w-3" />
               )}
