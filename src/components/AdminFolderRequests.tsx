@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Check, X, Clock, FolderPlus, Loader, RefreshCw } from 'lucide-react';
+import { Check, X, Clock, FolderPlus, Folder, Loader, RefreshCw } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -9,6 +9,8 @@ import { FolderRequest } from '../lib/types';
 
 interface ExtendedFolderRequest extends FolderRequest {
   requester_name?: string;
+  course_name?: string;
+  parent_folder_name?: string;
 }
 
 export function AdminFolderRequests() {
@@ -37,19 +39,38 @@ export function AdminFolderRequests() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        const userIds = [...new Set(data.map(r => r.requested_by))];
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name')
-          .in('id', userIds);
+        const userIds = [...new Set(data.map(r => r.requested_by).filter(Boolean))];
+        const courseIds = [...new Set(data.map(r => r.course_id).filter(Boolean))];
+        const parentFolderIds = [...new Set(data.map(r => r.parent_folder_id).filter(Boolean))];
 
-        const formatted = data.map(req => {
-          const profile = profiles?.find(p => p.id === req.requested_by);
+        const [profilesRes, coursesRes, parentFoldersRes] = await Promise.all([
+          userIds.length > 0 
+            ? supabase.from('profiles').select('id, first_name, last_name').in('id', userIds)
+            : Promise.resolve({ data: [] }),
+          courseIds.length > 0 
+            ? supabase.from('courses').select('id, name').in('id', courseIds)
+            : Promise.resolve({ data: [] }),
+          parentFolderIds.length > 0
+            ? supabase.from('folders').select('id, name').in('id', parentFolderIds)
+            : Promise.resolve({ data: [] }),
+        ]);
+
+        const profiles = profilesRes.data || [];
+        const courses = coursesRes.data || [];
+        const parentFolders = parentFoldersRes.data || [];
+
+        const formatted: ExtendedFolderRequest[] = data.map(req => {
+          const profile = profiles.find(p => p.id === req.requested_by);
+          const course = courses.find(c => c.id === req.course_id);
+          const parentFolder = parentFolders.find(f => f.id === req.parent_folder_id);
+
           return {
             ...req,
             requester_name: profile 
               ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Usuário'
-              : 'Usuário desconhecido'
+              : 'Usuário desconhecido',
+            course_name: course?.name || 'Disciplina não identificada',
+            parent_folder_name: parentFolder?.name || undefined,
           };
         });
         setRequests(formatted);
@@ -72,7 +93,7 @@ export function AdminFolderRequests() {
         .insert({
           name: req.folder_name,
           course_id: req.course_id,
-          parent_folder_id: null,
+          parent_folder_id: req.parent_folder_id || null,
         });
 
       if (folderError) throw folderError;
@@ -166,19 +187,47 @@ export function AdminFolderRequests() {
       ) : (
         <div className="divide-y divide-gray-100">
           {requests.map((req) => (
-            <div key={req.id} className="p-4 hover:bg-gray-50 transition flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900">{req.folder_name}</p>
-                <p className="text-xs text-gray-500">Solicitado por: {req.requester_name}</p>
-                <p className="text-xs text-gray-400 mt-2">
-                  <Clock className="inline w-3 h-3 mr-1" />
-                  {new Date(req.created_at).toLocaleString()}
+            <div key={req.id} className="p-4 hover:bg-gray-50 transition flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-bold text-gray-900 text-sm">{req.folder_name}</p>
+                  {req.parent_folder_id ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-900 border border-amber-200 rounded-md text-[11px] font-medium">
+                      <Folder className="w-3 h-3 text-amber-600 shrink-0" />
+                      Subpasta de: <strong className="font-semibold">{req.parent_folder_name || 'Pasta Superior'}</strong>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded-md text-[11px] font-medium">
+                      <Folder className="w-3 h-3 text-blue-500 shrink-0" />
+                      Pasta Principal (Raiz)
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xs text-gray-500">
+                  Disciplina: <strong className="text-gray-700">{req.course_name}</strong>
                 </p>
+
+                {req.reason && (
+                  <p className="text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-lg p-2 italic">
+                    <span className="font-semibold not-italic text-gray-700">Motivo:</span> "{req.reason}"
+                  </p>
+                )}
+
+                <div className="flex items-center gap-2 text-[11px] text-gray-400 pt-0.5">
+                  <span>Solicitado por: <strong className="text-gray-600">{req.requester_name}</strong></span>
+                  <span>•</span>
+                  <span className="inline-flex items-center">
+                    <Clock className="w-3 h-3 mr-1" />
+                    {new Date(req.created_at).toLocaleString()}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 pt-1">
                 <button
                   onClick={() => handleApprove(req)}
                   disabled={processingId === req.id}
+                  title="Aprovar criação"
                   className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition disabled:opacity-50"
                 >
                   {processingId === req.id ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -186,6 +235,7 @@ export function AdminFolderRequests() {
                 <button
                   onClick={() => handleReject(req)}
                   disabled={processingId === req.id}
+                  title="Recusar solicitação"
                   className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition disabled:opacity-50"
                 >
                   <X className="w-4 h-4" />
@@ -201,7 +251,7 @@ export function AdminFolderRequests() {
           isOpen={showRejectModal}
           onRequestId={requestToReject.id}
           onRequesterName={requestToReject.requester_name || 'Usuário'}
-          onRequestTitle={`Pasta: ${requestToReject.folder_name}`}
+          onRequestTitle={`Pasta: ${requestToReject.folder_name}${requestToReject.parent_folder_name ? ` (Subpasta de ${requestToReject.parent_folder_name})` : ''}`}
           onClose={() => {
             setShowRejectModal(false);
             setRequestToReject(null);
