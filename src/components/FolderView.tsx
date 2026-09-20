@@ -10,7 +10,6 @@ import {
   Archive,
   Loader,
   Video,
-  ChevronDown,
   MoreVertical
 } from 'lucide-react';
 import type { Course, Folder as FolderType } from '../lib/types';

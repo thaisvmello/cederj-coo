@@ -32,7 +32,7 @@ export function FolderRequestModal({ courseId, courseName, selectedFolderId, sel
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('folder_requests').insert({
+      const { error } = await supabase.from('folder_requests').insert({
         course_id: courseId,
         parent_folder_id: selectedFolderId || null,
         requested_by: user.id,
