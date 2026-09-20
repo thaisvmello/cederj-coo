@@ -19,7 +19,9 @@ export function FolderRequestModal({ courseId, courseName, selectedFolderId, sel
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isSubfolder = Boolean(selectedFolderId && selectedFolderName);
+  const [targetLocation, setTargetLocation] = useState<'subfolder' | 'root'>(
+    selectedFolderId && selectedFolderName ? 'subfolder' : 'root'
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,9 +36,11 @@ export function FolderRequestModal({ courseId, courseName, selectedFolderId, sel
 
     setLoading(true);
     try {
+      const parentId = targetLocation === 'subfolder' ? (selectedFolderId || null) : null;
+
       const { error } = await supabase.from('folder_requests').insert({
         course_id: courseId,
-        parent_folder_id: selectedFolderId || null,
+        parent_folder_id: parentId,
         requested_by: user.id,
         folder_name: name.trim(),
         reason: reason.trim() || null,
@@ -69,9 +73,11 @@ export function FolderRequestModal({ courseId, courseName, selectedFolderId, sel
             </div>
             <div className="min-w-0">
               <h2 className="text-xl font-bold text-gray-900 truncate">
-                {isSubfolder ? 'Solicitar Nova Subpasta' : 'Solicitar Nova Pasta'}
+                {targetLocation === 'subfolder' ? 'Solicitar Nova Subpasta' : 'Solicitar Nova Pasta'}
               </h2>
-              <p className="text-xs text-gray-500 truncate">{courseName}</p>
+              <p className="text-xs text-blue-600 font-semibold truncate">
+                Disciplina: {courseName}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition shrink-0 ml-2">
@@ -80,25 +86,78 @@ export function FolderRequestModal({ courseId, courseName, selectedFolderId, sel
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Card de Origem da Pasta */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-500 shrink-0">Disciplina:</span>
-              <span className="font-bold text-slate-800 truncate">{courseName}</span>
+          {/* Card de Origem da Pasta com Hierarquia Completa */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5 text-xs">
+            <div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                Pasta Principal da Disciplina:
+              </span>
+              <p className="text-sm font-bold text-slate-900 flex items-center gap-1.5 mt-0.5">
+                <Folder className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>{courseName}</span>
+              </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-slate-500 shrink-0">Local de Criação:</span>
-              {isSubfolder ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-900 font-bold rounded-lg border border-amber-300">
-                  <Folder className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  Subpasta dentro de: <span className="underline">{selectedFolderName}</span>
+
+            {/* Opção de escolha quando há pasta selecionada */}
+            {selectedFolderId && selectedFolderName && (
+              <div className="pt-1 border-t border-slate-200/70">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                  Local onde a pasta será criada:
                 </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-800 font-semibold rounded-lg border border-blue-200">
-                  <Folder className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  Pasta Principal (Raiz da disciplina)
-                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTargetLocation('subfolder')}
+                    className={`p-2 rounded-xl border text-left transition ${
+                      targetLocation === 'subfolder'
+                        ? 'bg-amber-50 border-amber-400 text-amber-900 shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs truncate">
+                      <Folder className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span className="truncate">Dentro de "{selectedFolderName}"</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">Subpasta de {selectedFolderName}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTargetLocation('root')}
+                    className={`p-2 rounded-xl border text-left transition ${
+                      targetLocation === 'root'
+                        ? 'bg-blue-50 border-blue-400 text-blue-900 shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs truncate">
+                      <Folder className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span className="truncate">Na raiz da disciplina</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">Pasta principal</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Caminho / Breadcrumb visual */}
+            <div className="bg-white border border-slate-200 rounded-lg p-2 text-[11px] text-slate-600 flex items-center gap-1 flex-wrap">
+              <span className="font-semibold text-slate-500 shrink-0">Caminho:</span>
+              <strong className="text-blue-700 font-bold flex items-center gap-1">
+                📁 {courseName}
+              </strong>
+              {targetLocation === 'subfolder' && selectedFolderName && (
+                <>
+                  <span className="text-slate-400">/</span>
+                  <strong className="text-amber-800 font-bold flex items-center gap-1">
+                    📂 {selectedFolderName}
+                  </strong>
+                </>
               )}
+              <span className="text-slate-400">/</span>
+              <span className="text-emerald-700 font-semibold italic">
+                📁 {name.trim() || 'Nova pasta'}
+              </span>
             </div>
           </div>
 
