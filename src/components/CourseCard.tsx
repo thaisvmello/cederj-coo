@@ -9,6 +9,16 @@ interface CourseCardProps {
   onToggleFavorite: (e: React.MouseEvent) => void;
 }
 
+function formatTitleWithoutWidows(text: string): string {
+  if (!text) return '';
+  const trimmed = text.trim();
+  const lastSpace = trimmed.lastIndexOf(' ');
+  if (lastSpace === -1) return trimmed;
+  // Replace the last space with a non-breaking space (\u00A0)
+  // This guarantees the last word (e.g. "II", "Tributário") will never sit alone on a widow line.
+  return trimmed.slice(0, lastSpace) + '\u00A0' + trimmed.slice(lastSpace + 1);
+}
+
 export function CourseCard({ course, fileCount, isFavorite, onClick, onToggleFavorite }: CourseCardProps) {
   const colors = [
     'text-blue-500 bg-blue-50',
@@ -40,14 +50,14 @@ export function CourseCard({ course, fileCount, isFavorite, onClick, onToggleFav
         <Star className={`w-4 h-4 sm:w-5 sm:h-5 ${isFavorite ? 'fill-current' : ''}`} />
       </button>
 
-      <div className="flex items-start gap-3 sm:gap-4 mb-1.5 sm:mb-2.5">
-        <div className={`p-2 sm:p-3 rounded-xl shrink-0 ${colorClass}`}>
-          <Folder className="w-5 h-5 sm:w-6 sm:h-6" />
+      <div className="flex items-start gap-3 sm:gap-4 mb-2 sm:mb-3">
+        <div className={`p-2 sm:p-2.5 rounded-xl shrink-0 ${colorClass}`}>
+          <Folder className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
         </div>
         
-        <div className="flex-1 min-w-0 pr-6 sm:pr-8">
-          <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-[1.15] group-hover:text-blue-600 transition-colors [text-wrap:balance] line-clamp-3">
-            {course.name}
+        <div className="flex-1 min-w-0 pr-7 sm:pr-8">
+          <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-snug group-hover:text-blue-600 transition-colors [text-wrap:pretty] line-clamp-3">
+            {formatTitleWithoutWidows(course.name)}
           </h3>
         </div>
       </div>
