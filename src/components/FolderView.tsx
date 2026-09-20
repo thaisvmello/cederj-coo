@@ -44,8 +44,6 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
   const [showEditCourse, setShowEditCourse] = useState(false);
   const [editingFolder, setEditingFolder] = useState<FolderType | null>(null);
 
-  // Controle do menu dropdown de pastas
-  const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
   // Controle do menu de 3 pontos do Header
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const headerMenuRef = useRef<HTMLDivElement>(null);
@@ -87,13 +85,11 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
   const handleSelectFolder = (folder: FolderType) => {
     setShowVideos(false);
     setSelectedFolder(folder);
-    setIsFolderDropdownOpen(false);
   };
 
   const handleSelectVideos = () => {
     setSelectedFolder(null);
     setShowVideos(true);
-    setIsFolderDropdownOpen(false);
   };
 
   const handleDownloadFullCourse = async () => {
@@ -282,83 +278,72 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
         </button>
       </div>
 
-      {/* 3. Seletor de Pastas de Materiais (Dropdown Inline 3 Colunas Fixo) */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3 space-y-2">
-        <button
-          onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
-          className="w-full flex items-center justify-between px-3.5 py-2.5 bg-gray-50 hover:bg-blue-50/60 border border-gray-200 rounded-xl transition text-left group"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest shrink-0">Pasta:</span>
-            <div className="flex items-center gap-1.5 min-w-0">
-              {showVideos ? (
-                <Video className="w-4 h-4 text-blue-600 shrink-0" />
-              ) : (
-                <Folder className="w-4 h-4 text-blue-600 shrink-0" />
-              )}
-              <span className="text-xs sm:text-sm font-bold text-gray-900 truncate">
-                {activeFolderName}
-              </span>
-            </div>
+      {/* 3. Seletor de Pastas de Materiais (Grid Fixo) */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest shrink-0">Pasta:</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            {showVideos ? (
+              <Video className="w-4 h-4 text-blue-600 shrink-0" />
+            ) : (
+              <Folder className="w-4 h-4 text-blue-600 shrink-0" />
+            )}
+            <span className="text-xs sm:text-sm font-bold text-gray-900 truncate">
+              {activeFolderName}
+            </span>
           </div>
-          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0 ${isFolderDropdownOpen ? 'rotate-180 text-blue-600' : ''}`} />
-        </button>
+        </div>
 
-        {/* Grid Fixo de 3 Colunas dentro da tela (Sem rolagem horizontal) */}
-        {isFolderDropdownOpen && (
-          <div className="pt-2 border-t border-gray-100 animate-in fade-in duration-150">
-            <div className="grid grid-cols-3 gap-2">
-              {folders.map((folder) => {
-                const isActive = !showVideos && selectedFolder?.id === folder.id;
-                return (
-                  <div key={folder.id} className="relative group">
-                    <button
-                      onClick={() => handleSelectFolder(folder)}
-                      className={`w-full flex flex-col items-center justify-center p-2 sm:p-2.5 rounded-xl border text-center transition ${
-                        isActive
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                          : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
-                      }`}
-                    >
-                      <Folder className={`w-4 h-4 mb-1 shrink-0 ${isActive ? 'text-white' : 'text-blue-500'}`} />
-                      <span className="text-[11px] font-bold truncate w-full px-0.5">
-                        {folder.name}
-                      </span>
-                    </button>
+        <div className="grid grid-cols-3 gap-2">
+          {folders.map((folder) => {
+            const isActive = !showVideos && selectedFolder?.id === folder.id;
+            return (
+              <div key={folder.id} className="relative group">
+                <button
+                  onClick={() => handleSelectFolder(folder)}
+                  className={`w-full flex flex-col items-center justify-center p-2 sm:p-2.5 rounded-xl border text-center transition ${
+                    isActive
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                      : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
+                  }`}
+                >
+                  <Folder className={`w-4 h-4 mb-1 shrink-0 ${isActive ? 'text-white' : 'text-blue-500'}`} />
+                  <span className="text-[11px] font-bold truncate w-full px-0.5">
+                    {folder.name}
+                  </span>
+                </button>
 
-                    {isAdmin && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingFolder(folder);
-                        }}
-                        className="absolute top-1 right-1 p-1 bg-white/90 border border-gray-200 rounded-md text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition shadow-sm"
-                        title="Renomear pasta"
-                      >
-                        <Pencil className="w-2.5 h-2.5" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+                {isAdmin && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingFolder(folder);
+                    }}
+                    className="absolute top-1 right-1 p-1 bg-white/90 border border-gray-200 rounded-md text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition shadow-sm"
+                    title="Renomear pasta"
+                  >
+                    <Pencil className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
 
-              {/* Botão de Videoaulas no Grid */}
-              <button
-                onClick={handleSelectVideos}
-                className={`w-full flex flex-col items-center justify-center p-2 sm:p-2.5 rounded-xl border text-center transition ${
-                  showVideos
-                    ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                    : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
-                }`}
-              >
-                <Video className={`w-4 h-4 mb-1 shrink-0 ${showVideos ? 'text-white' : 'text-blue-500'}`} />
-                <span className="text-[11px] font-bold truncate w-full px-0.5">
-                  Vídeos
-                </span>
-              </button>
-            </div>
-          </div>
-        )}
+          {/* Botão de Videoaulas no Grid */}
+          <button
+            onClick={handleSelectVideos}
+            className={`w-full flex flex-col items-center justify-center p-2 sm:p-2.5 rounded-xl border text-center transition ${
+              showVideos
+                ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
+            }`}
+          >
+            <Video className={`w-4 h-4 mb-1 shrink-0 ${showVideos ? 'text-white' : 'text-blue-500'}`} />
+            <span className="text-[11px] font-bold truncate w-full px-0.5">
+              Vídeos
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* 4. Área de Upload (quando ativada) */}
