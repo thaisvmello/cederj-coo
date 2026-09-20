@@ -147,6 +147,7 @@ export interface FolderRequest {
   course_id: string;
   requested_by: string;
   folder_name: string;
+  parent_folder_id?: string | null;
   reason?: string | null;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
