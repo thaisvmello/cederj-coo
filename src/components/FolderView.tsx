@@ -387,9 +387,11 @@ export function FolderView({ course: initialCourse, onBack }: FolderViewProps) {
 
       {/* Modais */}
       {showRequestModal && (
-        <FolderRequestModal 
+        <FolderRequestModal
           courseId={course.id}
           courseName={course.name}
+          selectedFolderId={selectedFolder?.id}
+          selectedFolderName={selectedFolder?.name}
           onClose={() => setShowRequestModal(false)}
           onSuccess={loadFolders}
         />

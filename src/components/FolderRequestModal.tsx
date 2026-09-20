@@ -7,11 +7,13 @@ import toast from 'react-hot-toast';
 interface FolderRequestModalProps {
   courseId: string;
   courseName: string;
+  selectedFolderId?: string | null;
+  selectedFolderName?: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function FolderRequestModal({ courseId, courseName, onClose, onSuccess }: FolderRequestModalProps) {
+export function FolderRequestModal({ courseId, courseName, selectedFolderId, selectedFolderName, onClose, onSuccess }: FolderRequestModalProps) {
   const { user } = useAuth();
   const [name, setName] = useState('');
   const [reason, setReason] = useState('');
@@ -30,16 +32,9 @@ export function FolderRequestModal({ courseId, courseName, onClose, onSuccess }:
 
     setLoading(true);
     try {
-      console.log('Enviando solicitação:', {
-        course_id: courseId,
-        requested_by: user.id,
-        folder_name: name.trim(),
-        reason: reason.trim() || null,
-        status: 'pending'
-      });
-
       const { data, error } = await supabase.from('folder_requests').insert({
         course_id: courseId,
+        parent_folder_id: selectedFolderId || null,
         requested_by: user.id,
         folder_name: name.trim(),
         reason: reason.trim() || null,
@@ -51,23 +46,12 @@ export function FolderRequestModal({ courseId, courseName, onClose, onSuccess }:
         throw error;
       }
 
-      console.log('Solicitação criada:', data);
       toast.success('Solicitação enviada! Aguarde a aprovação do administrador.');
       onSuccess();
       onClose();
     } catch (error: any) {
       console.error('Erro ao solicitar pasta:', error);
-      
-      // Mensagens de erro mais específicas
-      if (error?.code === '42P01') {
-        toast.error('Tabela de solicitações não encontrada. Contate o administrador.');
-      } else if (error?.code === '23503') {
-        toast.error('Disciplina não encontrada. Tente novamente.');
-      } else if (error?.code === '42501' || error?.message?.includes('policy')) {
-        toast.error('Sem permissão para criar solicitação. Verifique se está logado.');
-      } else {
-        toast.error(`Erro ao enviar solicitação: ${error?.message || 'Tente novamente'}`);
-      }
+      toast.error(`Erro ao enviar solicitação: ${error?.message || 'Tente novamente'}`);
     } finally {
       setLoading(false);
     }
@@ -83,7 +67,7 @@ export function FolderRequestModal({ courseId, courseName, onClose, onSuccess }:
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900">Solicitar Nova Pasta</h2>
-              <p className="text-xs text-gray-500">{courseName}</p>
+              <p className="text-xs text-gray-500">{courseName} {selectedFolderName ? `/ ${selectedFolderName}` : ''}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
