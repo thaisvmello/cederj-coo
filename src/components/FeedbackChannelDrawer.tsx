@@ -211,7 +211,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                   key={n.id}
                   onClick={() => handleSelectNotification(n)}
                   className={`w-full text-left p-3 border-b border-gray-100 hover:bg-gray-50 transition ${
-                    n.feedback_report_id && selectedReport?.id === n.feedback_report_id ? 'bg-purple-50' : ''
+                    selectedNotification?.id === n.id ? 'bg-purple-50' : ''
                   }`}
                 >
                   <div className="flex items-start gap-2">
@@ -219,11 +219,6 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{n.title}</p>
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.content}</p>
-                      {n.feedback_report_id && (
-                        <span className="text-[10px] text-purple-600 mt-1 inline-block">
-                          {n.is_read ? 'Lida' : 'Não lida'}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </button>
@@ -304,6 +299,14 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                     </div>
                   </div>
                 )}
+              </div>
+            ) : selectedNotification ? (
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{selectedNotification.title}</h3>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedNotification.content}</p>
+                <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500">
+                  {new Date(selectedNotification.created_at).toLocaleString('pt-BR')}
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
