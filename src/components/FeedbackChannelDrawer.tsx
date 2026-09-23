@@ -18,6 +18,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedReport, setSelectedReport] = useState<FeedbackReport | null>(null);
   const [comments, setComments] = useState<FeedbackComment[]>([]);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [replyText, setReplyText] = useState('');
   const [loading, setLoading] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
@@ -91,9 +92,14 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
   };
 
   const handleSelectNotification = async (notification: Notification) => {
+    setSelectedNotification(notification);
     if (notification.feedback_report_id) {
       await loadReportDetail(notification.feedback_report_id);
+    } else {
+      setSelectedReport(null);
+      setComments([]);
     }
+    
     if (!notification.is_read) {
       await supabase.from('notifications').update({ is_read: true }).eq('id', notification.id);
       fetchNotifications();
