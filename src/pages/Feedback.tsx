@@ -5,7 +5,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
-import { Link, useNavigate } from 'react-router-dom';
+import { FeedbackChannelDrawer } from '../components/FeedbackChannelDrawer';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   MessageSquare, 
   AlertTriangle, 
@@ -33,12 +34,14 @@ export function Feedback() {
   const navigate = useNavigate();
 
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState<'bug' | 'suggestion'>('bug');
-  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+    const [description, setDescription] = useState('');
+    const [type, setType] = useState<'bug' | 'suggestion'>('bug');
+    const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const [showFeedbackDrawer, setShowFeedbackDrawer] = useState(false);
+    const [searchParams] = useSearchParams();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -496,10 +499,16 @@ export function Feedback() {
             </div>
           </div>
         </div>
-
-      </main>
-
-      <Footer />
+        
+              <FeedbackChannelDrawer
+                isOpen={showFeedbackDrawer}
+                onClose={() => setShowFeedbackDrawer(false)}
+                initialReportId={searchParams.get('report')}
+              />
+        
+              </main>
+        
+              <Footer />
     </div>
   );
 }

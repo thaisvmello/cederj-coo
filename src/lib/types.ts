@@ -88,8 +88,9 @@ export interface Notification {
   user_id: string;
   title: string;
   content: string;
-  type: 'folder_request' | 'new_content' | 'announcement' | 'file_action' | 'folder_request_rejection' | 'message';
+  type: 'folder_request' | 'new_content' | 'announcement' | 'file_action' | 'folder_request_rejection' | 'message' | 'feedback_response';
   link: string | null;
+  feedback_report_id?: string | null;
   is_read: boolean;
   created_at: string;
 }
@@ -160,7 +161,7 @@ export interface FeedbackReport {
   title: string;
   description: string;
   category: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  status: 'open' | 'new' | 'in_progress' | 'resolved' | 'closed';
   attachments: string[];
   created_at: string;
   updated_at: string;

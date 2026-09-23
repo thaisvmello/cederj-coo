@@ -11,6 +11,7 @@ import {
   Clock,
   AlertCircle,
   X,
+  Send,
 } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import type { FeedbackReport, FeedbackComment } from '../lib/types';
@@ -22,6 +23,8 @@ export function AdminFeedback() {
   const [commentsMap, setCommentsMap] = useState<Record<string, FeedbackComment[]>>({});
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState<Record<string, string>>({});
+  const [sendingReply, setSendingReply] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAdmin) loadReports();
@@ -104,6 +107,27 @@ export function AdminFeedback() {
     }
   };
 
+  const handleReply = async (reportId: string) => {
+    const content = replyText[reportId]?.trim();
+    if (!content) return;
+    setSendingReply(reportId);
+    try {
+      const { error } = await supabase.rpc('create_feedback_response', {
+        p_report_id: reportId,
+        p_content: content,
+      });
+      if (error) throw error;
+      setReplyText(prev => ({ ...prev, [reportId]: '' }));
+      toast.success('Resposta enviada!');
+      loadReports();
+    } catch (error: any) {
+      console.error('Erro ao enviar resposta:', error);
+      toast.error(error.message || 'Erro ao enviar resposta');
+    } finally {
+      setSendingReply(null);
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'open': return <AlertCircle className="w-4 h-4 text-red-500" />;
@@ -121,17 +145,17 @@ export function AdminFeedback() {
       <div className="p-4 border-b border-gray-100 bg-gray-50/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-purple-600" />
-                        <h3 className="font-bold text-gray-800">Feedback & Sugestões</h3>
-                        <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                          {reports.length}
-                        </span>
-                      </div>
-                      <button onClick={loadReports} className="p-2 hover:bg-gray-200 rounded-lg transition text-gray-600">
-                        <RefreshCw className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+            <AlertTriangle className="w-5 h-5 text-purple-600" />
+            <h3 className="font-bold text-gray-800">Feedback & Sugestões</h3>
+            <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full">
+              {reports.length}
+            </span>
+          </div>
+          <button onClick={loadReports} className="p-2 hover:bg-gray-200 rounded-lg transition text-gray-600">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
 
       <div className="divide-y divide-gray-100 max-h-[700px] overflow-y-auto custom-scrollbar">
         {loading ? (
@@ -254,6 +278,29 @@ export function AdminFeedback() {
                         </div>
                       )}
                     </>
+                  )}
+
+                  {/* Admin Reply Field */}
+                  {report.status !== 'closed' && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={replyText[report.id] || ''}
+                          onChange={(e) => setReplyText(prev => ({ ...prev, [report.id]: e.target.value }))}
+                          placeholder="Responder ao estudante..."
+                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          onKeyDown={(e) => e.key === 'Enter' && handleReply(report.id)}
+                        />
+                        <button
+                          onClick={() => handleReply(report.id)}
+                          disabled={sendingReply === report.id || !replyText[report.id]?.trim()}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition flex items-center gap-1"
+                        >
+                          {sendingReply === report.id ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
