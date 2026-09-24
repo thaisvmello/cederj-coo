@@ -37,19 +37,24 @@ const WHATSAPP_GROUPS = [
 /* Estilos                                                             */
 /* ------------------------------------------------------------------ */
 
+// Foco sobre o fundo azul (header)
 const ring =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00394a]/40 focus-visible:ring-offset-1';
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70';
+
+// Foco dentro dos painéis brancos
+const ringLight =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00394a]/40';
 
 // "Chip" no celular, botão discreto no desktop
 const navChip = (active: boolean) =>
   `inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors lg:rounded-lg lg:border-transparent lg:px-3 ${
     active
-      ? 'border-[#00394a] bg-[#00394a] text-white lg:bg-[#00394a]/10 lg:text-[#00394a]'
-      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 lg:text-slate-600 lg:hover:bg-slate-100 lg:hover:text-[#00394a]'
+      ? 'border-white bg-white text-[#00394a] lg:bg-white/15 lg:text-white'
+      : 'border-white/20 bg-white/5 text-white/85 hover:bg-white/10 hover:text-white lg:bg-transparent lg:text-white/75'
   } ${ring}`;
 
 // Itens dos painéis (bottom sheet no celular, popover no desktop)
-const sheetItem = `flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left text-[15px] font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 lg:px-4 lg:py-2.5 lg:text-sm ${ring}`;
+const sheetItem = `flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left text-[15px] font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 lg:px-4 lg:py-2.5 lg:text-sm ${ringLight}`;
 
 // Painel: sobe de baixo no celular, vira popover a partir de lg
 const sheetPanel =
@@ -112,7 +117,7 @@ export function Header({
   }, [location.pathname]);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 border-t-[3px] border-t-[#00394a] bg-white">
+    <header className="sticky top-0 z-40 w-full border-b border-black/20 border-t-[3px] border-t-white bg-[#00394a] text-white shadow-md shadow-black/10">
       {/* Fundo que captura cliques fora (escurece só no celular quando é um sheet) */}
       {open && (
         <button
@@ -133,14 +138,14 @@ export function Header({
           onClick={onGoHome}
           className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg lg:flex-none ${ring}`}
         >
-          <span className="grid h-10 min-w-10 shrink-0 place-items-center rounded-xl bg-[#00394a] px-1.5">
+          <span className="grid h-10 min-w-10 shrink-0 place-items-center rounded-xl bg-white/10 px-1.5 ring-1 ring-white/15">
             <img
               src="/57002beae21c30a2d583825b8ea17010.png"
               alt="Logo Acervo Acadêmico"
               className="h-7 w-auto object-contain"
             />
           </span>
-          <span className="truncate text-[17px] font-bold tracking-tight text-[#00394a] sm:text-xl">
+          <span className="truncate text-[17px] font-bold tracking-tight text-white sm:text-xl">
             Acervo Acadêmico
           </span>
         </Link>
@@ -156,23 +161,23 @@ export function Header({
               aria-expanded={open === 'user'}
               aria-haspopup="menu"
               aria-label="Menu do usuário"
-              className={`flex items-center gap-2 rounded-full border border-slate-200 py-1 pl-1 pr-2 transition-colors hover:bg-slate-50 ${
-                open === 'user' ? 'bg-slate-50' : ''
+              className={`flex items-center gap-2 rounded-full border border-white/20 py-1 pl-1 pr-2 transition-colors hover:bg-white/10 ${
+                open === 'user' ? 'bg-white/10' : ''
               } ${ring}`}
             >
-              <span className="relative grid h-8 w-8 place-items-center rounded-full bg-[#00394a] text-sm font-semibold text-white">
+              <span className="relative grid h-8 w-8 place-items-center rounded-full bg-white text-sm font-semibold text-[#00394a]">
                 {initial}
                 {isAdmin && (
-                  <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-purple-600 ring-2 ring-white">
+                  <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-purple-500 ring-2 ring-[#00394a]">
                     <Shield className="h-2.5 w-2.5 text-white" />
                   </span>
                 )}
               </span>
-              <span className="hidden max-w-[160px] truncate text-sm font-medium text-slate-700 xl:block">
+              <span className="hidden max-w-[160px] truncate text-sm font-medium text-white/90 xl:block">
                 {email}
               </span>
               <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${
+                className={`h-4 w-4 text-white/60 transition-transform duration-200 ${
                   open === 'user' ? 'rotate-180' : ''
                 }`}
               />
