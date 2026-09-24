@@ -279,39 +279,39 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
           <div className={`w-full md:w-80 lg:w-96 border-r border-gray-200 flex flex-col bg-white ${hasActiveDetail ? 'hidden md:flex' : 'flex'}`}>
             
             {/* ABAS DE FILTRO */}
-            <div className="flex overflow-x-auto custom-scrollbar p-2 gap-2 border-b border-gray-100 bg-gray-50">
+            <div className="flex flex-wrap p-3 gap-2 border-b border-gray-100 bg-gray-50">
               <button 
                 onClick={() => setActiveFilter('all')}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                className={`px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-colors ${activeFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
               >
                 Todas
               </button>
               <button 
                 onClick={() => setActiveFilter('feedback')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === 'feedback' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-colors ${activeFilter === 'feedback' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
               >
                 <MessageSquare className="w-3 h-3" /> Feedback
               </button>
               <button 
                 onClick={() => setActiveFilter('news')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === 'news' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-colors ${activeFilter === 'news' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
               >
                 <Megaphone className="w-3 h-3" /> Notícias
               </button>
               <button 
                 onClick={() => setActiveFilter('reply')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === 'reply' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-colors ${activeFilter === 'reply' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
               >
                 <MessageCircle className="w-3 h-3" /> Respostas
               </button>
               <button 
                 onClick={() => setActiveFilter('update')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === 'update' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-colors ${activeFilter === 'update' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
               >
                 <Bell className="w-3 h-3" /> Atualizações
               </button>
             </div>
-
+            
             {/* CONTEÚDO DA LISTA */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               {drawerLoading ? (
