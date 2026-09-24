@@ -47,22 +47,22 @@ export function Header({
   return (
     <header className="w-full z-40">
       {/* Main Header */}
-      <div className="bg-[#00394a] text-white px-4 sm:px-6 py-3 sm:py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
-          <Link to="/" onClick={onGoHome} className="flex items-center gap-3 sm:gap-4 hover:opacity-80 transition-opacity min-w-0">
+      <div className="bg-[#00394a] text-white px-2.5 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+          <Link to="/" onClick={onGoHome} className="flex items-center gap-2 sm:gap-4 hover:opacity-80 transition-opacity">
             <img
               src="/57002beae21c30a2d583825b8ea17010.png"
               alt="Logo Acervo Acadêmico"
               className="h-8 sm:h-10 md:h-12 w-auto object-contain shrink-0"
             />
-            <div className="border-l border-white/20 pl-3 sm:pl-4 min-w-0 flex items-center">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold leading-tight tracking-tight truncate">
+            <div className="border-l border-white/20 pl-2 sm:pl-4 flex items-center">
+              <h1 className="text-[15px] sm:text-xl md:text-2xl font-extrabold leading-tight tracking-tight">
                 Acervo Acadêmico
               </h1>
             </div>
           </Link>
 
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
             <div className="text-right hidden md:block">
               <Link to="/profile" className="group">
                 <div className="flex items-center gap-2 justify-end mb-0.5">
@@ -119,7 +119,6 @@ export function Header({
       {/* Secondary Nav */}
       {!isAdminPage && !isProfilePage && (
         <div className="bg-[#004157] text-gray-300 border-b border-[#002f3e] px-3 sm:px-6 py-2 relative z-30">
-          {/* Trocado 'overflow-x-auto whitespace-nowrap' por 'flex-wrap' e espaçamento aumentado */}
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-4 text-xs sm:text-sm font-medium">
             
             {/* Dropdown Ferramentas */}
