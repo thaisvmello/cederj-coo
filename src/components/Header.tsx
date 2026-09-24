@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LogOut,
@@ -13,8 +13,7 @@ import {
   ExternalLink,
   Wrench,
   MessageSquare,
-  Menu,
-  X,
+  User,
 } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,51 +24,36 @@ import { NotificationBell } from './NotificationBell';
 /* ------------------------------------------------------------------ */
 
 const CALENDARS = [
-  {
-    label: 'Calendário Acadêmico',
-    href: '/calendario-academico.pdf',
-    icon: Calendar,
-    color: 'text-emerald-500',
-  },
-  {
-    label: 'Calendário de Provas',
-    href: '/calendario-de-provas.pdf',
-    icon: FileText,
-    color: 'text-amber-500',
-  },
+  { label: 'Calendário Acadêmico', href: '/calendario-academico.pdf', icon: Calendar, color: 'text-emerald-500' },
+  { label: 'Calendário de Provas', href: '/calendario-de-provas.pdf', icon: FileText, color: 'text-amber-500' },
 ];
 
 const WHATSAPP_GROUPS = [
-  {
-    label: 'Grupo Geral - Contábeis CEDERJ',
-    href: 'https://chat.whatsapp.com/LJ7stNpuLzf4DI2UqogMvb',
-  },
-  {
-    label: 'Comunidade de Disciplinas',
-    href: 'https://chat.whatsapp.com/FJ9rXB2NAorEpSk1gSgaxP?mode=ac_t',
-  },
+  { label: 'Grupo Geral - Contábeis CEDERJ', href: 'https://chat.whatsapp.com/LJ7stNpuLzf4DI2UqogMvb' },
+  { label: 'Comunidade de Disciplinas', href: 'https://chat.whatsapp.com/FJ9rXB2NAorEpSk1gSgaxP?mode=ac_t' },
 ];
 
 /* ------------------------------------------------------------------ */
-/* Estilos reutilizáveis                                               */
+/* Estilos                                                             */
 /* ------------------------------------------------------------------ */
 
-const focusRing =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60';
+const ring =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00394a]/40 focus-visible:ring-offset-1';
 
-// Botão redondo só com ícone (40x40)
-const iconBtn = `inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white ${focusRing}`;
+// "Chip" no celular, botão discreto no desktop
+const navChip = (active: boolean) =>
+  `inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors lg:rounded-lg lg:border-transparent lg:px-3 ${
+    active
+      ? 'border-[#00394a] bg-[#00394a] text-white lg:bg-[#00394a]/10 lg:text-[#00394a]'
+      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 lg:text-slate-600 lg:hover:bg-slate-100 lg:hover:text-[#00394a]'
+  } ${ring}`;
 
-// Item de navegação do desktop
-const navItem = `inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white ${focusRing}`;
-const navItemActive = 'bg-white/10 text-white';
+// Itens dos painéis (bottom sheet no celular, popover no desktop)
+const sheetItem = `flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left text-[15px] font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 lg:px-4 lg:py-2.5 lg:text-sm ${ring}`;
 
-// Item dentro dos dropdowns (desktop)
-const dropdownItem =
-  'flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-[#00394a]';
-
-// Item do menu mobile (alvo de toque >= 44px)
-const mobileItem = `flex w-full items-center gap-3 rounded-lg px-3 py-3 text-[15px] font-medium text-white/90 transition-colors hover:bg-white/10 active:bg-white/15 ${focusRing}`;
+// Painel: sobe de baixo no celular, vira popover a partir de lg
+const sheetPanel =
+  'fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl animate-in fade-in duration-150 lg:absolute lg:inset-x-auto lg:bottom-auto lg:left-0 lg:top-full lg:mt-2 lg:w-64 lg:rounded-xl lg:border lg:border-slate-200 lg:pb-1.5 lg:shadow-xl';
 
 function WhatsAppIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -82,6 +66,8 @@ function WhatsAppIcon({ className = 'h-4 w-4' }: { className?: string }) {
 /* ------------------------------------------------------------------ */
 /* Componente                                                          */
 /* ------------------------------------------------------------------ */
+
+type MenuId = 'tools' | 'whatsapp' | 'user' | null;
 
 export function Header({
   showHomeButton = false,
@@ -110,120 +96,203 @@ export function Header({
   const email = user?.email || '';
   const initial = (email[0] || '?').toUpperCase();
 
-  const [openMenu, setOpenMenu] = useState<'tools' | 'whatsapp' | null>(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const navRef = useRef<HTMLElement>(null);
+  const [open, setOpen] = useState<MenuId>(null);
+  const toggle = (id: Exclude<MenuId, null>) => setOpen((cur) => (cur === id ? null : id));
+  const close = () => setOpen(null);
 
-  // Fecha dropdown ao clicar fora
+  // Fecha com Esc e ao trocar de rota
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (navRef.current && !navRef.current.contains(event.target as Node)) {
-        setOpenMenu(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(null);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  // Fecha tudo com Esc
   useEffect(() => {
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpenMenu(null);
-        setMobileOpen(false);
-      }
-    };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, []);
-
-  // Fecha menus ao trocar de rota
-  useEffect(() => {
-    setOpenMenu(null);
-    setMobileOpen(false);
+    setOpen(null);
   }, [location.pathname]);
 
-  // Trava o scroll da página enquanto o menu mobile está aberto
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [mobileOpen]);
-
-  const closeAll = () => {
-    setOpenMenu(null);
-    setMobileOpen(false);
-  };
-
-  const handleCalculator = () => {
-    onNavigateToCalculator?.();
-    closeAll();
-  };
-
-  const handleGoHome = () => {
-    onGoHome?.();
-    closeAll();
-  };
-
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#00394a] text-white shadow-md shadow-black/10">
-      {/* ============================ Barra principal ============================ */}
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-3 sm:h-16 sm:px-6">
-        {/* Marca */}
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 border-t-[3px] border-t-[#00394a] bg-white">
+      {/* Fundo que captura cliques fora (escurece só no celular quando é um sheet) */}
+      {open && (
+        <button
+          type="button"
+          aria-label="Fechar"
+          tabIndex={-1}
+          onClick={close}
+          className={`fixed inset-0 z-40 cursor-default ${
+            open === 'user' ? 'bg-transparent' : 'bg-slate-900/40 lg:bg-transparent'
+          }`}
+        />
+      )}
+
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-2.5 px-3 py-2.5 sm:px-6 lg:flex-nowrap lg:py-3">
+        {/* ------------------------------ Marca ------------------------------ */}
         <Link
           to="/"
           onClick={onGoHome}
-          className={`flex min-w-0 items-center gap-2.5 rounded-lg transition-opacity hover:opacity-80 ${focusRing}`}
+          className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg lg:flex-none ${ring}`}
         >
-          <img
-            src="/57002beae21c30a2d583825b8ea17010.png"
-            alt="Logo Acervo Acadêmico"
-            className="h-8 w-auto shrink-0 object-contain sm:h-9"
-          />
-          <span className="hidden h-6 w-px bg-white/20 sm:block" aria-hidden="true" />
-          <span className="truncate text-base font-bold tracking-tight sm:text-lg lg:text-xl">
+          <span className="grid h-10 min-w-10 shrink-0 place-items-center rounded-xl bg-[#00394a] px-1.5">
+            <img
+              src="/57002beae21c30a2d583825b8ea17010.png"
+              alt="Logo Acervo Acadêmico"
+              className="h-7 w-auto object-contain"
+            />
+          </span>
+          <span className="truncate text-[17px] font-bold tracking-tight text-[#00394a] sm:text-xl">
             Acervo Acadêmico
           </span>
         </Link>
 
-        {/* Navegação (desktop) */}
+        {/* --------- Ações à direita (ficam na 1ª linha, ao lado da marca) --------- */}
+        <div className="flex shrink-0 items-center gap-1.5 lg:order-3">
+          <NotificationBell />
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => toggle('user')}
+              aria-expanded={open === 'user'}
+              aria-haspopup="menu"
+              aria-label="Menu do usuário"
+              className={`flex items-center gap-2 rounded-full border border-slate-200 py-1 pl-1 pr-2 transition-colors hover:bg-slate-50 ${
+                open === 'user' ? 'bg-slate-50' : ''
+              } ${ring}`}
+            >
+              <span className="relative grid h-8 w-8 place-items-center rounded-full bg-[#00394a] text-sm font-semibold text-white">
+                {initial}
+                {isAdmin && (
+                  <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-purple-600 ring-2 ring-white">
+                    <Shield className="h-2.5 w-2.5 text-white" />
+                  </span>
+                )}
+              </span>
+              <span className="hidden max-w-[160px] truncate text-sm font-medium text-slate-700 xl:block">
+                {email}
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${
+                  open === 'user' ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {open === 'user' && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl animate-in fade-in slide-in-from-top-1 duration-150"
+              >
+                <div className="border-b border-slate-100 px-4 py-3">
+                  <p className="truncate text-sm font-semibold text-slate-800">{email || 'Minha conta'}</p>
+                  {isAdmin && (
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700">
+                      <Shield className="h-3 w-3" />
+                      Administrador
+                    </span>
+                  )}
+                </div>
+
+                <div className="py-1.5">
+                  <Link to="/profile" role="menuitem" className={sheetItem}>
+                    <span className="flex items-center gap-3">
+                      <User className="h-4 w-4 text-slate-500" />
+                      Meu perfil
+                    </span>
+                  </Link>
+
+                  {showHome && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        close();
+                        onGoHome?.();
+                      }}
+                      className={sheetItem}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Home className="h-4 w-4 text-slate-500" />
+                        Voltar ao início
+                      </span>
+                    </button>
+                  )}
+
+                  {isAdmin && (
+                    <Link to={isAdminPage ? '/' : '/admin'} role="menuitem" className={sheetItem}>
+                      <span className="flex items-center gap-3">
+                        {isAdminPage ? (
+                          <Home className="h-4 w-4 text-slate-500" />
+                        ) : (
+                          <Settings className="h-4 w-4 text-purple-500" />
+                        )}
+                        {isAdminPage ? 'Voltar ao início' : 'Painel do administrador'}
+                      </span>
+                    </Link>
+                  )}
+                </div>
+
+                <div className="border-t border-slate-100 py-1.5">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      close();
+                      signOut();
+                    }}
+                    className={`${sheetItem} !text-red-600 hover:!bg-red-50`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <LogOut className="h-4 w-4" />
+                      Sair
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ------------- Navegação: 2ª linha (chips) no celular, inline no desktop ------------- */}
         {showNav && (
           <nav
-            ref={navRef}
             aria-label="Navegação principal"
-            className="hidden min-w-0 flex-1 items-center gap-1 lg:flex"
+            className="-mx-3 order-last flex w-[calc(100%+1.5rem)] items-center gap-2 overflow-x-auto px-3 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:-mx-6 sm:w-[calc(100%+3rem)] sm:px-6 lg:order-2 lg:mx-0 lg:w-auto lg:flex-1 lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0 lg:pl-4 [&::-webkit-scrollbar]:hidden"
           >
             {/* Ferramentas */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 type="button"
-                onClick={() => setOpenMenu(openMenu === 'tools' ? null : 'tools')}
-                aria-expanded={openMenu === 'tools'}
+                onClick={() => toggle('tools')}
+                aria-expanded={open === 'tools'}
                 aria-haspopup="menu"
-                className={`${navItem} ${
-                  openMenu === 'tools' || currentPage === 'calculator' ? navItemActive : ''
-                }`}
+                className={navChip(open === 'tools' || currentPage === 'calculator')}
               >
-                <Wrench className="h-4 w-4 text-white/60" />
+                <Wrench className="h-4 w-4" />
                 Ferramentas
                 <ChevronDown
-                  className={`h-3.5 w-3.5 text-white/60 transition-transform duration-200 ${
-                    openMenu === 'tools' ? 'rotate-180' : ''
+                  className={`h-3.5 w-3.5 opacity-60 transition-transform duration-200 ${
+                    open === 'tools' ? 'rotate-180' : ''
                   }`}
                 />
               </button>
 
-              {openMenu === 'tools' && (
-                <div
-                  role="menu"
-                  className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150"
-                >
-                  <button type="button" role="menuitem" onClick={handleCalculator} className={dropdownItem}>
-                    <span className="flex items-center gap-2.5">
-                      <Calculator className="h-4 w-4 text-blue-500" />
+              {open === 'tools' && (
+                <div role="menu" className={sheetPanel}>
+                  <div className="mx-auto mb-1 mt-2.5 h-1 w-10 rounded-full bg-slate-200 lg:hidden" />
+                  <p className="px-5 pb-1 pt-2 text-sm font-semibold text-slate-800 lg:hidden">Ferramentas</p>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      close();
+                      onNavigateToCalculator?.();
+                    }}
+                    className={sheetItem}
+                  >
+                    <span className="flex items-center gap-3">
+                      <Calculator className="h-5 w-5 text-blue-500 lg:h-4 lg:w-4" />
                       Calculadora de Notas
                     </span>
                   </button>
@@ -235,14 +304,14 @@ export function Header({
                       target="_blank"
                       rel="noopener noreferrer"
                       role="menuitem"
-                      onClick={() => setOpenMenu(null)}
-                      className={dropdownItem}
+                      onClick={close}
+                      className={sheetItem}
                     >
-                      <span className="flex items-center gap-2.5">
-                        <Icon className={`h-4 w-4 ${color}`} />
+                      <span className="flex items-center gap-3">
+                        <Icon className={`h-5 w-5 lg:h-4 lg:w-4 ${color}`} />
                         {label}
                       </span>
-                      <ExternalLink className="h-3 w-3 text-slate-400" />
+                      <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
                     </a>
                   ))}
                 </div>
@@ -250,28 +319,30 @@ export function Header({
             </div>
 
             {/* WhatsApp */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 type="button"
-                onClick={() => setOpenMenu(openMenu === 'whatsapp' ? null : 'whatsapp')}
-                aria-expanded={openMenu === 'whatsapp'}
+                onClick={() => toggle('whatsapp')}
+                aria-expanded={open === 'whatsapp'}
                 aria-haspopup="menu"
-                className={`${navItem} ${openMenu === 'whatsapp' ? navItemActive : ''}`}
+                className={navChip(open === 'whatsapp')}
               >
-                <WhatsAppIcon className="h-4 w-4 text-white/60" />
+                <WhatsAppIcon className="h-4 w-4" />
                 WhatsApp
                 <ChevronDown
-                  className={`h-3.5 w-3.5 text-white/60 transition-transform duration-200 ${
-                    openMenu === 'whatsapp' ? 'rotate-180' : ''
+                  className={`h-3.5 w-3.5 opacity-60 transition-transform duration-200 ${
+                    open === 'whatsapp' ? 'rotate-180' : ''
                   }`}
                 />
               </button>
 
-              {openMenu === 'whatsapp' && (
-                <div
-                  role="menu"
-                  className="absolute left-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150"
-                >
+              {open === 'whatsapp' && (
+                <div role="menu" className={`${sheetPanel} lg:w-72`}>
+                  <div className="mx-auto mb-1 mt-2.5 h-1 w-10 rounded-full bg-slate-200 lg:hidden" />
+                  <p className="px-5 pb-1 pt-2 text-sm font-semibold text-slate-800 lg:hidden">
+                    Grupos de WhatsApp
+                  </p>
+
                   {WHATSAPP_GROUPS.map(({ label, href }) => (
                     <a
                       key={href}
@@ -279,242 +350,32 @@ export function Header({
                       target="_blank"
                       rel="noopener noreferrer"
                       role="menuitem"
-                      onClick={() => setOpenMenu(null)}
-                      className={dropdownItem}
+                      onClick={close}
+                      className={sheetItem}
                     >
-                      <span className="flex items-center gap-2.5">
+                      <span className="flex items-center gap-3">
                         <span className="h-2 w-2 shrink-0 rounded-full bg-green-500" />
                         {label}
                       </span>
-                      <ExternalLink className="h-3 w-3 shrink-0 text-slate-400" />
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                     </a>
                   ))}
                 </div>
               )}
             </div>
 
-            <Link to="/tutorial" className={`${navItem} ${isTutorialPage ? navItemActive : ''}`}>
-              <HelpCircle className="h-4 w-4 text-white/60" />
+            <Link to="/tutorial" className={navChip(isTutorialPage)}>
+              <HelpCircle className="h-4 w-4" />
               Tutorial
             </Link>
 
-            <Link to="/feedback" className={`${navItem} ${isFeedbackPage ? navItemActive : ''}`}>
-              <MessageSquare className="h-4 w-4 text-white/60" />
+            <Link to="/feedback" className={navChip(isFeedbackPage)}>
+              <MessageSquare className="h-4 w-4" />
               Erros/Sugestões
             </Link>
           </nav>
         )}
-
-        {/* Ações à direita */}
-        <div className="flex shrink-0 items-center gap-1">
-          {/* Usuário (desktop) */}
-          <Link
-            to="/profile"
-            title={email || 'Meu perfil'}
-            className={`hidden items-center gap-2.5 rounded-full p-1 transition-colors hover:bg-white/10 lg:flex xl:pr-3 ${focusRing}`}
-          >
-            <span className="relative grid h-8 w-8 place-items-center rounded-full bg-white/15 text-sm font-semibold">
-              {initial}
-              {isAdmin && (
-                <span className="absolute -right-0.5 -top-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-purple-500 ring-2 ring-[#00394a]">
-                  <Shield className="h-2 w-2 text-white" />
-                </span>
-              )}
-            </span>
-            <span className="hidden max-w-[180px] truncate text-sm font-medium text-white/90 xl:block">
-              {email}
-            </span>
-          </Link>
-
-          {/* Admin (desktop) */}
-          {isAdmin && (
-            <Link
-              to={isAdminPage ? '/' : '/admin'}
-              title={isAdminPage ? 'Voltar ao Início' : 'Painel do Administrador'}
-              aria-label={isAdminPage ? 'Voltar ao Início' : 'Painel do Administrador'}
-              className={`${iconBtn} hidden lg:inline-flex ${
-                isAdminPage ? '!bg-purple-600 !text-white hover:!bg-purple-700' : ''
-              }`}
-            >
-              {isAdminPage ? <Home className="h-5 w-5" /> : <Settings className="h-5 w-5" />}
-            </Link>
-          )}
-
-          {/* Início (desktop) */}
-          {showHome && (
-            <button
-              type="button"
-              onClick={onGoHome}
-              title="Voltar ao Início"
-              aria-label="Voltar ao Início"
-              className={`${iconBtn} hidden lg:inline-flex`}
-            >
-              <Home className="h-5 w-5" />
-            </button>
-          )}
-
-          <NotificationBell />
-
-          {/* Sair (desktop) */}
-          <button
-            type="button"
-            onClick={() => signOut()}
-            title="Sair"
-            aria-label="Sair"
-            className={`${iconBtn} hidden lg:inline-flex`}
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
-
-          {/* Botão do menu (mobile / tablet) */}
-          <button
-            type="button"
-            onClick={() => setMobileOpen((v) => !v)}
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-menu"
-            aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
-            className={`${iconBtn} lg:hidden`}
-          >
-            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
       </div>
-
-      {/* ============================ Menu mobile ============================ */}
-      {mobileOpen && (
-        <>
-          {/* Fundo escurecido (clique fecha) */}
-          <button
-            type="button"
-            aria-label="Fechar menu"
-            onClick={() => setMobileOpen(false)}
-            className="fixed inset-x-0 bottom-0 top-14 z-30 cursor-default bg-black/40 sm:top-16 lg:hidden"
-          />
-
-          <div
-            id="mobile-menu"
-            className="absolute inset-x-0 top-full z-40 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain border-t border-white/10 bg-[#00394a] pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[calc(100dvh-4rem)] lg:hidden"
-          >
-            <div className="mx-auto max-w-7xl space-y-1 px-3 py-3 sm:px-6">
-              {/* Perfil */}
-              <Link
-                to="/profile"
-                className="mb-2 flex items-center gap-3 rounded-xl bg-white/5 p-3 transition-colors hover:bg-white/10"
-              >
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15 text-base font-semibold">
-                  {initial}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">{email || 'Meu perfil'}</span>
-                  <span className="mt-0.5 flex items-center gap-1.5 text-xs text-white/60">
-                    {isAdmin && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/25 px-1.5 py-0.5 text-[11px] font-medium text-purple-200">
-                        <Shield className="h-3 w-3" />
-                        Admin
-                      </span>
-                    )}
-                    Ver meu perfil
-                  </span>
-                </span>
-              </Link>
-
-              {showNav && (
-                <>
-                  <p className="px-3 pb-1 pt-3 text-xs font-medium text-white/50">Ferramentas</p>
-
-                  <button type="button" onClick={handleCalculator} className={mobileItem}>
-                    <Calculator className="h-5 w-5 text-blue-300" />
-                    Calculadora de Notas
-                  </button>
-
-                  {CALENDARS.map(({ label, href, icon: Icon, color }) => (
-                    <a
-                      key={href}
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={closeAll}
-                      className={mobileItem}
-                    >
-                      <Icon className={`h-5 w-5 ${color.replace('500', '300')}`} />
-                      <span className="flex-1">{label}</span>
-                      <ExternalLink className="h-3.5 w-3.5 text-white/40" />
-                    </a>
-                  ))}
-
-                  <p className="px-3 pb-1 pt-4 text-xs font-medium text-white/50">Comunidade</p>
-
-                  {WHATSAPP_GROUPS.map(({ label, href }) => (
-                    <a
-                      key={href}
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={closeAll}
-                      className={mobileItem}
-                    >
-                      <WhatsAppIcon className="h-5 w-5 text-green-400" />
-                      <span className="flex-1">{label}</span>
-                      <ExternalLink className="h-3.5 w-3.5 text-white/40" />
-                    </a>
-                  ))}
-
-                  <p className="px-3 pb-1 pt-4 text-xs font-medium text-white/50">Ajuda</p>
-
-                  <Link
-                    to="/tutorial"
-                    className={`${mobileItem} ${isTutorialPage ? 'bg-white/10' : ''}`}
-                  >
-                    <HelpCircle className="h-5 w-5 text-amber-300" />
-                    Tutorial
-                  </Link>
-
-                  <Link
-                    to="/feedback"
-                    className={`${mobileItem} ${isFeedbackPage ? 'bg-white/10' : ''}`}
-                  >
-                    <MessageSquare className="h-5 w-5 text-rose-300" />
-                    Erros/Sugestões
-                  </Link>
-                </>
-              )}
-
-              {/* Conta */}
-              <div className="mt-3 space-y-1 border-t border-white/10 pt-3">
-                {showHome && (
-                  <button type="button" onClick={handleGoHome} className={mobileItem}>
-                    <Home className="h-5 w-5 text-white/70" />
-                    Voltar ao Início
-                  </button>
-                )}
-
-                {isAdmin && (
-                  <Link to={isAdminPage ? '/' : '/admin'} className={mobileItem}>
-                    {isAdminPage ? (
-                      <Home className="h-5 w-5 text-white/70" />
-                    ) : (
-                      <Settings className="h-5 w-5 text-purple-300" />
-                    )}
-                    {isAdminPage ? 'Voltar ao Início' : 'Painel do Administrador'}
-                  </Link>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeAll();
-                    signOut();
-                  }}
-                  className={`${mobileItem} text-red-200 hover:bg-red-500/10`}
-                >
-                  <LogOut className="h-5 w-5" />
-                  Sair
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </header>
   );
 }
