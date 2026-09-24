@@ -175,20 +175,28 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative ml-auto w-full max-w-2xl h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div className="relative ml-auto w-full max-w-3xl h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50/50">
           <div className="flex items-center gap-2">
+            {(selectedNotification || selectedReport) && (
+              <button
+                onClick={handleBackToList}
+                className="md:hidden p-1 -ml-1 hover:bg-gray-200 rounded-lg"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-500" />
+              </button>
+            )}
             <MessageSquare className="w-5 h-5 text-purple-600" />
-            <h3 className="font-bold text-gray-800">Canal de Feedback</h3>
+            <h3 className="font-bold text-gray-800 text-sm sm:text-base">Canal de Feedback</h3>
             {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 font-bold">
+              <span className="bg-red-500 text-white text-[10px] sm:text-xs rounded-full px-2 py-0.5 font-bold">
                 {unreadCount}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handleMarkAllRead} className="text-sm text-blue-600 hover:text-blue-700">
-              Marcar todas como lidas
+            <button onClick={handleMarkAllRead} className="text-[10px] sm:text-sm text-blue-600 hover:text-blue-700 font-medium">
+              Marcar lidas
             </button>
             <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded-lg">
               <X className="w-5 h-5 text-gray-500" />
@@ -197,7 +205,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
         </div>
 
         <div className="flex-1 flex overflow-hidden">
-          <div className="w-80 border-r border-gray-200 overflow-y-auto custom-scrollbar">
+          <div className={`w-full md:w-80 border-r border-gray-200 overflow-y-auto custom-scrollbar ${selectedNotification ? 'hidden md:block' : 'block'}`}>
             {drawerLoading ? (
               <div className="p-8 flex flex-col items-center gap-2">
                 <Loader className="w-6 h-6 animate-spin text-purple-600" />
@@ -210,15 +218,18 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                 <button
                   key={n.id}
                   onClick={() => handleSelectNotification(n)}
-                  className={`w-full text-left p-3 border-b border-gray-100 hover:bg-gray-50 transition ${
+                  className={`w-full text-left p-3 sm:p-4 border-b border-gray-100 hover:bg-gray-50 transition ${
                     selectedNotification?.id === n.id ? 'bg-purple-50' : ''
                   }`}
                 >
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-2 sm:gap-3">
                     {!n.is_read && <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0" />}
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{n.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.content}</p>
+                      <p className="text-sm font-bold text-gray-900 truncate">{n.title}</p>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{n.content}</p>
+                      <p className="text-[10px] text-gray-400 mt-2">
+                        {new Date(n.created_at).toLocaleDateString('pt-BR')}
+                      </p>
                     </div>
                   </div>
                 </button>
@@ -226,34 +237,32 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+          <div className={`flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-6 bg-gray-50/30 ${!selectedNotification ? 'hidden md:flex flex-col items-center justify-center' : 'block'}`}>
             {loading ? (
               <div className="flex flex-col items-center justify-center h-full gap-3">
                 <Loader className="w-8 h-8 animate-spin text-purple-600" />
                 <p className="text-xs text-gray-400">Carregando...</p>
               </div>
             ) : selectedReport ? (
-              <div className="space-y-4">
-                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
+              <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-gray-900">{selectedReport.title}</span>
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900">{selectedReport.title}</h4>
                       {getStatusIcon(selectedReport.status)}
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${getStatusBadge(selectedReport.status)}`}>
+                    <span className={`self-start sm:self-center text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${getStatusBadge(selectedReport.status)}`}>
                       {getStatusLabel(selectedReport.status)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs text-gray-500">
-                      Enviado por <strong>{selectedReport.first_name} {selectedReport.last_name}</strong>
-                    </span>
+                  <div className="flex items-center gap-2 mb-4 text-xs text-gray-500 italic">
+                    Enviado por <strong className="text-gray-700 not-italic">{selectedReport.first_name} {selectedReport.last_name}</strong>
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedReport.description}</p>
                   {selectedReport.attachments && selectedReport.attachments.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
                       {selectedReport.attachments.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs hover:bg-blue-100 transition">
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold hover:bg-blue-100 transition shadow-sm">
                           <ChevronRight className="w-3 h-3" /> Anexo {i + 1}
                         </a>
                       ))}
@@ -261,57 +270,76 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                   )}
                 </div>
 
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold text-gray-800">Conversa</h4>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 uppercase tracking-widest px-1">
+                    <MessageSquare className="w-4 h-4" />
+                    Histórico
+                  </h4>
                   {comments.length === 0 ? (
-                    <p className="text-sm text-gray-500">Nenhuma resposta ainda.</p>
+                    <div className="bg-white border border-gray-200 p-8 rounded-2xl text-center">
+                      <p className="text-sm text-gray-400">Nenhuma resposta ainda. Aguarde o retorno da moderação.</p>
+                    </div>
                   ) : (
-                    comments.map((comment) => (
-                      <div key={comment.id} className="bg-white border border-gray-200 p-3 rounded-lg">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-gray-900">{comment.first_name} {comment.last_name}</span>
-                          <span className="text-[10px] text-gray-400">{new Date(comment.created_at).toLocaleString('pt-BR')}</span>
+                    <div className="space-y-3">
+                      {comments.map((comment) => (
+                        <div key={comment.id} className={`p-4 rounded-2xl shadow-sm border ${comment.user_id === user?.id ? 'bg-white border-gray-200 ml-4' : 'bg-purple-50 border-purple-100 mr-4'}`}>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="text-xs font-bold text-gray-900">{comment.first_name} {comment.last_name}</span>
+                            <span className="text-[10px] text-gray-400">{new Date(comment.created_at).toLocaleString('pt-BR')}</span>
+                          </div>
+                          <p className="text-sm text-gray-700 leading-relaxed">{comment.content}</p>
                         </div>
-                        <p className="text-sm text-gray-700 leading-relaxed">{comment.content}</p>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
 
                 {canReply && (
-                  <div className="border-t border-gray-200 pt-4">
-                    <div className="flex gap-2">
+                  <div className="sticky bottom-0 bg-gray-50/80 backdrop-blur-sm pt-4 pb-2">
+                    <div className="flex gap-2 bg-white p-2 rounded-2xl shadow-lg border border-gray-200">
                       <input
                         type="text"
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Digite sua resposta..."
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        placeholder="Responder ao chamado..."
+                        className="flex-1 px-4 py-2 text-sm focus:outline-none"
                         onKeyDown={(e) => e.key === 'Enter' && handleReply()}
                       />
                       <button
                         onClick={handleReply}
                         disabled={sendingReply || !replyText.trim()}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition flex items-center gap-1"
+                        className="p-2 sm:px-4 sm:py-2 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition flex items-center gap-2 shadow-md"
                       >
                         {sendingReply ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        <span className="hidden sm:inline">Enviar</span>
                       </button>
                     </div>
                   </div>
                 )}
               </div>
             ) : selectedNotification ? (
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{selectedNotification.title}</h3>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedNotification.content}</p>
-                <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500">
-                  {new Date(selectedNotification.created_at).toLocaleString('pt-BR')}
+              <div className="max-w-xl mx-auto h-full flex flex-col justify-center">
+                <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-1.5 bg-purple-600" />
+                  <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-4 leading-tight">{selectedNotification.title}</h3>
+                  <div className="w-12 h-1 bg-gray-100 mb-6 rounded-full" />
+                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedNotification.content}</p>
+                  <div className="mt-10 pt-6 border-t border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider">
+                        {new Date(selectedNotification.created_at).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                <MessageSquare className="w-12 h-12 mb-3" />
-                <p className="text-sm">Selecione uma notificação para visualizar</p>
+              <div className="flex flex-col items-center justify-center h-full text-gray-300">
+                <div className="p-6 bg-gray-100 rounded-full mb-4">
+                  <MessageSquare className="w-12 h-12" />
+                </div>
+                <p className="text-sm font-medium">Selecione uma notificação na lista ao lado</p>
               </div>
             )}
           </div>
@@ -320,3 +348,4 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
     </div>
   );
 }
+
