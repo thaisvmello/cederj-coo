@@ -37,7 +37,7 @@ export function Tutorial() {
               <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
                 <BookOpen className="w-6 h-6" />
               </div>
-              <h1 className="text-1xl font-extrabold text-gray-900 tracking-tight">
+              <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
                 Guia e Tutorial do Acervo
               </h1>
             </div>
