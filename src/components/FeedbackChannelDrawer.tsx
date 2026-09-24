@@ -2,15 +2,26 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
-import type { FeedbackReport, FeedbackComment, Notification } from '../lib/types';
-import { X, Send, Loader, ChevronRight, MessageSquare, Clock, CheckCircle, AlertCircle, AlertTriangle, ArrowLeft } from 'lucide-react';
+import type { FeedbackReport, FeedbackComment, Notification as BaseNotification } from '../lib/types';
+import { 
+  X, Send, Loader, ChevronRight, MessageSquare, Clock, 
+  CheckCircle, AlertCircle, AlertTriangle, ArrowLeft, 
+  Trash2, Megaphone, MessageCircle, Bell 
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// Estendemos o tipo base para garantir que o TypeScript conheça o campo 'type'
+interface Notification extends BaseNotification {
+  type?: 'feedback' | 'news' | 'reply' | 'update';
+}
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   initialReportId?: string | null;
 }
+
+type FilterType = 'all' | 'feedback' | 'news' | 'reply' | 'update';
 
 export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Props) {
   const { user } = useAuth();
@@ -24,7 +35,9 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
   const [sendingReply, setSendingReply] = useState(false);
   const [drawerLoading, setDrawerLoading] = useState(true);
   
-  // Ref para auto-scroll das mensagens
+  // Novo estado para o filtro ativo
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(async () => {
@@ -51,7 +64,6 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
     }
   }, [isOpen, initialReportId]);
 
-  // Auto-scroll quando novos comentários são carregados
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -131,6 +143,29 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
     fetchNotifications();
   };
 
+  // NOVA FUNÇÃO: Excluir notificação
+  const handleDeleteNotification = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation(); // Evita que clique no card abra os detalhes
+    
+    // Atualização otimista (remove da tela imediatamente)
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    
+    // Se a notificação excluída for a que está aberta, volta pra lista
+    if (selectedNotification?.id === id) {
+      handleBackToList();
+    }
+
+    try {
+      const { error } = await supabase.from('notifications').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Mensagem excluída');
+    } catch (error) {
+      console.error('Erro ao excluir:', error);
+      toast.error('Erro ao excluir mensagem');
+      fetchNotifications(); // Reverte a atualização otimista em caso de erro
+    }
+  };
+
   const handleReply = async () => {
     if (!selectedReport || !replyText.trim() || !user) return;
     setSendingReply(true);
@@ -187,9 +222,17 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
 
   const canReply = selectedReport && (isAdmin || user?.id === selectedReport.user_id) && selectedReport.status !== 'closed';
   const unreadCount = notifications.filter(n => !n.is_read).length;
-
-  // Variável crucial para saber se deve mostrar a tela de detalhes no mobile
   const hasActiveDetail = Boolean(selectedNotification || selectedReport);
+
+  // Lógica de filtro baseada no tipo (fallback para feedback caso tenha report_id)
+  const filteredNotifications = notifications.filter(n => {
+    if (activeFilter === 'all') return true;
+    
+    // Se o backend ainda não tiver a coluna type mas você quiser testar,
+    // usamos o feedback_report_id como inferência provisória para "feedback"
+    const resolvedType = n.type || (n.feedback_report_id ? 'feedback' : 'update');
+    return resolvedType === activeFilter;
+  });
 
   if (!isOpen) return null;
 
@@ -197,7 +240,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
     <div className="fixed inset-0 z-50 flex">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="relative ml-auto w-full md:w-3/4 max-w-4xl h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div className="relative ml-auto w-full md:w-3/4 max-w-5xl h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         
         {/* HEADER */}
         <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 bg-gray-50/50">
@@ -206,13 +249,12 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
               <button
                 onClick={handleBackToList}
                 className="md:hidden p-2 -ml-2 mr-1 hover:bg-gray-200 rounded-full flex-shrink-0 transition-colors"
-                aria-label="Voltar"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-700" />
               </button>
             )}
-            <MessageSquare className="w-5 h-5 text-purple-600 flex-shrink-0" />
-            <h3 className="font-bold text-gray-800 text-sm sm:text-base truncate">Canal de Feedback</h3>
+            <Bell className="w-5 h-5 text-purple-600 flex-shrink-0" />
+            <h3 className="font-bold text-gray-800 text-sm sm:text-base truncate">Central de Notificações</h3>
             {unreadCount > 0 && (
               <span className="bg-red-500 text-white text-[10px] sm:text-xs rounded-full px-2 py-0.5 font-bold flex-shrink-0">
                 {unreadCount}
@@ -233,40 +275,94 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
         {/* BODY */}
         <div className="flex-1 flex overflow-hidden">
           
-          {/* LISTA DE NOTIFICAÇÕES (Esconde no mobile se houver detalhe ativo) */}
-          <div className={`w-full md:w-80 border-r border-gray-200 overflow-y-auto custom-scrollbar ${hasActiveDetail ? 'hidden md:block' : 'block'}`}>
-            {drawerLoading ? (
-              <div className="p-8 flex flex-col items-center gap-2">
-                <Loader className="w-6 h-6 animate-spin text-purple-600" />
-                <p className="text-xs text-gray-400">Carregando...</p>
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500 text-sm">Nenhuma notificação</div>
-            ) : (
-              notifications.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => handleSelectNotification(n)}
-                  className={`w-full text-left p-4 border-b border-gray-100 hover:bg-purple-50/50 transition-colors ${
-                    selectedNotification?.id === n.id ? 'bg-purple-50 border-l-4 border-l-purple-600' : 'border-l-4 border-l-transparent'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {!n.is_read && <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />}
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-sm truncate ${n.is_read ? 'text-gray-700 font-medium' : 'text-gray-900 font-bold'}`}>{n.title}</p>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{n.content}</p>
-                      <p className="text-[10px] text-gray-400 mt-2">
-                        {new Date(n.created_at).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
+          {/* LISTA DE NOTIFICAÇÕES */}
+          <div className={`w-full md:w-80 lg:w-96 border-r border-gray-200 flex flex-col bg-white ${hasActiveDetail ? 'hidden md:flex' : 'flex'}`}>
+            
+            {/* ABAS DE FILTRO */}
+            <div className="flex overflow-x-auto custom-scrollbar p-2 gap-2 border-b border-gray-100 bg-gray-50">
+              <button 
+                onClick={() => setActiveFilter('all')}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+              >
+                Todas
+              </button>
+              <button 
+                onClick={() => setActiveFilter('feedback')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === 'feedback' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
+              >
+                <MessageSquare className="w-3 h-3" /> Feedback
+              </button>
+              <button 
+                onClick={() => setActiveFilter('news')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === 'news' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+              >
+                <Megaphone className="w-3 h-3" /> Notícias
+              </button>
+              <button 
+                onClick={() => setActiveFilter('reply')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === 'reply' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
+              >
+                <MessageCircle className="w-3 h-3" /> Respostas
+              </button>
+              <button 
+                onClick={() => setActiveFilter('update')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === 'update' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
+              >
+                <Bell className="w-3 h-3" /> Atualizações
+              </button>
+            </div>
+
+            {/* CONTEÚDO DA LISTA */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {drawerLoading ? (
+                <div className="p-8 flex flex-col items-center gap-2">
+                  <Loader className="w-6 h-6 animate-spin text-purple-600" />
+                  <p className="text-xs text-gray-400">Carregando...</p>
+                </div>
+              ) : filteredNotifications.length === 0 ? (
+                <div className="p-8 text-center text-gray-500 text-sm flex flex-col items-center gap-2">
+                  <Bell className="w-8 h-8 text-gray-300" />
+                  <p>Nenhuma mensagem nesta categoria</p>
+                </div>
+              ) : (
+                filteredNotifications.map((n) => (
+                  <div 
+                    key={n.id}
+                    className={`group relative flex border-b border-gray-100 transition-colors ${
+                      selectedNotification?.id === n.id ? 'bg-purple-50 border-l-4 border-l-purple-600' : 'border-l-4 border-l-transparent hover:bg-gray-50'
+                    }`}
+                  >
+                    <button
+                      onClick={() => handleSelectNotification(n)}
+                      className="flex-1 text-left p-4 pr-12"
+                    >
+                      <div className="flex items-start gap-3">
+                        {!n.is_read && <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0 shadow-sm" />}
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm truncate pr-2 ${n.is_read ? 'text-gray-700 font-medium' : 'text-gray-900 font-bold'}`}>{n.title}</p>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{n.content}</p>
+                          <p className="text-[10px] text-gray-400 mt-2 font-medium">
+                            {new Date(n.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                    
+                    {/* Botão de Excluir */}
+                    <button
+                      onClick={(e) => handleDeleteNotification(n.id, e)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                      title="Excluir notificação"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                </button>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
 
-          {/* ÁREA DE DETALHES/LEITURA (Esconde no mobile se NÃO houver detalhe ativo) */}
+          {/* ÁREA DE DETALHES/LEITURA */}
           <div className={`flex-1 overflow-y-auto custom-scrollbar bg-gray-50/30 flex-col ${!hasActiveDetail ? 'hidden md:flex md:items-center md:justify-center' : 'flex'}`}>
             {loading ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3">
@@ -277,8 +373,8 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
               <div className="flex-1 flex flex-col p-3 sm:p-6 max-w-3xl mx-auto w-full">
                 
                 {/* CABEÇALHO DO REPORT */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm mb-4 flex-shrink-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm mb-4 flex-shrink-0 relative">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pr-8">
                     <div className="flex items-center gap-2">
                       <h4 className="text-base sm:text-lg font-bold text-gray-900 leading-tight">{selectedReport.title}</h4>
                       {getStatusIcon(selectedReport.status)}
@@ -287,20 +383,22 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                       {getStatusLabel(selectedReport.status)}
                     </span>
                   </div>
+                  
+                  {/* Botão Excluir no Header do Detalhe (se atrelado a uma notificação na tela) */}
+                  {selectedNotification && (
+                    <button 
+                      onClick={() => handleDeleteNotification(selectedNotification.id)}
+                      className="absolute top-4 sm:top-6 right-4 sm:right-6 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                      title="Excluir"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+
                   <div className="flex items-center gap-2 mb-4 text-xs text-gray-500 italic">
                     Enviado por <strong className="text-gray-700 not-italic">{selectedReport.first_name} {selectedReport.last_name}</strong>
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedReport.description}</p>
-                  
-                  {selectedReport.attachments && selectedReport.attachments.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
-                      {selectedReport.attachments.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold hover:bg-blue-100 transition shadow-sm">
-                          <ChevronRight className="w-3 h-3" /> Anexo {i + 1}
-                        </a>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* HISTÓRICO DE MENSAGENS */}
@@ -329,7 +427,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                           </div>
                         );
                       })}
-                      <div ref={messagesEndRef} /> {/* Âncora para o scroll */}
+                      <div ref={messagesEndRef} />
                     </div>
                   )}
                 </div>
@@ -360,9 +458,19 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
               </div>
             ) : selectedNotification ? (
               <div className="max-w-xl mx-auto flex-1 flex flex-col justify-center p-4">
-                <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-lg relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1.5 bg-purple-600" />
-                  <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-4 leading-tight">{selectedNotification.title}</h3>
+                <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-lg relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500" />
+                  
+                  {/* Botão de Excluir dentro da leitura da notificação simples */}
+                  <button 
+                    onClick={() => handleDeleteNotification(selectedNotification.id)}
+                    className="absolute top-6 right-6 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                    title="Excluir notificação"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+
+                  <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-4 leading-tight pr-10">{selectedNotification.title}</h3>
                   <div className="w-12 h-1 bg-gray-100 mb-6 rounded-full" />
                   <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedNotification.content}</p>
                   <div className="mt-10 pt-6 border-t border-gray-100 flex items-center justify-between">
@@ -378,7 +486,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <div className="p-6 bg-gray-100 rounded-full mb-4">
-                  <MessageSquare className="w-12 h-12 text-gray-300" />
+                  <Bell className="w-12 h-12 text-gray-300" />
                 </div>
                 <p className="text-sm font-medium">Selecione uma notificação na lista</p>
               </div>
