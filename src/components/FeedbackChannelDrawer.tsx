@@ -106,6 +106,11 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
     }
   };
 
+  const handleBackToList = () => {
+    setSelectedNotification(null);
+    setSelectedReport(null);
+  };
+
   const handleMarkAllRead = async () => {
     if (!user) return;
     await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
