@@ -95,19 +95,19 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
   });
 
   const favoriteCourses = filteredCourses.filter(c => favorites.includes(c.id));
-    const otherCourses = filteredCourses.filter(c => !favorites.includes(c.id));
+  const otherCourses = filteredCourses.filter(c => !favorites.includes(c.id));
   
-    const handleToggleFavorite = async (e: React.MouseEvent, courseId: string) => {
-      e.stopPropagation();
-      if (!user) return;
-      const isFav = favorites.includes(courseId);
-      if (isFav) {
-        await supabase.from('course_favorites').delete().eq('user_id', user.id).eq('course_id', courseId);
-      } else {
-        await supabase.from('course_favorites').insert({ user_id: user.id, course_id: courseId });
-      }
-      loadData();
-    };
+  const handleToggleFavorite = async (e: React.MouseEvent, courseId: string) => {
+    e.stopPropagation();
+    if (!user) return;
+    const isFav = favorites.includes(courseId);
+    if (isFav) {
+      await supabase.from('course_favorites').delete().eq('user_id', user.id).eq('course_id', courseId);
+    } else {
+      await supabase.from('course_favorites').insert({ user_id: user.id, course_id: courseId });
+    }
+    loadData();
+  };
 
   const handleBackToCourses = () => {
     setSelectedCourse(null);
@@ -122,14 +122,16 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
     <div className="space-y-8 relative">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <BookOpen className="w-6 h-6 text-blue-600" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg shrink-0">
+              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
             </div>
-            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Diretório Colaborativo de Provas e Materiais</h2>
+            <h2 className="text-lg sm:text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight leading-tight">
+              Diretório Colaborativo de Provas e Materiais
+            </h2>
           </div>
           <p className="text-sm text-gray-500 font-medium"></p>
-                    {/* Stats Counter */}
+          {/* Stats Counter */}
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-1.5">
               <Folder className="w-4 h-4 text-blue-500" />
@@ -204,15 +206,15 @@ export function CourseBrowser({ onNavigateToSubPage, goHomeTrigger }: CourseBrow
         </div>
       ) : (
         <div className="space-y-6">
-                  <CourseTreeView
-                    courses={filteredCourses}
-                    favorites={favorites}
-                    favoriteCourses={favoriteCourses}
-                    fileCounts={fileCounts}
-                    onSelectFolder={(course, folder) => setSelectedFolder({ course, folder })}
-                    onToggleFavorite={handleToggleFavorite}
-                  />
-                </div>
+          <CourseTreeView
+            courses={filteredCourses}
+            favorites={favorites}
+            favoriteCourses={favoriteCourses}
+            fileCounts={fileCounts}
+            onSelectFolder={(course, folder) => setSelectedFolder({ course, folder })}
+            onToggleFavorite={handleToggleFavorite}
+          />
+        </div>
       )}
 
       {selectedFolder && (
