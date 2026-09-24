@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
 import type { FeedbackReport, FeedbackComment, Notification } from '../lib/types';
-import { X, Send, Loader, ChevronRight, MessageSquare, Clock, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
+import { X, Send, Loader, ChevronRight, MessageSquare, Clock, CheckCircle, AlertCircle, AlertTriangle, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Props {
