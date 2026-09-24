@@ -56,7 +56,7 @@ export function Header({
               className="h-8 sm:h-10 md:h-12 w-auto object-contain shrink-0"
             />
             <div className="border-l border-white/20 pl-2 sm:pl-4 flex items-center">
-              <h1 className="text-[19px] sm:text-xl md:text-2xl font-extrabold leading-tight tracking-tight">
+              <h1 className="text-[15px] sm:text-xl md:text-2xl font-extrabold leading-tight tracking-tight">
                 Acervo Acadêmico
               </h1>
             </div>
