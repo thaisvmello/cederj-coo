@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
@@ -23,6 +23,9 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
   const [loading, setLoading] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
   const [drawerLoading, setDrawerLoading] = useState(true);
+  
+  // Ref para auto-scroll das mensagens
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -31,6 +34,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
+      
     if (error) console.error('Error fetching notifications:', error);
     else setNotifications(data || []);
   }, [user]);
@@ -47,14 +51,23 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
     }
   }, [isOpen, initialReportId]);
 
+  // Auto-scroll quando novos comentários são carregados
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [comments]);
+
   const loadReportDetail = async (reportId: string) => {
     setLoading(true);
     try {
-      const { data: reportData } = await supabase
+      const { data: reportData, error: reportError } = await supabase
         .from('feedback_reports')
         .select('*')
         .eq('id', reportId)
         .single();
+
+      if (reportError) throw reportError;
 
       if (reportData) {
         setSelectedReport(reportData as FeedbackReport);
@@ -64,7 +77,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
           .eq('report_id', reportId)
           .order('created_at', { ascending: true });
 
-        if (commentsData) {
+        if (commentsData && commentsData.length > 0) {
           const userIds = [...new Set(commentsData.map(c => c.user_id))];
           const { data: profilesData } = await supabase
             .from('profiles')
@@ -75,7 +88,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
             const profile = profilesData?.find(p => p.id === comment.user_id);
             return {
               ...comment,
-              first_name: profile?.first_name || 'Estudante',
+              first_name: profile?.first_name || 'Usuário',
               last_name: profile?.last_name || '',
             };
           });
@@ -86,6 +99,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
       }
     } catch (error) {
       console.error('Error loading report detail:', error);
+      toast.error('Erro ao carregar detalhes');
     } finally {
       setLoading(false);
     }
@@ -132,7 +146,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
       await fetchNotifications();
     } catch (error: any) {
       console.error('Error sending reply:', error);
-      toast.error(error.message || 'Erro ao enviar resposta');
+      toast.error(error?.message || 'Erro ao enviar resposta');
     } finally {
       setSendingReply(false);
     }
@@ -172,45 +186,55 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
   };
 
   const canReply = selectedReport && (isAdmin || user?.id === selectedReport.user_id) && selectedReport.status !== 'closed';
-
   const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  // Variável crucial para saber se deve mostrar a tela de detalhes no mobile
+  const hasActiveDetail = Boolean(selectedNotification || selectedReport);
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative ml-auto w-full max-w-3xl h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50/50">
-          <div className="flex items-center gap-2">
-            {(selectedNotification || selectedReport) && (
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      
+      <div className="relative ml-auto w-full md:w-3/4 max-w-4xl h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+        
+        {/* HEADER */}
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 bg-gray-50/50">
+          <div className="flex items-center gap-2 overflow-hidden">
+            {hasActiveDetail && (
               <button
                 onClick={handleBackToList}
-                className="md:hidden p-1 -ml-1 hover:bg-gray-200 rounded-lg"
+                className="md:hidden p-2 -ml-2 mr-1 hover:bg-gray-200 rounded-full flex-shrink-0 transition-colors"
+                aria-label="Voltar"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-500" />
+                <ArrowLeft className="w-5 h-5 text-gray-700" />
               </button>
             )}
-            <MessageSquare className="w-5 h-5 text-purple-600" />
-            <h3 className="font-bold text-gray-800 text-sm sm:text-base">Canal de Feedback</h3>
+            <MessageSquare className="w-5 h-5 text-purple-600 flex-shrink-0" />
+            <h3 className="font-bold text-gray-800 text-sm sm:text-base truncate">Canal de Feedback</h3>
             {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-[10px] sm:text-xs rounded-full px-2 py-0.5 font-bold">
+              <span className="bg-red-500 text-white text-[10px] sm:text-xs rounded-full px-2 py-0.5 font-bold flex-shrink-0">
                 {unreadCount}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handleMarkAllRead} className="text-[10px] sm:text-sm text-blue-600 hover:text-blue-700 font-medium">
+          
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button onClick={handleMarkAllRead} className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium">
               Marcar lidas
             </button>
-            <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded-lg">
+            <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded-full transition-colors">
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
         </div>
 
+        {/* BODY */}
         <div className="flex-1 flex overflow-hidden">
-          <div className={`w-full md:w-80 border-r border-gray-200 overflow-y-auto custom-scrollbar ${selectedNotification ? 'hidden md:block' : 'block'}`}>
+          
+          {/* LISTA DE NOTIFICAÇÕES (Esconde no mobile se houver detalhe ativo) */}
+          <div className={`w-full md:w-80 border-r border-gray-200 overflow-y-auto custom-scrollbar ${hasActiveDetail ? 'hidden md:block' : 'block'}`}>
             {drawerLoading ? (
               <div className="p-8 flex flex-col items-center gap-2">
                 <Loader className="w-6 h-6 animate-spin text-purple-600" />
@@ -223,14 +247,14 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                 <button
                   key={n.id}
                   onClick={() => handleSelectNotification(n)}
-                  className={`w-full text-left p-3 sm:p-4 border-b border-gray-100 hover:bg-gray-50 transition ${
-                    selectedNotification?.id === n.id ? 'bg-purple-50' : ''
+                  className={`w-full text-left p-4 border-b border-gray-100 hover:bg-purple-50/50 transition-colors ${
+                    selectedNotification?.id === n.id ? 'bg-purple-50 border-l-4 border-l-purple-600' : 'border-l-4 border-l-transparent'
                   }`}
                 >
-                  <div className="flex items-start gap-2 sm:gap-3">
-                    {!n.is_read && <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0" />}
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">{n.title}</p>
+                  <div className="flex items-start gap-3">
+                    {!n.is_read && <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />}
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm truncate ${n.is_read ? 'text-gray-700 font-medium' : 'text-gray-900 font-bold'}`}>{n.title}</p>
                       <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{n.content}</p>
                       <p className="text-[10px] text-gray-400 mt-2">
                         {new Date(n.created_at).toLocaleDateString('pt-BR')}
@@ -242,21 +266,24 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
             )}
           </div>
 
-          <div className={`flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-6 bg-gray-50/30 ${!selectedNotification ? 'hidden md:flex flex-col items-center justify-center' : 'block'}`}>
+          {/* ÁREA DE DETALHES/LEITURA (Esconde no mobile se NÃO houver detalhe ativo) */}
+          <div className={`flex-1 overflow-y-auto custom-scrollbar bg-gray-50/30 flex-col ${!hasActiveDetail ? 'hidden md:flex md:items-center md:justify-center' : 'flex'}`}>
             {loading ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3">
+              <div className="flex-1 flex flex-col items-center justify-center gap-3">
                 <Loader className="w-8 h-8 animate-spin text-purple-600" />
-                <p className="text-xs text-gray-400">Carregando...</p>
+                <p className="text-xs text-gray-400">Carregando detalhes...</p>
               </div>
             ) : selectedReport ? (
-              <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm">
+              <div className="flex-1 flex flex-col p-3 sm:p-6 max-w-3xl mx-auto w-full">
+                
+                {/* CABEÇALHO DO REPORT */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm mb-4 flex-shrink-0">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-base sm:text-lg font-bold text-gray-900">{selectedReport.title}</h4>
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900 leading-tight">{selectedReport.title}</h4>
                       {getStatusIcon(selectedReport.status)}
                     </div>
-                    <span className={`self-start sm:self-center text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${getStatusBadge(selectedReport.status)}`}>
+                    <span className={`self-start sm:self-center text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider whitespace-nowrap ${getStatusBadge(selectedReport.status)}`}>
                       {getStatusLabel(selectedReport.status)}
                     </span>
                   </div>
@@ -264,6 +291,7 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                     Enviado por <strong className="text-gray-700 not-italic">{selectedReport.first_name} {selectedReport.last_name}</strong>
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedReport.description}</p>
+                  
                   {selectedReport.attachments && selectedReport.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
                       {selectedReport.attachments.map((url, i) => (
@@ -275,45 +303,53 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                   )}
                 </div>
 
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 uppercase tracking-widest px-1">
-                    <MessageSquare className="w-4 h-4" />
-                    Histórico
+                {/* HISTÓRICO DE MENSAGENS */}
+                <div className="flex-1 pb-4">
+                  <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 uppercase tracking-widest px-1 mb-4">
+                    <MessageSquare className="w-4 h-4" /> Histórico
                   </h4>
+                  
                   {comments.length === 0 ? (
                     <div className="bg-white border border-gray-200 p-8 rounded-2xl text-center">
-                      <p className="text-sm text-gray-400">Nenhuma resposta ainda. Aguarde o retorno da moderação.</p>
+                      <p className="text-sm text-gray-400">Nenhuma resposta ainda. Aguarde o retorno.</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {comments.map((comment) => (
-                        <div key={comment.id} className={`p-4 rounded-2xl shadow-sm border ${comment.user_id === user?.id ? 'bg-white border-gray-200 ml-4' : 'bg-purple-50 border-purple-100 mr-4'}`}>
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <span className="text-xs font-bold text-gray-900">{comment.first_name} {comment.last_name}</span>
-                            <span className="text-[10px] text-gray-400">{new Date(comment.created_at).toLocaleString('pt-BR')}</span>
+                    <div className="space-y-4">
+                      {comments.map((comment) => {
+                        const isMine = comment.user_id === user?.id;
+                        return (
+                          <div key={comment.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`p-4 rounded-2xl shadow-sm border max-w-[85%] sm:max-w-[75%] ${isMine ? 'bg-white border-gray-200 rounded-tr-sm' : 'bg-purple-50 border-purple-100 rounded-tl-sm'}`}>
+                              <div className="flex items-center justify-between gap-4 mb-2">
+                                <span className="text-xs font-bold text-gray-900 truncate">{comment.first_name} {comment.last_name}</span>
+                                <span className="text-[10px] text-gray-400 flex-shrink-0">{new Date(comment.created_at).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</span>
+                              </div>
+                              <p className="text-sm text-gray-700 leading-relaxed break-words">{comment.content}</p>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-700 leading-relaxed">{comment.content}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
+                      <div ref={messagesEndRef} /> {/* Âncora para o scroll */}
                     </div>
                   )}
                 </div>
 
+                {/* INPUT DE RESPOSTA */}
                 {canReply && (
-                  <div className="sticky bottom-0 bg-gray-50/80 backdrop-blur-sm pt-4 pb-2">
-                    <div className="flex gap-2 bg-white p-2 rounded-2xl shadow-lg border border-gray-200">
+                  <div className="sticky bottom-0 bg-gray-50/90 backdrop-blur-md pt-2 pb-4 sm:pb-2 z-10 border-t border-gray-200/50 mt-auto">
+                    <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-md border border-gray-200 focus-within:border-purple-400 transition-colors">
                       <input
                         type="text"
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Responder ao chamado..."
-                        className="flex-1 px-4 py-2 text-sm focus:outline-none"
+                        placeholder="Escreva sua resposta..."
+                        className="flex-1 px-3 py-2 text-sm focus:outline-none bg-transparent"
                         onKeyDown={(e) => e.key === 'Enter' && handleReply()}
                       />
                       <button
                         onClick={handleReply}
                         disabled={sendingReply || !replyText.trim()}
-                        className="p-2 sm:px-4 sm:py-2 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition flex items-center gap-2 shadow-md"
+                        className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition-all flex items-center gap-2"
                       >
                         {sendingReply ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                         <span className="hidden sm:inline">Enviar</span>
@@ -323,8 +359,8 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                 )}
               </div>
             ) : selectedNotification ? (
-              <div className="max-w-xl mx-auto h-full flex flex-col justify-center">
-                <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
+              <div className="max-w-xl mx-auto flex-1 flex flex-col justify-center p-4">
+                <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-lg relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-1.5 bg-purple-600" />
                   <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-4 leading-tight">{selectedNotification.title}</h3>
                   <div className="w-12 h-1 bg-gray-100 mb-6 rounded-full" />
@@ -340,11 +376,11 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-300">
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <div className="p-6 bg-gray-100 rounded-full mb-4">
-                  <MessageSquare className="w-12 h-12" />
+                  <MessageSquare className="w-12 h-12 text-gray-300" />
                 </div>
-                <p className="text-sm font-medium">Selecione uma notificação na lista ao lado</p>
+                <p className="text-sm font-medium">Selecione uma notificação na lista</p>
               </div>
             )}
           </div>
@@ -353,4 +389,3 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
     </div>
   );
 }
-
