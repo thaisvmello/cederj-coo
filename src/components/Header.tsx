@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAdmin } from '../hooks/useAdmin';
-import { LogOut, Calculator, Shield, Home, Settings, ChevronDown, Calendar, FileText, HelpCircle, ExternalLink, Wrench, MessageSquare, Menu } from 'lucide-react';
+import { LogOut, Calculator, Shield, Home, Settings, ChevronDown, Calendar, FileText, HelpCircle, ExternalLink, Wrench, MessageSquare } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../contexts/AuthContext';
@@ -149,13 +149,13 @@ export function Header({
         </div>
       </div>
 
-      {/* Secondary Nav - Azul Petróleo - Design Pílulas */}
+      {/* Secondary Nav - Azul Petróleo - Design Pílulas SEM ROLAGEM */}
       {!isAdminPage && !isProfilePage && (
         <div className="bg-[#004157] text-gray-200 border-b border-[#002f3e] px-2 sm:px-6 relative z-30 shadow-inner">
-          <div className="max-w-7xl mx-auto flex items-center justify-start md:justify-center gap-2 overflow-x-auto no-scrollbar py-2.5 px-2 snap-x">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-2 py-2.5 px-2">
             
             {/* Dropdown Ferramentas */}
-            <div className="relative shrink-0 snap-start" ref={toolsRef}>
+            <div className="relative shrink-0" ref={toolsRef}>
               <button
                 onClick={() => {
                   setToolsOpen(!toolsOpen);
@@ -219,7 +219,7 @@ export function Header({
             </div>
 
             {/* Dropdown WhatsApp */}
-            <div className="relative shrink-0 snap-start" ref={whatsappRef}>
+            <div className="relative shrink-0" ref={whatsappRef}>
               <button
                 onClick={() => {
                   setWhatsappOpen(!whatsappOpen);
@@ -286,7 +286,7 @@ export function Header({
             {/* Link Tutorial */}
             <Link
               to="/tutorial"
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-transparent bg-white/5 hover:bg-white/10 hover:border-white/10 text-amber-300 hover:text-amber-200 transition-all shrink-0 snap-start text-xs sm:text-sm font-semibold shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-transparent bg-white/5 hover:bg-white/10 hover:border-white/10 text-amber-300 hover:text-amber-200 transition-all shrink-0 text-xs sm:text-sm font-semibold shadow-sm"
             >
               <HelpCircle className="w-3.5 h-3.5 shrink-0" />
               <span>Tutorial</span>
@@ -295,7 +295,7 @@ export function Header({
             {/* Link Erros/Sugestões */}
             <Link
               to="/feedback"
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-transparent bg-white/5 hover:bg-white/10 hover:border-white/10 text-rose-300 hover:text-rose-200 transition-all shrink-0 snap-start text-xs sm:text-sm font-semibold shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-transparent bg-white/5 hover:bg-white/10 hover:border-white/10 text-rose-300 hover:text-rose-200 transition-all shrink-0 text-xs sm:text-sm font-semibold shadow-sm"
             >
               <MessageSquare className="w-3.5 h-3.5 shrink-0" />
               <span>Feedback</span>
