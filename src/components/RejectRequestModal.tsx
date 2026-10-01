@@ -3,11 +3,14 @@ import { AlertTriangle } from 'lucide-react';
 
 interface RejectRequestModalProps {
   isOpen: boolean;
-  onRequestId: string;
-  onRequesterName: string;
-  onRequestTitle: string;
+  onRequestId?: string;
+  onRequesterName?: string;
+  onRequestTitle?: string;
+  bulkIds?: string[];
+  bulkLabel?: string;
   onClose: () => void;
-  onReject: (requestId: string, message: string, link?: string) => void;
+  onReject?: (requestId: string, message: string, link?: string) => void | Promise<void>;
+  onRejectBulk?: (requestIds: string[], message: string, link?: string) => void | Promise<void>;
 }
 
 export const RejectRequestModal: React.FC<RejectRequestModalProps> = ({
@@ -15,12 +18,17 @@ export const RejectRequestModal: React.FC<RejectRequestModalProps> = ({
   onRequestId,
   onRequesterName,
   onRequestTitle,
+  bulkIds,
+  bulkLabel,
   onClose,
   onReject,
+  onRejectBulk,
 }) => {
   const [message, setMessage] = useState('');
   const [link, setLink] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const isBulk = !!bulkIds && bulkIds.length > 0;
 
   const handleSubmit = async () => {
     if (!message.trim()) {
@@ -29,7 +37,13 @@ export const RejectRequestModal: React.FC<RejectRequestModalProps> = ({
     }
     setLoading(true);
     try {
-      await onReject(onRequestId, message, link.trim() || undefined);
+      if (isBulk && onRejectBulk) {
+        await onRejectBulk(bulkIds, message, link.trim() || undefined);
+      } else if (onReject && onRequestId) {
+        await onReject(onRequestId, message, link.trim() || undefined);
+      }
+      setMessage('');
+      setLink('');
       onClose();
     } catch (e) {
       console.error('Error rejecting request:', e);
@@ -45,7 +59,9 @@ export const RejectRequestModal: React.FC<RejectRequestModalProps> = ({
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-gray-900">Recusar Solicitação</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            {isBulk ? 'Recusar Seleções' : 'Recusar Solicitação'}
+          </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -61,16 +77,26 @@ export const RejectRequestModal: React.FC<RejectRequestModalProps> = ({
 
         <div className="p-6 space-y-4">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-2">
-            <AlertTriangle size={16} className="text-red-500" />
+            <AlertTriangle size={16} className="text-red-500 shrink-0" />
             <span className="font-medium text-red-700">Atenção</span>
           </div>
 
-          <p className="text-sm text-gray-600">
-            <strong>Solicitação:</strong> {onRequestTitle}
-          </p>
-          <p className="text-sm text-gray-600">
-            <strong>Solicitante:</strong> {onRequesterName}
-          </p>
+          {isBulk ? (
+            <p className="text-sm text-gray-600">
+              Serão recusadas <strong>{bulkIds.length}</strong>{' '}
+              {bulkIds.length === 1 ? 'solicitação' : 'solicitações'}
+              {bulkLabel ? `: ${bulkLabel}` : '.'} O mesmo motivo será enviado para todas.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600">
+                <strong>Solicitação:</strong> {onRequestTitle}
+              </p>
+              <p className="text-sm text-gray-600">
+                <strong>Solicitante:</strong> {onRequesterName}
+              </p>
+            </>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -109,9 +135,13 @@ export const RejectRequestModal: React.FC<RejectRequestModalProps> = ({
             <button
               onClick={handleSubmit}
               disabled={loading || !message.trim()}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
             >
-              {loading ? 'Enviando...' : 'Enviar Recusa'}
+              {loading
+                ? 'Enviando...'
+                : isBulk
+                  ? `Recusar ${bulkIds.length}`
+                  : 'Enviar Recusa'}
             </button>
           </div>
         </div>

@@ -5,7 +5,6 @@ import {
   BookOpen,
   MessageSquare,
   FileText,
-  Settings,
   AlertTriangle,
 } from 'lucide-react';
 import { useAdmin } from '../hooks/useAdmin';
@@ -14,7 +13,6 @@ import { AdminFolderRequests } from '../components/AdminFolderRequests';
 import { AdminCourseRequests } from '../components/AdminCourseRequests';
 import { AdminFileActions } from '../components/AdminFileActions';
 import { AdminCommentsManager } from '../components/AdminCommentsManager';
-import { AdminBulkRename } from '../components/AdminBulkRename';
 import { AdminAnnouncements } from '../components/AdminAnnouncements';
 import { AdminFeedback } from '../components/AdminFeedback';
 import { useState } from 'react';
@@ -25,7 +23,6 @@ type AdminTab =
   | 'courses'
   | 'files'
   | 'comments'
-  | 'maintenance'
   | 'announcements'
   | 'feedback';
 
@@ -40,7 +37,6 @@ export function AdminPanel() {
     { id: 'courses', label: 'Disciplinas', icon: BookOpen },
     { id: 'files', label: 'Arquivos', icon: FileText },
     { id: 'comments', label: 'Comentários', icon: MessageSquare },
-    { id: 'maintenance', label: 'Manutenção', icon: Settings },
     { id: 'announcements', label: 'Anúncios', icon: Shield },
     { id: 'feedback', label: 'Erros e Sugestões', icon: AlertTriangle },
   ];
@@ -115,7 +111,6 @@ export function AdminPanel() {
             {activeTab === 'courses' && <AdminCourseRequests />}
             {activeTab === 'files' && <AdminFileActions />}
             {activeTab === 'comments' && <AdminCommentsManager />}
-            {activeTab === 'maintenance' && <AdminBulkRename />}
             {activeTab === 'announcements' && <AdminAnnouncements />}
             {activeTab === 'feedback' && <AdminFeedback />}
           </div>
