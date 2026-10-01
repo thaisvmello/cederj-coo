@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { SUPABASE_ANON_KEY } from '../integrations/supabase/client';
 import { Loader, AlertCircle, FileText, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFileValidation } from '../hooks/useFileValidation';
@@ -148,7 +149,6 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
       }
 
       const { data: { session } } = await supabase.auth.getSession();
-      const anonKey = (supabase as any).supabaseKey;
       
       if (!session) throw new Error('Sessão expirada. Por favor, faça login novamente.');
 
@@ -159,7 +159,7 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
-          'apikey': anonKey,
+          'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           fileName: fileName,

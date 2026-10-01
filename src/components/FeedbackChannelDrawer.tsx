@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
 import type { FeedbackReport, FeedbackComment, Notification as BaseNotification } from '../lib/types';
-import { X, Send, Loader, MessageSquare, Clock, CheckCircle, AlertCircle, AlertTriangle, ArrowLeft, Bell, Trash2 } from 'lucide-react';
+import { X, Send, Loader, MessageSquare, Clock, CheckCircle, AlertCircle, AlertTriangle, ArrowLeft, Bell, Trash2, Megaphone, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Use o tipo base diretamente para evitar conflitos
@@ -218,14 +218,17 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
   const unreadCount = notifications.filter(n => !n.is_read).length;
   const hasActiveDetail = Boolean(selectedNotification || selectedReport);
 
-  // Lógica de filtro baseada no tipo (fallback para feedback caso tenha report_id)
+  // Mapeamento entre os filtros de UI e os tipos reais do banco
+  const filterTypeMap: Record<Exclude<FilterType, 'all'>, Notification['type'][]> = {
+    feedback: ['feedback_response'],
+    news: ['announcement', 'new_content'],
+    reply: ['message'],
+    update: ['folder_request', 'folder_request_rejection', 'file_action'],
+  };
+
   const filteredNotifications = notifications.filter(n => {
     if (activeFilter === 'all') return true;
-    
-    // Se o backend ainda não tiver a coluna type mas você quiser testar,
-    // usamos o feedback_report_id como inferência provisória para "feedback"
-    // Comparação simplificada para evitar erro de tipo: ignorar filtros incompatíveis
-    return n.type === activeFilter;
+    return filterTypeMap[activeFilter].includes(n.type);
   });
 
   if (!isOpen) return null;

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { SUPABASE_ANON_KEY } from '../integrations/supabase/client';
 import { Loader, FileText, Upload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -35,7 +36,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       prev.map((f) => (f.id === pendingFile.id ? { ...f, uploading: true, error: undefined } : f))
     );
     try {
-      const { data: { session } } = await (supabase as any).auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Sessão expirada. Por favor, faça login novamente.');
       const functionUrl = `https://tlcdhwjkdbrmrwueeokj.supabase.co/functions/v1/get-r2-upload-url`;
       const response = await fetch(functionUrl, {
@@ -43,7 +44,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
-          apikey: (supabase as any).supabaseKey,
+          apikey: SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           fileName: pendingFile.file.name,
@@ -62,7 +63,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         headers: { 'Content-Type': pendingFile.file.type },
       });
       if (!uploadRes.ok) throw new Error(`Falha no upload (${uploadRes.status})`);
-      const { error: dbError } = await (supabase as any)
+      const { error: dbError } = await supabase
         .from('files')
         .insert({
           folder_id: folderId,
