@@ -93,19 +93,22 @@ export function AdminFeedback() {
   };
 
   const handleStatusChange = async (id: string, status: FeedbackReport['status']) => {
-    try {
-      const { error } = await supabase
-        .from('feedback_reports')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
-      toast.success('Status atualizado');
-      loadReports();
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error);
-      toast.error('Erro ao atualizar status');
-    }
-  };
+      const previous = reports;
+      setReports(prev => prev.map(r => (r.id === id ? { ...r, status } : r)));
+      try {
+        const { error } = await supabase
+          .from('feedback_reports')
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq('id', id);
+        if (error) throw error;
+        toast.success('Status atualizado');
+        loadReports();
+      } catch (error) {
+        console.error('Erro ao atualizar status:', error);
+        setReports(previous);
+        toast.error('Erro ao atualizar status');
+      }
+    };
 
   const handleReply = async (reportId: string) => {
     const content = replyText[reportId]?.trim();
