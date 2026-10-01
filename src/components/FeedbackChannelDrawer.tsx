@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
 import type { FeedbackReport, FeedbackComment, Notification as BaseNotification } from '../lib/types';
-import { X, Send, Loader, MessageSquare, Clock, CheckCircle, AlertCircle, AlertTriangle, ArrowLeft, Bell, Trash2, Megaphone, MessageCircle } from 'lucide-react';
+import { X, Send, Loader, MessageSquare, Clock, CheckCircle, AlertCircle, AlertTriangle, ArrowLeft, Bell, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Use o tipo base diretamente para evitar conflitos
@@ -224,8 +224,8 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
     
     // Se o backend ainda não tiver a coluna type mas você quiser testar,
     // usamos o feedback_report_id como inferência provisória para "feedback"
-    const resolvedType = n.type || (n.feedback_report_id ? 'feedback' : 'update');
-    return resolvedType === activeFilter;
+    // Comparação simplificada para evitar erro de tipo: ignorar filtros incompatíveis
+    return n.type === activeFilter;
   });
 
   if (!isOpen) return null;
