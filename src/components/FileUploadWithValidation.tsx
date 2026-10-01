@@ -196,7 +196,10 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
         uploaded_by: user.id,
       });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('[FileUploadWithValidation] DB Error completo:', dbError);
+        throw new Error(dbError.message || dbError.details || dbError.hint || `Erro ao salvar no banco (${dbError.code})`);
+      }
 
       setPendingFiles(prev =>
         prev.map(f => (f.id === pendingFile.id ? { ...f, uploading: false, uploaded: true } : f))
@@ -204,8 +207,9 @@ export function FileUploadWithValidation({ folderId, folderName, disciplineName,
       
       return true;
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Erro desconhecido';
-      console.error('[FileUploadWithValidation] Erro:', msg);
+      // Supabase PostgrestError não é instanceof Error mas tem .message
+      const msg = (error as any)?.message || (error as any)?.details || 'Erro desconhecido';
+      console.error('[FileUploadWithValidation] Erro completo:', error);
       
       setPendingFiles(prev =>
         prev.map(f => (f.id === pendingFile.id ? { ...f, uploading: false, error: msg } : f))
