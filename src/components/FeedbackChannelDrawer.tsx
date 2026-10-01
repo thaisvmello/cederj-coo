@@ -3,10 +3,10 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
 import type { FeedbackReport, FeedbackComment, Notification as BaseNotification } from '../lib/types';
-import { 
-  X, Send, Loader, ChevronRight, MessageSquare, Clock, 
-  CheckCircle, AlertCircle, AlertTriangle, ArrowLeft, 
-  Trash2, Megaphone, MessageCircle, Bell 
+import {
+  X, Send, Loader, MessageSquare, Clock,
+  CheckCircle, AlertCircle, AlertTriangle, ArrowLeft,
+  Trash2, Bell
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
