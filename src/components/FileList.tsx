@@ -292,7 +292,7 @@ export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListPro
       </div>
 
       {/* 2. Lista de Arquivos com Botão "Ver" sempre visível e menu ⋮ */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100">
         {files.length === 0 ? (
           <div className="p-8 text-center space-y-2">
             <FileText className="w-8 h-8 text-gray-300 mx-auto" />
@@ -306,11 +306,11 @@ export function FileList({ folderId, onToggleUpload, isUploadOpen }: FileListPro
             const isMenuOpen = activeMenuFileId === file.id;
 
             return (
-              <div 
-                key={file.id} 
+              <div
+                key={file.id}
                 className={`p-3 transition flex items-center justify-between gap-2.5 ${
                   isSelected ? 'bg-blue-50/40' : 'hover:bg-gray-50/60'
-                }`}
+                } first:rounded-t-2xl last:rounded-b-2xl`}
               >
                 {/* Checkbox + Ícone + Nome e Metadados Truncados */}
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
