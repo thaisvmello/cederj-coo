@@ -345,14 +345,15 @@ export function FeedbackChannelDrawer({ isOpen, onClose, initialReportId }: Prop
                       </div>
                     </button>
                     
-                    {/* Botão de Excluir */}
-                    <button
-                      onClick={(e) => handleDeleteNotification(n.id, e)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
-                      title="Excluir notificação"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Botão de Excluir - visível ao toque, hover em desktop */}
+                                        <button
+                                          onClick={(e) => handleDeleteNotification(n.id, e)}
+                                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 active:text-red-600 active:bg-red-50 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-all flex-shrink-0"
+                                          title="Excluir notificação"
+                                          aria-label={`Excluir notificação: ${n.title}`}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
                   </div>
                 ))
               )}
